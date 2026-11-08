@@ -17,7 +17,7 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
-        checkUpdate: async () => ({ available: true, version: '0.5.7', notes: 'Новая версия для проверки' }),
+        checkUpdate: async () => ({ available: true, version: '0.5.8', notes: 'Новая версия для проверки' }),
         installUpdate: async () => {
           window.ymcInstallRequested = true;
           return { error: 'Тестовая установка остановлена.' };
@@ -54,7 +54,7 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
-    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.5.7').waitFor();
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.5.8').waitFor();
     assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
     await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
@@ -443,7 +443,7 @@ async function run() {
     });
     const backgroundBox = await page.locator('[data-ymc-app-backdrop]').boundingBox();
     assert.ok(Math.abs(backgroundBox.width - (await panel.boundingBox()).x) < 1);
-    await ui.locator('[data-prop=text]').fill('#2244AA');
+    await ui.locator('[data-prop=text]').fill('#2244aa');
     assert.equal(await page.locator('.VibePage_text__fixture').evaluate(el => getComputedStyle(el).color), 'rgb(255, 255, 255)');
     await ui.locator('#p-contrastGuard').uncheck();
     assert.equal(await page.locator('.VibePage_text__fixture').evaluate(el => getComputedStyle(el).color), 'rgb(34, 68, 170)');
@@ -491,8 +491,8 @@ async function run() {
     assert.match(await background.evaluate(image), /123deg/);
 
     await ui.locator('#p-playlistCustomButtons').check();
-    await ui.locator('[data-prop=playlistPrimary]').fill('#5588DD');
-    await ui.locator('[data-prop=playlistSelected]').fill('#DD4411');
+    await ui.locator('[data-prop=playlistPrimary]').fill('#5588dd');
+    await ui.locator('[data-prop=playlistSelected]').fill('#dd4411');
     await ui.locator('[data-prop=playlistFilterBorder]').fill('#556677');
     await ui.locator('#p-playlistButtonRound').fill('12');
     const listen = page.locator('.CommonPageHeader_playControl__fixture');
@@ -505,7 +505,7 @@ async function run() {
     await ui.locator('#p-playlistCoverRound').fill('26');
     assert.equal(await page.locator('#playlist-cover').evaluate(el => getComputedStyle(el).borderRadius), '26px');
     await ui.locator('#p-playlistSearchCustom').check();
-    await ui.locator('[data-prop=playlistSearchText]').fill('#42CCCC');
+    await ui.locator('[data-prop=playlistSearchText]').fill('#42cccc');
     assert.equal(await page.locator('[data-test-id=SEARCH_PLAYLIST_INPUT]').evaluate(el => getComputedStyle(el).color), 'rgb(66, 204, 204)');
 
     await ui.locator('[data-prop=navigationFill]').fill('#000000');
@@ -555,7 +555,7 @@ async function run() {
     assert.equal(await page.locator('#filled-xlink use').evaluate(el =>
       el.getAttributeNS('http://www.w3.org/1999/xlink', 'href')), '/icons/sprite.svg#liked_m');
     await ui.locator('#p-likedCustom').check();
-    await ui.locator('[data-prop=likedColor]').fill('#F23467');
+    await ui.locator('[data-prop=likedColor]').fill('#f23467');
     assert.equal(await page.locator('#filled-xlink').evaluate(el => getComputedStyle(el).color), 'rgb(242, 52, 103)');
     await ui.locator('[data-prop=likedShape]').selectOption('star');
     assert.match(await page.locator('#filled-xlink').evaluate(el => getComputedStyle(el).maskImage), /data:image\/svg/);
@@ -650,8 +650,8 @@ async function run() {
     assert.equal(await offer.isVisible(), true);
     await ui.locator('#ymc-guide-start').click();
     assert.equal(await ui.locator('.tabs [data-tab]').count(), 5);
-    for (let step = 1; step <= 7; step++) {
-      assert.match(await progress.textContent(), new RegExp('Шаг ' + step + ' из 7$'));
+    for (let step = 1; step <= 9; step++) {
+      assert.match(await progress.textContent(), new RegExp('Шаг ' + step + ' из 9$'));
       await next.click();
     }
     assert.equal(await offer.isHidden(), true);
@@ -659,9 +659,9 @@ async function run() {
     await ui.locator('#ymc-guide-all').click();
     const categories = new Set();
     const guideTitles = new Set();
-    for (let step = 1; step <= 30; step++) {
+    for (let step = 1; step <= 33; step++) {
       const label = await progress.textContent();
-      assert.match(label, new RegExp('Шаг ' + step + ' из 30$'));
+      assert.match(label, new RegExp('Шаг ' + step + ' из 33$'));
       categories.add(label.split(' · ')[0]);
       guideTitles.add(await ui.locator('#ymc-guide-title').textContent());
       await next.click();
@@ -672,7 +672,7 @@ async function run() {
     }
     assert.equal(await guide.isHidden(), true);
     assert.equal(await offer.isHidden(), true);
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.5.6');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.5.7');
     await page.reload();
     await launcher.click();
     assert.equal(await offer.isHidden(), true);
@@ -824,7 +824,7 @@ async function run() {
     }), 'one green hue matches the larger cover area: ' + firstSpectrum);
     await page.waitForFunction(end => !['rgb(16, 16, 24)', end].includes(getComputedStyle(document.body).backgroundColor), cssColor(firstColor));
     await waitBodyColor(cssColor(firstColor));
-    assert.equal(await page.locator('body').evaluate(el => getComputedStyle(el).color), cssColor(firstText));
+    await page.waitForFunction(expected => getComputedStyle(document.body).color === expected, cssColor(firstText));
     assert.equal(await accent(), '#224466');
     assert.equal((await theme()).background, '#101018');
     assert.equal((await theme()).text, '#DDEAFF');
@@ -979,7 +979,7 @@ async function run() {
       await ctx.close();
     });
     assert.deepEqual(errors, []);
-    console.log('PASS: spectrum recovery and drawn cover colors, cover gradients and auras, cover retry, stable stylesheet, 7 + 30 guide steps, existing controls');
+    console.log('PASS: spectrum recovery and drawn cover colors, cover gradients and auras, cover retry, stable stylesheet, 9 + 33 guide steps, existing controls');
   } finally {
     await browser.close();
   }

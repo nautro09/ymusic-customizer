@@ -11,7 +11,7 @@ struct MusicInstall {
     static let officialID = "ru.yandex.desktop.music"
     static let customID = "local.ymusic.customizer.music"
     static let name = "Яндекс Музыка с Customizer"
-    static let release = "0.5.6-mac.1"
+    static let release = "0.5.7-mac.1"
     static let suggestedSource = URL(fileURLWithPath: "/Applications/Яндекс Музыка.app", isDirectory: true)
 
     let directory: URL
@@ -166,7 +166,12 @@ struct MusicInstall {
     }
 
     private func requireClosed() throws {
-        guard NSRunningApplication.runningApplications(withBundleIdentifier: Self.customID).isEmpty else {
+        let target = application.resolvingSymlinksInPath().standardizedFileURL.path
+        let targetIsRunning = NSRunningApplication.runningApplications(withBundleIdentifier: Self.customID).contains {
+            guard let bundle = $0.bundleURL else { return true }
+            return bundle.resolvingSymlinksInPath().standardizedFileURL.path == target
+        }
+        guard !targetIsRunning else {
             throw CustomizerError("Закройте «\(Self.name)» через ⌘Q и повторите действие.")
         }
     }

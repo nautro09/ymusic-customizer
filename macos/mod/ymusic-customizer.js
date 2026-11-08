@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.5.6 for Windows and macOS. MIT.
+ * YMusic Customizer v0.5.7 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,11 +11,13 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.5.6';
+  const version = '0.5.7';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
   const GUIDE_SEEN_KEY = 'ymc:guide:seen';
+  const EDITOR_WIDTH_KEY = 'ymc:editor:width';
+  const UPDATE_DISMISSED_KEY = 'ymc:update:dismissed';
   const MAX_ADDON = 160_000;
   const MAX_VIBE_MEDIA = 100 * 1024 * 1024;
   const VIBE_MEDIA_TYPES = {
@@ -25,6 +27,17 @@
   const PALETTE_VARIANTS = {
     balanced: 'Сбалансированная', calm: 'Спокойная', contrast: 'Контрастная',
     dark: 'Тёмная', light: 'Светлая', neon: 'Неоновая'
+  };
+  const PATTERNS = {
+    stars: 'Звёздное небо', constellations: 'Созвездия', grid: 'Координатная сетка',
+    hexagons: 'Соты', diamonds: 'Кристаллы', circuits: 'Микросхема', orbits: 'Орбиты',
+    ripples: 'Круги на воде', rain: 'Метеорный дождь', snow: 'Снежинки',
+    petals: 'Лепестки', bubbles: 'Пузырьки', notes: 'Ноты', pixels: 'Пиксели', symbols: 'Свои символы'
+  };
+  const PATTERN_DIRECTIONS = {
+    right: [1, 0, 'Вправо'], left: [-1, 0, 'Влево'], up: [0, -1, 'Вверх'], down: [0, 1, 'Вниз'],
+    upRight: [1, -1, 'Вправо и вверх'], upLeft: [-1, -1, 'Влево и вверх'],
+    downRight: [1, 1, 'Вправо и вниз'], downLeft: [-1, 1, 'Влево и вниз']
   };
   const SPECTRUM_PROFILES = {
     wave: { label: 'Мягкая лента', settings: { spectrumStyle: 'wave', spectrumBands: 72, spectrumGradient: 'horizontal',
@@ -68,6 +81,13 @@
     visualizer: false, wallpaper: '', customCss: '',
     vibeCoverOpacity: 100, vibeTrackOpacity: 100, vibeControlsOpacity: 100,
     vibeAnimation: true, hideVibeTrack: false, hideVibeControls: false, appMediaEnabled: true,
+    showVibePortrait: true, showVibeArtist: true, showVibeHeading: true,
+    showCornerAppVersion: true, showCornerLoaderVersion: true, showCornerAudioFormat: true,
+    patternEnabled: false, patternStyle: 'stars', patternScope: 'app', patternPalette: 'theme',
+    patternPrimary: '#B5D4FF', patternSecondary: '#A88AFF', patternSymbols: '✦ ◇ ♪',
+    patternOpacity: 48, patternDensity: 44, patternSize: 100, patternGlow: 0, patternSeed: 173,
+    patternMotion: 'still', patternDirection: 'upRight', patternPeriod: 32,
+    patternX: 0, patternY: 0, patternNativeOpacity: 32,
     barCustom: false, barSpectrum: false, barOpacity: 83, barWallpaper: '',
     spectrumPlacement: 'page', spectrumStyle: 'wave', spectrumGradient: 'horizontal',
     spectrumStart: '#8B5CF6', spectrumMid: '#C688FF', spectrumEnd: '#22D3EE', spectrumOpacity: 81,
@@ -90,6 +110,7 @@
     vibeButtonRound: 24, vibeWheelOpacity: 100, vibeAiOpacity: 100,
     portraitEffect: 'off', portraitColorSource: 'theme', portraitColor: '#A855F7',
     portraitOutline: 3, portraitSpread: 24, portraitIntensity: 80,
+    portraitBeat: false, portraitBeatStrength: 70, portraitBeatSensitivity: 70, portraitBeatRelease: 260,
     smartTheme: false, smartTransition: 2200, smartStrength: 92, smartPaletteStyle: 'balanced',
     ...Object.fromEntries(smartGroups.flatMap(key => [[key, true], [key + 'Amount', 100]])),
     motionEnabled: false, motionDuration: 420, motionCurve: 'smooth', motionCards: true,
@@ -205,6 +226,8 @@
     likedShape: ['native', 'star', 'diamond', 'image'], likedMotion: ['off', 'pulse', 'sparkle'],
     mediaFit: ['cover', 'contain'], barFit: ['cover', 'contain'], barImagePosition: ['center', 'top', 'bottom'],
     portraitEffect: ['off', 'glow', 'outline', 'both'], portraitColorSource: ['theme', 'background', 'custom'],
+    patternStyle: Object.keys(PATTERNS), patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
+    patternMotion: ['still', 'drift', 'shimmer', 'both'], patternDirection: Object.keys(PATTERN_DIRECTIONS),
     smartPaletteStyle: Object.keys(PALETTE_VARIANTS),
     motionCurve: ['smooth', 'soft', 'snappy', 'linear'], barLayout: ['native', 'compact', 'center', 'spacious'],
     barProgressMode: ['native', 'always', 'minimal']
@@ -214,7 +237,7 @@
     'accentHover', 'accentPress', 'vibeFill', 'vibeHover', 'vibePlayFill', 'playlistPrimary', 'playlistPrimaryText',
     'playlistSecondary', 'playlistSecondaryText', 'playlistFilter', 'playlistFilterText', 'playlistFilterBorder', 'playlistSelected',
     'playlistButtonHover', 'playlistSearchFill', 'playlistSearchText', 'barButtonFill', 'barButtonText', 'barButtonHover',
-    'portraitColor', 'navigationFill', 'navigationText'];
+    'portraitColor', 'navigationFill', 'navigationText', 'patternPrimary', 'patternSecondary'];
   const RANGES = {
     blur: [0, 40, 'px'], round: [0, 40, 'px'], panelOpacity: [0, 100, '%'], barOpacity: [0, 100, '%'],
     backgroundDim: [0, 80, '%'], gradientAngle: [0, 360, '°'], cardRound: [0, 40, 'px'], scale: [85, 125, '%'],
@@ -231,6 +254,10 @@
     playlistSearchOpacity: [0, 100, '%'], playlistSearchRound: [0, 40, 'px'],
     barButtonOpacity: [0, 100, '%'], barButtonRound: [0, 48, 'px'],
     portraitOutline: [1, 8, 'px'], portraitSpread: [4, 48, 'px'], portraitIntensity: [0, 100, '%'],
+    portraitBeatStrength: [0, 100, '%'], portraitBeatSensitivity: [10, 100, '%'], portraitBeatRelease: [80, 900, 'мс'],
+    patternOpacity: [0, 100, '%'], patternDensity: [10, 100, '%'], patternSize: [45, 200, '%'],
+    patternGlow: [0, 16, 'px'], patternSeed: [1, 65535, ''], patternPeriod: [6, 90, 'с'],
+    patternX: [0, 100, '%'], patternY: [0, 100, '%'], patternNativeOpacity: [0, 100, '%'],
     smartTransition: [400, 8000, 'мс'], smartStrength: [0, 100, '%'],
     ...Object.fromEntries(smartGroups.map(key => [key + 'Amount', [0, 100, '%']])),
     motionDuration: [80, 1600, 'мс'], motionCardScale: [100, 112, '%'], motionCardLift: [0, 20, 'px'],
@@ -241,6 +268,8 @@
   };
   const TOGGLES = ['enabled', 'manualScale', 'separateSurfaces', 'widePlayer', 'playerOverlay', 'visualizer', 'addonEnabled', 'addonPalette',
     'vibeAnimation', 'hideVibeTrack', 'hideVibeControls', 'appMediaEnabled', 'barCustom', 'barSpectrum', 'sidebarGradient',
+    'showVibePortrait', 'showVibeArtist', 'showVibeHeading', 'showCornerAppVersion', 'showCornerLoaderVersion',
+    'showCornerAudioFormat', 'patternEnabled', 'portraitBeat',
     'customVibeIcons', 'aiTrackCards', 'showVibeWheel', 'playlistButtons', 'likedCustom', 'likedTintImage',
     'customAccentStates', 'spectrumPeaks', 'customVibeButtons', 'hideVibeVolume', 'hideVibeMenu', 'hideVibeLike',
     'hideVibeDislike', 'hideVibeSkip', 'hideVibePlay', 'hideBarVolume', 'hideBarQueue', 'hideBarCover', 'hideBarTitle', 'hideBarArtist',
@@ -279,6 +308,10 @@
     for (const [key, max] of Object.entries({ name: 60, customCss: 20_000 })) {
       if (typeof value[key] === 'string') safe[key] = value[key].slice(0, max);
     }
+    if (typeof value.patternSymbols === 'string') {
+      safe.patternSymbols = Array.from(value.patternSymbols.slice(0, 96).replace(/[\p{Cc}\p{Cf}\p{Cs}]/gu, ''))
+        .slice(0, 16).join('');
+    }
     safe.wallpaper = isDataImage(value.wallpaper) ? value.wallpaper : '';
     safe.barWallpaper = isDataImage(value.barWallpaper) ? value.barWallpaper : '';
     safe.likedImage = isDataImage(value.likedImage) ? value.likedImage : '';
@@ -314,6 +347,10 @@
   const PLAYLIST_SELECTED = PLAYLIST_FILTER + ':is([aria-pressed="true"],[aria-selected="true"],[aria-current="true"])';
   const PLAYLIST_SEARCH = ':is(input[data-test-id="PLAYLIST_SEARCH_INPUT"],input[data-test-id="SEARCH_PLAYLIST_INPUT"],input[aria-label="Поиск трека"],input[placeholder="Поиск трека"])';
   const VIBE_PLAY = ':is([class*="VibePlayerControls_playButton__"],[class*="VibePlayerBar_button_play__"],[class*="VibePlayerBar_playButton__"],[data-test-id="PLAY_BUTTON"],[data-test-id="PAUSE_BUTTON"])';
+  const VIBE_DYNAMIC_HEADING = '[data-test-id="VIBE_DYNAMIC_TITLE_VIBE"]';
+  const VIBE_OTHER_TITLES = ':is(' + VIBE_DYNAMIC_HEADING + ',[data-test-id="VIBE_DYNAMIC_TITLE_GENERATIVE"],[data-test-id="VIBE_DYNAMIC_TITLE_NON_MUSIC_ENTITY_TITLE"])';
+  const VIBE_HERO = '[class*="VibePage_root__"], [data-test-id="VIBE_PAGE"]';
+  const PORTRAIT = ':is([data-test-id="VIBE_ARTIST_COVER"],[class*="VibeArtistCover_root__"])';
   const SELECTOR = {
     layout: '[class*="DefaultLayout_root"]',
     surface: '[class*="DefaultLayout_root"], [class^="Content_root"], [class*=" Content_root"], [class*="MainPage_root"], [class*="MainPage_content"], [class^="Layout_root"], [class*=" Layout_root"]',
@@ -327,7 +364,12 @@
     vibeControls: '[class*="VibePlayerControls_root__"]',
     vibeAi: '[class*="VibePage_words__"], [data-test-id="WORDS_CARD_FULLSCREEN_MESSAGE"]',
     vibeWheel: '[class*="VibePage_wheel__"], [data-test-id="WHEEL_DESKTOP"], [data-test-id="WHEEL_MOBILE"]',
-    portrait: ':is([data-test-id="VIBE_ARTIST_COVER"],[class*="VibeArtistCover_root__"]) img:is([src]:not([src=""]),[srcset]:not([srcset=""]))',
+    portrait: PORTRAIT + ' img:is([src]:not([src=""]),[srcset]:not([srcset=""]))',
+    vibeArtist: ':is([data-test-id="VIBE_DYNAMIC_ARTISTS"],[class*="VibeDynamicArtists_root__"]):not(:has(' + VIBE_OTHER_TITLES + '))',
+    vibeHeading: VIBE_DYNAMIC_HEADING + ', [data-test-id="RESET_VIBE_CONTEXT_STATIC_TEXT"]',
+    cornerVersion: '[class*="MainPage_betaSlot"] [data-test-id="RELEASE_NOTES_BUTTON"]',
+    cornerLoader: '[class*="MainPage_betaSlot"] .ymmods-modver',
+    cornerFormat: '[class*="MainPage_betaSlot"] .ymmods-quality.ymmods-in-slot',
     vibeText: '[class*="VibePage_text__"], [class*="VibePage_words__"], [class*="VibePage_words__"] :is(button,a,p,span), [data-test-id="WORDS_CARD_TEXT"], [class*="WordsCard_text__"], [data-test-id="VIBE_DYNAMIC_ARTISTS"], [data-test-id="VIBE_DYNAMIC_ARTISTS"] a, [data-test-id="WHEEL_ITEM_TITLE"], [data-test-id="WHEEL_ITEM_DESCRIPTION"], [data-test-id="WHEEL_ITEM_TITLE"] *, [class*="VibePlayerbarTrackName_trackNameText__"]',
     barText: '[class*="PlayerBarDesktopWithBackgroundProgressBar_description__"], [class*="PlayerBarDesktopWithBackgroundProgressBar_description__"] a, [class*="PlayerBarDesktopWithBackgroundProgressBar_artists__"], [class*="PlayerBarDesktopWithBackgroundProgressBar_artistLink__"], [class*="PlayerBarDesktopWithBackgroundProgressBar_description__"] [class*="Meta_title__"], [class*="PlayerBarDesktopWithBackgroundProgressBar_description__"] [class*="Meta_artists__"]',
     playlistBackdrop: `[class*="PlaylistPage_averageColorBackground__"], ${PLAYLIST} [class*="AverageColorBackground_root__"]`,
@@ -592,6 +634,9 @@
     return cssUrl('data:image/svg+xml,' + encodeURIComponent(svg) + '#portrait');
   }
 
+  const hasPortraitAura = t => t.showVibePortrait && t.portraitIntensity > 0 && ['glow', 'both'].includes(t.portraitEffect);
+  const hasBeatAura = t => hasPortraitAura(t) && t.portraitBeat && t.portraitBeatStrength > 0;
+
   const navigationFill = t => t.navigationCustom ? blendedFill(t.navigationFill, t.navigationOpacity, t.background) : t.background;
   function navigationStyles(t, paint) {
     if (!t.navigationCustom && !t.contrastGuard) return '';
@@ -676,7 +721,13 @@
     const portraitColor = portraitEffectColor(t, portraitBackground);
     const portrait = portraitFilter(t, portraitColor);
     const portraitRule = portrait === 'none' ? 'none' : paint(portrait);
-    const pulsePortrait = t.motionEnabled && t.motionAura && portrait !== 'none' && t.portraitEffect !== 'outline';
+    const beatPortrait = hasBeatAura(t);
+    const pulsePortrait = t.motionEnabled && t.motionAura && hasPortraitAura(t) && !beatPortrait;
+    const hiddenElements = [
+      [t.showVibePortrait, PORTRAIT], [t.showVibeArtist, SELECTOR.vibeArtist], [t.showVibeHeading, SELECTOR.vibeHeading],
+      [t.showCornerAppVersion, SELECTOR.cornerVersion], [t.showCornerLoaderVersion, SELECTOR.cornerLoader],
+      [t.showCornerAudioFormat, SELECTOR.cornerFormat]
+    ].filter(([visible]) => !visible).map(([, selector]) => selector).join(', ');
     const originalImageColors = t.likedShape === 'image' && !t.likedTintImage;
     const moveBackground = t.motionEnabled && t.motionBackground && t.mode === 'gradient';
     const minimum = t.contrastGuard ? t.contrastLevel / 10 : 0;
@@ -768,11 +819,23 @@
         ` : ''}
       ` : ''}
       ${!t.aiTrackCards ? `${scoped(SELECTOR.vibeAi)} { display:none !important; }` : ''}
+      ${hiddenElements ? `${scoped(hiddenElements)} { display:none !important; }` : ''}
       ${!t.showVibeWheel ? `${scoped(SELECTOR.vibeWheel)} { display:none !important; }` : ''}
       ${t.showVibeWheel && t.vibeWheelOpacity < 100 ? `${scoped(SELECTOR.vibeWheel)} { opacity:${t.vibeWheelOpacity / 100} !important; }` : ''}
       ${t.aiTrackCards && t.vibeAiOpacity < 100 ? `${scoped(SELECTOR.vibeAi)} { opacity:${t.vibeAiOpacity / 100} !important; }` : ''}
       ${portrait !== 'none' ? `${scoped(SELECTOR.portrait)} { filter:${portraitRule} !important; }` : ''}
+      ${t.patternEnabled && t.patternOpacity > 0 && t.vibeAnimation ? `
+        ${scoped(t.patternScope === 'wave' ? '[class*="VibePage_vibeAnimation__"]' : SELECTOR.vibeAnimation)} {
+          opacity:${t.patternNativeOpacity / 100} !important;
+        }
+      ` : ''}
       @media (prefers-reduced-motion:no-preference) {
+        ${beatPortrait ? `
+          ${scoped(SELECTOR.portrait)} {
+            filter:${portraitRule} drop-shadow(0 0 ${Math.max(4, t.portraitSpread * .6)}px
+              color-mix(in srgb,${paint(portraitColor)} var(--ymc-beat-pulse,0%),transparent)) !important;
+          }
+        ` : ''}
         ${t.motionEnabled ? `
           ${scoped('body, .ym-dark-theme, .ym-light-theme')} { --ym-duration-transition:${t.motionDuration}ms !important; }
           ${scoped(SELECTOR.navigation + ', ' + SELECTOR.player + ' button, ' + SELECTOR.vibe + ' button, ' + SELECTOR.playlistPlay)} {
@@ -1182,6 +1245,7 @@
         mediaStyle.setProperty('--ymc-media-opacity', String(styledTheme.mediaOpacity / 100));
       }
     }
+    syncPatternAppearance(styledTheme, colorOnly);
     if (!colorOnly) {
       setText($('ymc-status'), compareNative ? 'Показано штатное оформление' : !active ? 'Оформление выключено'
         : theme.addonEnabled && theme.addonPalette ? 'Оформление из CSS-темы' : 'Оформление включено');
@@ -1760,6 +1824,172 @@
     }
   }
 
+  const PATTERN_TILE = 320;
+  const STROKE = 'fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round"';
+  const sparkle = '<path d="M0-13Q1-1 11 0Q1 1 0 13Q-1 1-11 0Q-1-1 0-13Z"/>';
+  const patternMarks = {
+    stars: i => i % 7 === 0 ? sparkle : '<circle r="3"/>',
+    constellations: i => i % 2 ? '<path d="M-16 4l9-12 10 3 8 14 10-6" ' + STROKE +
+      '/><circle cx="-16" cy="4" r="2.1"/><circle cx="-7" cy="-8" r="1.7"/><circle cx="3" cy="-5" r="2.2"/><circle cx="11" cy="9" r="1.6"/><circle cx="21" cy="3" r="2.1"/>' :
+      '<path d="M-13-5l10 9 7-11 10 4m-17 7 13 10" ' + STROKE +
+      '/><circle cx="-13" cy="-5" r="2"/><circle cx="-3" cy="4" r="1.8"/><circle cx="4" cy="-7" r="1.6"/><circle cx="14" cy="-3" r="2"/><circle cx="10" cy="14" r="1.5"/>',
+    diamonds: i => '<path d="M0-14 12 0 0 14-12 0Z M-12 0h24 M0-14 5 0 0 14-5 0Z" ' + STROKE + '/>' +
+      (i % 3 ? '' : '<circle cx="16" cy="-8" r="1.6"/>'),
+    orbits: i => '<ellipse rx="21" ry="9" ' + STROKE + '/><circle r="' + (i % 2 ? 4.5 : 2.5) +
+      '"/><circle cx="15" cy="-6" r="2.3"/>',
+    ripples: i => '<circle r="6" ' + STROKE + '/><circle r="12" ' + STROKE +
+      ' opacity=".72"/><circle r="19" ' + STROKE + ' opacity=".4"/>' + (i % 2 ? '<circle r="2"/>' : ''),
+    rain: i => '<path d="M-13 13 13-13" ' + STROKE + ' stroke-width="' + (i % 3 ? '1.3' : '2.5') +
+      '"/><circle cx="-13" cy="13" r="1.7"/>',
+    snow: i => i % 4 ? '<path d="M-10 0h20M-5-8.7 5 8.7M-5 8.7 5-8.7 M-7-2l2 2-2 2m14-4-2 2 2 2" ' + STROKE + '/>' : '<circle r="2.4"/>',
+    petals: i => '<path d="M0 14C-16 6-13-8-3-14Q12-12 10 0 8 8 0 14Z" ' +
+      (i % 2 ? STROKE : 'fill="white" opacity=".7"') + '/><path d="M0 11Q-5 3 1-7" ' + STROKE + '/>',
+    bubbles: i => '<circle r="' + (i % 3 ? 12 : 17) + '" ' + STROKE +
+      '/><path d="M-7-2q1-4 5-5" ' + STROKE + ' stroke-width="1.5"/><circle cx="13" cy="11" r="1.3"/>',
+    notes: i => i % 2 ? '<path d="M-4 8v-19l14-4V4" ' + STROKE +
+      ' stroke-width="2"/><ellipse cx="-8" cy="8" rx="5" ry="3"/><ellipse cx="6" cy="4" rx="5" ry="3"/>' :
+      '<path d="M1 10v-23q6 7 11 7" ' + STROKE + ' stroke-width="2"/><ellipse cx="-4" cy="10" rx="6" ry="4"/>',
+    pixels: i => '<rect x="-6" y="-6" width="12" height="12" rx="1.5"/>' +
+      (i % 3 ? '<rect x="8" y="-10" width="5" height="5" rx="1"/>' : '<rect x="-14" y="8" width="6" height="6" rx="1"/>'),
+    symbols: (i, glyphs) => '<text text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif" font-size="24">' +
+      glyphs[i % glyphs.length] + '</text>'
+  };
+
+  function patternArtwork(t) {
+    const size = PATTERN_TILE;
+    let seed = t.patternSeed;
+    const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 0x100000000);
+    const layer = [[], []];
+    const ink = (to, code) => layer[to].push(code);
+    const density = t.patternDensity / 100;
+    if (t.patternStyle === 'grid') {
+      const divisions = 4 + Math.round(density * 12);
+      for (let i = 0; i < divisions; i++) {
+        const p = (i + .5) * size / divisions;
+        const opacity = i % 3 ? .3 : .62;
+        ink(i % 3 ? 0 : 1, `<path d="M${p} 0V${size}M0 ${p}H${size}" ${STROKE} opacity="${opacity}"/>`);
+        if (i % 2 === 0) {
+          const row = (Math.floor(random() * divisions) + .5) * size / divisions;
+          ink(1, `<circle cx="${p}" cy="${row}" r="2.1" opacity=".85"/>`);
+        }
+      }
+    } else if (t.patternStyle === 'hexagons') {
+      const divisions = 4 + Math.round(density * 7);
+      const width = size / divisions, height = size / (2 * divisions);
+      // Repeat an even number of staggered rows so the opposite edges meet.
+      for (let y = -1; y <= 2 * divisions; y++) {
+        for (let x = -1; x <= divisions; x++) {
+          const px = (x + (y % 2 ? .5 : 0)) * width;
+          const py = y * height;
+          const a = width / 2, b = height / 3;
+          ink(0, `<path d="M${px - a} ${py - b}l${a} -${b} ${a} ${b}v${2 * b}l-${a} ${b} -${a} -${b}Z" ${STROKE} opacity=".46"/>`);
+          if (y >= 0 && x >= 0 && x < divisions && y < 2 * divisions && random() < .23) {
+            ink(1, `<circle cx="${px + 3}" cy="${py + 3}" r="2" opacity=".82"/>`);
+          }
+        }
+      }
+    } else if (t.patternStyle === 'circuits') {
+      const divisions = 4 + Math.round(density * 6), step = size / divisions;
+      for (let y = 0; y < divisions; y++) {
+        for (let x = 0; x < divisions; x++) {
+          const px = (x + .5) * step, py = (y + .5) * step;
+          const dx = random() < .5 ? 1 : -1, dy = random() < .5 ? 1 : -1;
+          ink(0, `<path d="M${px} ${py}h${dx * step * .23}l${dx * step * .18} ${dy * step * .18}v${dy * step * .22}" ${STROKE} opacity=".55"/>`);
+          if ((x + y) % 2 === 0) ink(1, `<circle cx="${px}" cy="${py}" r="2.6" ${STROKE}/>`);
+        }
+      }
+    } else {
+      const mark = patternMarks[t.patternStyle] || patternMarks.stars;
+      const glyphs = Array.from(t.patternSymbols.replace(/\s/gu, '') || DEFAULT.patternSymbols.replaceAll(' ', ''))
+        .map(value => '&#x' + value.codePointAt(0).toString(16) + ';');
+      const fine = ['stars', 'rain', 'snow', 'pixels'].includes(t.patternStyle);
+      const columns = fine ? 4 + Math.round(density * 5) : 3 + Math.round(density * 3);
+      const cell = size / columns;
+      for (let i = 0; i < columns ** 2; i++) {
+        const x = (i % columns + .23 + random() * .54) * cell;
+        const y = (Math.floor(i / columns) + .23 + random() * .54) * cell;
+        const scale = Math.min(cell / 29, (fine ? .44 : .65) + random() * (fine ? .68 : .56));
+        const angle = t.patternStyle === 'rain' ? (random() - .5) * 17
+          : ['diamonds', 'notes', 'symbols', 'pixels'].includes(t.patternStyle) ? (random() - .5) * 26
+          : (random() - .5) * 150;
+        const opacity = (.37 + random() * .61).toFixed(2);
+        ink(i % 3 === 0 ? 1 : 0, `<g opacity="${opacity}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${angle.toFixed(1)}) scale(${scale.toFixed(2)})">${mark(i, glyphs)}</g>`);
+      }
+    }
+    return layer.map(marks => cssUrl('data:image/svg+xml,' + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="white">${marks.join('')}</svg>`)));
+  }
+
+  function patternRules(layer) {
+    return `
+      ${layer} .ymc-pattern-inner { position:absolute; inset:0; opacity:var(--ymc-pattern-alpha); }
+      ${layer}[data-glow] .ymc-pattern-inner { filter:drop-shadow(0 0 var(--ymc-pattern-glow) var(--ymc-pattern-accent)); }
+      ${layer} .ymc-pattern-ink { position:absolute; inset:0; background-color:var(--ymc-pattern-color);
+        mask-image:var(--ymc-pattern-mask); mask-size:var(--ymc-pattern-tile) var(--ymc-pattern-tile);
+        mask-position:var(--ymc-pattern-x) var(--ymc-pattern-y); mask-repeat:repeat; }
+      ${layer} .ymc-pattern-ink + .ymc-pattern-ink { background-color:var(--ymc-pattern-accent); }
+    `;
+  }
+
+  let patternLayer, patternKey;
+  const patternMarkup = '<div class="ymc-pattern-inner"><i class="ymc-pattern-ink"></i><i class="ymc-pattern-ink"></i></div>';
+  const patternVisible = () => isStyled() && theme.patternEnabled && theme.patternOpacity > 0;
+
+  function syncPatternAppearance(t, colorOnly) {
+    if (!theme.patternEnabled) return;
+    const preview = $('ymc-pattern-sample');
+    const color = t.patternPalette === 'custom' ? t.patternPrimary : mixHex(t.accent, t.text, .43);
+    const accent = t.patternPalette === 'custom' ? t.patternSecondary : t.accent;
+    const tile = Math.round(PATTERN_TILE * t.patternSize / 100);
+    if (!colorOnly) {
+      const key = JSON.stringify([t.patternStyle, t.patternSeed, t.patternDensity, t.patternSymbols]);
+      if (key !== patternKey) {
+        patternKey = key;
+        const masks = patternArtwork(t);
+        for (const surface of [patternLayer, preview]) {
+          [...surface.querySelectorAll('.ymc-pattern-ink')].forEach((ink, i) =>
+            ink.style.setProperty('--ymc-pattern-mask', masks[i]));
+        }
+      }
+      const [dx, dy] = PATTERN_DIRECTIONS[t.patternDirection];
+      patternLayer.dataset.motion = t.patternMotion;
+      patternLayer.style.setProperty('--ymc-pattern-dx', dx * tile + 'px');
+      patternLayer.style.setProperty('--ymc-pattern-dy', dy * tile + 'px');
+      patternLayer.style.setProperty('--ymc-pattern-period', t.patternPeriod + 's');
+      for (const surface of [patternLayer, preview]) {
+        const length = surface === preview ? Math.round(tile * .56) : tile;
+        surface.toggleAttribute('data-glow', t.patternGlow > 0);
+        surface.style.setProperty('--ymc-pattern-glow', t.patternGlow + 'px');
+        surface.style.setProperty('--ymc-pattern-tile', length + 'px');
+        surface.style.setProperty('--ymc-pattern-alpha', String(t.patternOpacity / 100));
+        surface.style.setProperty('--ymc-pattern-x', Math.round(length * t.patternX / 100) + 'px');
+        surface.style.setProperty('--ymc-pattern-y', Math.round(length * t.patternY / 100) + 'px');
+      }
+    }
+    for (const surface of [patternLayer, preview]) {
+      const style = surface.style;
+      if (style.getPropertyValue('--ymc-pattern-color') !== color) style.setProperty('--ymc-pattern-color', color);
+      if (style.getPropertyValue('--ymc-pattern-accent') !== accent) style.setProperty('--ymc-pattern-accent', accent);
+    }
+  }
+
+  function syncPatternMount(fullscreen) {
+    if (fullscreen || !patternVisible()) {
+      patternLayer.remove();
+      return;
+    }
+    const wave = theme.patternScope !== 'wave' || [...document.querySelectorAll(VIBE_HERO)]
+      .some(node => node.getClientRects().length && !node.closest('[aria-hidden="true"]'));
+    if (!wave) {
+      patternLayer.remove();
+      return;
+    }
+    if (appBackdrop.isConnected) {
+      if (appBackdrop.nextElementSibling !== patternLayer) appBackdrop.after(patternLayer);
+    } else if (!patternLayer.isConnected) document.body.prepend(patternLayer);
+    patternLayer.toggleAttribute('data-paused', document.hidden);
+  }
+
   const wrapHue = hue => (hue + 360) % 360;
   const hueDistance = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
 
@@ -2323,6 +2553,74 @@
   const spectrumLevels = new Float32Array(120);
   const spectrumPeaks = new Float32Array(120);
   const demoLevels = new Float32Array(120);
+  let beatPortrait, beatSource, beatValue = 0;
+  const beatState = { average: 0, recent: 0, impulse: 0, level: 0, cooldown: 0 };
+
+  function bassEnvelope(bins, sampleRate) {
+    if (!bins) return 0;
+    const binHz = sampleRate / (bins.length * 2);
+    const from = Math.max(1, Math.ceil(35 / binHz));
+    const to = Math.min(bins.length, Math.max(from + 1, Math.ceil(185 / binHz)));
+    let peak = 0, power = 0;
+    for (let bin = from; bin < to; bin++) {
+      const energy = Math.min(1, Math.max(0, (bins[bin] + 79) / 59));
+      peak = Math.max(peak, energy);
+      power += energy ** 2;
+    }
+    return to > from ? peak * .67 + Math.sqrt(power / (to - from)) * .33 : 0;
+  }
+
+  function stepBeat(state, bass, dt, sensitivity, decay) {
+    const threshold = .035 + (1 - sensitivity / 100) * .10;
+    const prominence = bass - state.average;
+    state.cooldown = Math.max(0, state.cooldown - dt);
+    // Follow low-frequency onsets above a rolling average, without flashing for a steady tone.
+    if (!state.cooldown && prominence > threshold && bass - state.recent > threshold * .5) {
+      state.impulse = Math.max(state.impulse, Math.min(1, (prominence - threshold * .5) * (2.4 + sensitivity / 62)));
+      state.cooldown = 115;
+    }
+    state.average += (bass - state.average) * (1 - Math.exp(-dt / 480));
+    state.recent += (bass - state.recent) * (1 - Math.exp(-dt / 78));
+    state.level += (state.impulse - state.level) * (1 - Math.exp(-dt / (state.impulse > state.level ? 30 : 75)));
+    state.impulse *= Math.exp(-dt / decay);
+    if (state.level < .004 && state.impulse < .004) state.level = state.impulse = 0;
+    return state.level;
+  }
+
+  function resetBeat() {
+    if (beatValue) beatPortrait?.style.removeProperty('--ymc-beat-pulse');
+    beatValue = 0;
+    beatSource = undefined;
+    beatState.average = beatState.recent = beatState.impulse = beatState.level = beatState.cooldown = 0;
+  }
+
+  function syncBeatPortrait(fullscreen) {
+    const enabled = !fullscreen && !document.hidden && isStyled() && hasBeatAura(theme) && !reducedMotion();
+    const next = enabled ? [...document.querySelectorAll(SELECTOR.portrait)].find(node =>
+      node.getClientRects().length && getComputedStyle(node).visibility === 'visible') : undefined;
+    if (next !== beatPortrait) {
+      resetBeat();
+      beatPortrait = next;
+      spectrumCheckAt = 0;
+    }
+  }
+
+  function paintBeat(t, input, bins, dt) {
+    if (bins && input !== beatSource) {
+      beatState.average = beatState.recent = beatState.cooldown = 0;
+      beatSource = input;
+    }
+    if (!bins) beatSource = undefined;
+    const level = stepBeat(beatState, bassEnvelope(bins, input?.analyser?.context.sampleRate || 48000),
+      dt, t.portraitBeatSensitivity, t.portraitBeatRelease);
+    const value = Math.round(level * t.portraitBeatStrength);
+    if (value !== beatValue) {
+      if (value) beatPortrait.style.setProperty('--ymc-beat-pulse', value + '%');
+      else beatPortrait.style.removeProperty('--ymc-beat-pulse');
+      beatValue = value;
+    }
+    return level > 0;
+  }
 
   function releaseSpectrumInput() {
     const input = spectrumInput;
@@ -2700,7 +2998,9 @@
     const background = backgroundSpectrumActive();
     const overlay = overlaySpectrum && theme.visualizer && activeDialog === 'now';
     const preview = previewActive();
-    if (document.hidden || !(background || overlay || preview)) {
+    const beat = beatPortrait?.isConnected && !reducedMotion();
+    if (document.hidden || !(background || overlay || preview || beat)) {
+      resetBeat();
       releaseSpectrumInput();
       spectrumSignal = 'idle';
       return;
@@ -2727,8 +3027,10 @@
     const t = visualTheme();
     const dt = Math.min(70, now - (lastSpectrumFrame || now - 16));
     lastSpectrumFrame = now;
-    updateSpectrumLevels(t, bins, input?.analyser?.context.sampleRate || 48000, dt);
-    const fading = spectrumLevels.subarray(0, t.spectrumBands).some(level => level > .004);
+    const drawSpectrum = background || overlay || preview;
+    if (drawSpectrum) updateSpectrumLevels(t, bins, input?.analyser?.context.sampleRate || 48000, dt);
+    const fading = drawSpectrum && spectrumLevels.subarray(0, t.spectrumBands).some(level => level > .004);
+    const beatFading = beat && paintBeat(t, input, bins, dt);
     if (background && activeDialog !== 'now') {
       if (barCanvas.dataset.signal !== spectrumSignal) barCanvas.dataset.signal = spectrumSignal;
       setText($('ymc-bar-status'), SPECTRUM_STATUS[spectrumSignal]);
@@ -2748,7 +3050,7 @@
       paintSpectrum(previewCanvas, t, bins ? spectrumLevels : demoLevels, bins ? spectrumPeaks : demoLevels, true);
       setText($('ymc-spectrum-preview-label'), bins ? 'Сигнал текущего трека' : 'Макет без звука');
     }
-    if (spectrumSignal !== 'idle' || fading || preview && !reducedMotion()) {
+    if (spectrumSignal !== 'idle' || fading || beatFading || preview && !reducedMotion()) {
       spectrumFrame = requestAnimationFrame(spectrumTick);
     } else {
       // Refresh and media events wake the canvas; a paused track needs no frame loop.
@@ -2758,7 +3060,7 @@
 
   function syncSpectrumAnimation(force = false) {
     if (!shadow) return;
-    if (!document.hidden && (backgroundSpectrumActive() || overlaySpectrum || previewActive())) {
+    if (!document.hidden && (backgroundSpectrumActive() || overlaySpectrum || previewActive() || beatPortrait?.isConnected)) {
       if (spectrumFrame === undefined && (force || performance.now() >= spectrumCheckAt)) {
         if (force) spectrumCheckAt = 0;
         spectrumFrame = requestAnimationFrame(spectrumTick);
@@ -2768,6 +3070,7 @@
     if (spectrumFrame !== undefined) cancelAnimationFrame(spectrumFrame);
     spectrumFrame = undefined;
     spectrumSignal = 'idle';
+    resetBeat();
     releaseSpectrumInput();
     spectrumCheckAt = lastSpectrumFrame = 0;
     spectrumPreferred = spectrumSource = undefined;
@@ -2791,8 +3094,30 @@
     .head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .btn.primary{background:var(--hover);border-color:var(--accent)}
     .shade{position:fixed;inset:0;background:#090610ad;pointer-events:auto}
-    #ymc-editor{position:fixed;inset:0 0 0 auto;width:var(--ymc-dock);pointer-events:auto}
-    .panel{position:absolute;top:0;right:0;width:100%;height:100%;overflow:auto;overscroll-behavior:contain;background:var(--bg);border-left:1px solid var(--border);padding:0 clamp(10px,2vw,20px) 24px}
+    #ymc-editor{position:fixed;inset:0 0 0 auto;width:var(--ymc-dock);pointer-events:auto;display:flex;flex-direction:column}
+    .panel{position:relative;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;background:var(--bg);border-left:1px solid var(--border);padding:0 clamp(10px,2vw,20px) 24px}
+    #ymc-resize{position:absolute;inset:0 auto 0 -6px;width:12px;z-index:5;cursor:ew-resize;touch-action:none;user-select:none}
+    #ymc-resize::after{content:"";position:absolute;top:50%;left:4px;width:4px;height:44px;translate:0 -50%;border-radius:6px;background:var(--muted);opacity:.45}
+    #ymc-resize:is(:hover,:focus-visible)::after,#ymc-editor[data-resizing] #ymc-resize::after{height:58px;background:var(--accent);opacity:1}
+    .editor-footer{position:relative;z-index:4;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;
+      padding:8px clamp(10px,2vw,20px);background:var(--bg);border-top:1px solid var(--border);border-left:1px solid var(--border)}
+    .editor-footer .muted{margin:0;font-variant-numeric:tabular-nums}
+    .update-trigger{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;font-size:12px}
+    .update-trigger svg{width:15px;height:15px}
+    .update-trigger[data-available]{border-color:var(--accent)}
+    .update-card{position:absolute;inset:auto 10px calc(100% + 8px);padding:12px;max-height:min(54vh,440px);
+      overflow:auto;overscroll-behavior:contain;background:var(--bg);border:1px solid var(--border);
+      border-radius:13px;box-shadow:0 8px 28px #0007}
+    .update-card .buttons{margin-bottom:0}
+    #ymc-update-notes{white-space:pre-wrap}
+    .update-toast{position:fixed;top:36px;right:clamp(12px,calc(var(--ymc-reserved-width) + 12px),max(12px,calc(100vw - 354px)));
+      z-index:8;width:min(342px,calc(100vw - 24px));padding:12px;pointer-events:auto;touch-action:pan-y;
+      background:var(--bg);border:1px solid var(--accent);border-radius:13px;box-shadow:0 8px 26px #0006}
+    .update-toast-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+    .update-toast-head strong{font-size:13px}
+    .update-toast .muted{margin:2px 0 0}
+    .update-toast .btn{padding:5px 9px;font-size:12px}
+    #ymc-update-toast-open{margin-top:8px}
     .head{position:sticky;top:0;background:var(--bg);padding:14px 0 9px;border-bottom:1px solid var(--border);z-index:2}
     .headrow,.line,.tabs{display:flex;align-items:center;gap:10px}
     .headrow,.line{justify-content:space-between}
@@ -2850,7 +3175,6 @@
     #ymc-theme-status{padding:9px 0 6px;border:0}
     #ymc-theme-status h3{display:none}
     #ymc-theme-status .line{margin:0 0 7px}
-    #ymc-theme-status .preview{margin-top:8px}
     #ymc-smart-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:8px 0}
     #ymc-smart-preview span{min-width:0;display:grid;gap:2px;padding:4px 5px;border:1px solid var(--border);
       border-radius:6px;color:var(--muted);font-size:10px}
@@ -2883,8 +3207,11 @@
     .muted,.notice,.error{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
     .error{color:#ffb4b4}.error:empty,.notice:empty{display:none}
     .pill{font-size:11px;color:var(--fg);background:var(--control);border-radius:99px;padding:4px 8px;display:inline-block}
-    .preview{margin-top:11px;border-radius:12px;padding:12px;border:1px solid var(--border);display:flex;gap:6px;align-items:center;justify-content:space-between}
-    .preview span{padding:4px 7px;border-radius:7px}
+    .pattern-sample{position:relative;height:110px;isolation:isolate;overflow:hidden;margin:9px 0;border:1px solid var(--border);
+      border-radius:10px;background:linear-gradient(145deg,var(--art-start),var(--art-end))}
+    ${patternRules('.pattern-sample')}
+    .pattern-seed{display:flex;align-items:end;gap:8px;flex-wrap:wrap;margin:8px 0}
+    .pattern-seed input{padding:5px;max-width:98px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--fg)}
     .portrait-preview{display:flex;align-items:center;gap:10px;min-height:116px;margin:9px 0 12px;padding:4px 12px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(135deg,var(--art-start),var(--art-end));overflow:hidden}
     .portrait-preview svg{flex:none;width:108px;height:108px}
     .portrait-preview-label{padding:5px 8px;border-radius:8px;background:var(--bg);color:var(--fg);font-size:12px}
@@ -2990,7 +3317,7 @@
   const whenAvailable = (key, enable, content) => `<div class="settings-fold" data-available="${key}" data-enable="${enable}">
     <div class="settings-inner">${content}</div></div>`;
   const PANES = {
-    theme: ['Тема', 'Оформление по обложке, эквалайзер и ручные цвета.'],
+    theme: ['Тема', 'Цвета по обложке, эквалайзер и узоры на фоне.'],
     layout: ['Главная', 'Всё, что видно на экране «Моей волны».'],
     player: ['Плеер', 'Нижняя панель, расширенное окно и Discord.'],
     playlists: ['Плейлисты', 'Шапка, кнопки и поиск. Настройки действуют и на «Мне нравится».'],
@@ -3001,9 +3328,11 @@
   const paneIntro = key => `<div class="pane-intro"><h2>${PANES[key][0]}</h2><p>${PANES[key][1]}</p></div>`;
   const MARKUP = `
     <div id="ymc-editor" hidden>
-      <aside class="panel" aria-labelledby="ymc-editor-title">
+      <div id="ymc-resize" role="separator" aria-orientation="vertical" aria-label="Ширина редактора" aria-controls="ymc-panel"
+        tabindex="0" title="Перетащите край. Стрелки меняют ширину, двойной щелчок возвращает минимум."></div>
+      <aside id="ymc-panel" class="panel" aria-labelledby="ymc-editor-title">
         <header class="head">
-          <div class="headrow"><div><h2 id="ymc-editor-title">YMusic Customizer</h2><p class="muted">v${version} · ${mac ? 'macOS' : 'Windows'}</p></div>
+          <div class="headrow"><h2 id="ymc-editor-title">YMusic Customizer</h2>
           <div class="head-actions"><button id="ymc-undo" class="btn" title="Отменить изменение (${mac ? '⌘Z' : 'Ctrl+Z'})" aria-label="Отменить изменение">↶</button><button id="ymc-redo" class="btn" title="Вернуть изменение (${mac ? '⌘⇧Z' : 'Ctrl+Y'})" aria-label="Вернуть изменение">↷</button><button id="ymc-guide-open" class="btn head-icon" title="Обучение по текущей вкладке" aria-label="Обучение">?</button><button id="ymc-player-open" class="btn head-icon" title="Открыть расширенный плеер" aria-label="Плеер" hidden>♪</button>
           <button id="ymc-close" class="btn head-icon" aria-label="Закрыть редактор">✕</button></div></div>
           <nav class="tabs" aria-label="Вкладки Customizer">
@@ -3021,25 +3350,15 @@
             <button class="btn" id="ymc-show-catalog">Магазин тем</button><button class="btn" data-tab="files">CSS и файлы</button>
           </nav>
           <p id="ymc-notice" class="notice" role="status"></p><p id="ymc-save-error" class="error" role="alert"></p>
-          <details id="ymc-updates" hidden>
-            <summary id="ymc-update-summary">Обновления</summary>
-            <p id="ymc-update-status" class="muted" role="status">Проверка обновлений…</p>
-            <p id="ymc-update-notes" class="muted" hidden></p>
-            <div class="buttons">
-              <button type="button" id="ymc-update-check" class="btn">Проверить</button>
-              <button type="button" id="ymc-update-install" class="btn primary" hidden>Обновить и перезапустить</button>
-            </div>
-          </details>
         </header>
         <div id="ymc-guide-offer" class="guide-offer" hidden>
-          <div><strong>Что изменилось в оформлении</strong><p>Семь коротких шагов по меню, цветам из обложки и эквалайзеру.</p></div>
+          <div><strong>Что изменилось в оформлении</strong><p>Короткий тур по меню, узорам, цветам из обложки и визуализатору.</p></div>
           <div class="buttons"><button class="btn primary" id="ymc-guide-start">Быстрый старт</button>
             <button class="btn" id="ymc-guide-dismiss">Позже</button></div>
         </div>
         <div data-pane="theme">
           ${paneIntro('theme')}
           <section id="ymc-theme-status"><h3>Применение темы</h3>${check('enabled', 'Включить Customizer')}<span class="pill" id="ymc-status"></span>
-            <div id="ymc-preview" class="preview"><b id="ymc-preview-name"></b><span>Акцент</span></div>
           </section>
           <section id="ymc-theme-palette"><h3>Палитра</h3><label>Название темы<input type="text" data-prop="name" maxlength="60"></label>
             <div class="buttons"><button class="btn" id="ymc-open-store">Открыть магазин тем</button></div><div class="grid">
@@ -3105,6 +3424,32 @@
                 ${check(key, label)}${whenAvailable(key + 'Amount', key, range(key + 'Amount', 'Сила · ' + label.toLowerCase()))}
               </div>`).join('')}
             </details>`)}
+          </section>
+          <section id="ymc-theme-pattern"><h3>Узоры на фоне</h3>
+            ${check('patternEnabled', 'Показывать узор')}
+            ${whenAvailable('patternStyle', 'patternEnabled', `
+              <div class="grid">
+                <label>Рисунок<select data-prop="patternStyle">${Object.entries(PATTERNS).map(([key, label]) =>
+                  `<option value="${key}">${label}</option>`).join('')}</select></label>
+                <label>Где показывать<select data-prop="patternScope"><option value="app">Во всём приложении</option><option value="wave">Только «Моя волна»</option></select></label>
+              </div>
+              ${whenAvailable('patternSymbols', 'patternStyle', `<label>Свои символы<input type="text" data-prop="patternSymbols" maxlength="32" placeholder="✦ ◇ ♪"></label>`)}
+              <div id="ymc-pattern-sample" class="pattern-sample" aria-hidden="true">${patternMarkup}</div>
+              ${range('patternOpacity', 'Видимость узора')}${range('patternDensity', 'Плотность рисунка')}${range('patternSize', 'Масштаб рисунка')}
+              <label>Цвета узора<select data-prop="patternPalette"><option value="theme">Из текущей темы</option><option value="custom">Два своих цвета</option></select></label>
+              ${whenAvailable('patternPrimary', 'patternPalette', `<div class="grid">${swatch('patternPrimary', 'Основной цвет')}${swatch('patternSecondary', 'Цвет деталей')}</div>`)}
+              <details class="settings-more"><summary>Движение, свечение и положение</summary>
+                <label>Анимация<select data-prop="patternMotion"><option value="still">Неподвижно</option><option value="drift">Дрейф</option><option value="shimmer">Мягкое мерцание</option><option value="both">Дрейф и мерцание</option></select></label>
+                ${whenAvailable('patternDirection', 'patternMotion', `<label>Направление<select data-prop="patternDirection">${Object.entries(PATTERN_DIRECTIONS).map(([key, [,, label]]) =>
+                  `<option value="${key}">${label}</option>`).join('')}</select></label>`)}
+                ${whenAvailable('patternPeriod', 'patternMotion', range('patternPeriod', 'Длительность цикла'))}
+                ${range('patternGlow', 'Свечение')}${range('patternX', 'Сдвиг по горизонтали')}${range('patternY', 'Сдвиг по вертикали')}
+                ${whenAvailable('patternNativeOpacity', 'vibeAnimation', range('patternNativeOpacity', 'Видимость штатной анимации за «Моей волной»'))}
+                <div class="pattern-seed"><label>Номер раскладки<input type="number" min="1" max="65535" step="1" data-number="patternSeed"></label>
+                  <button class="btn" id="ymc-pattern-shuffle" type="button" data-setting="patternSeed" data-find="Перемешать узор">Перемешать</button></div>
+              </details>
+              <p class="muted">Узор рисуется поверх вашего фона, за текстом и кнопками.</p>
+            `)}
           </section>
           <section id="ymc-theme-surfaces"><h3>Панели и карточки</h3>
             ${swatch('panel', 'Общий цвет панелей')}
@@ -3199,6 +3544,12 @@
         </div>
         <div data-pane="layout" hidden>
           ${paneIntro('layout')}
+          <section id="ymc-home-hero"><h3>Портрет и надписи</h3>
+            ${check('showVibePortrait', 'Показывать фото исполнителя')}
+            ${check('showVibeArtist', 'Показывать имя исполнителя')}
+            ${check('showVibeHeading', 'Показывать надпись «Моя волна»')}
+            <p class="muted">Эти галочки не скрывают обложку трека, навигацию и кнопки плеера.</p>
+          </section>
           <section id="ymc-home-buttons"><h3>Оформление кнопок «Моей волны»</h3>
             ${check('customVibeIcons', 'Свои цвета иконок')}
             ${whenAvailable('vibeIcon', 'customVibeIcons', `<div class="grid">${swatch('vibeIcon', 'Лайк, громкость и меню')}${swatch('vibeTransport', 'Играть, пауза и переключение')}</div>`)}
@@ -3229,11 +3580,11 @@
             <label>Характер движения<select data-prop="motionCurve"><option value="smooth">Плавный</option><option value="soft">Мягкий</option><option value="snappy">Пружинистый</option><option value="linear">Равномерный</option></select></label>
             ${check('motionCards', 'Анимировать карточки при наведении')}
             ${whenAvailable('motionCardScale', 'motionCards', range('motionCardScale', 'Увеличение карточки') + range('motionCardLift', 'Подъём карточки'))}
-            ${check('motionAura', 'Пульсация ауры портрета')}
-            ${whenAvailable('motionAuraSpeed', 'motionAura', range('motionAuraSpeed', 'Скорость пульсации'))}
+            ${check('motionAura', 'Равномерное дыхание ауры')}
+            ${whenAvailable('motionAuraSpeed', 'motionAura', range('motionAuraSpeed', 'Скорость дыхания'))}
             ${check('motionBackground', 'Медленное движение фона')}
             ${whenAvailable('motionBackgroundSpeed', 'motionBackground', range('motionBackgroundSpeed', 'Скорость движения фона'))}
-            <p class="muted">Движение фона работает с градиентом. Пульсация появляется на вырезанном портрете с включённой аурой.</p>`)}
+            <p class="muted">Движение фона работает с градиентом. Для пульсации от музыки откройте «Портрет артиста».</p>`)}
           </section>
           <section id="ymc-home-portrait"><h3>Портрет артиста</h3>
             <p class="muted">Эффект появляется, когда «Моя волна» показывает вырезанный портрет.</p>
@@ -3258,11 +3609,22 @@
             ${whenAvailable('portraitSpread', 'portraitEffect', range('portraitSpread', 'Радиус ауры'))}
             ${whenAvailable('portraitOutline', 'portraitEffect', range('portraitOutline', 'Толщина обводки'))}
             ${whenAvailable('portraitIntensity', 'portraitEffect', range('portraitIntensity', 'Интенсивность эффекта'))}
+            ${whenAvailable('portraitBeat', 'portraitEffect', `
+              ${check('portraitBeat', 'Пульсировать в такт музыке')}
+              ${whenAvailable('portraitBeatStrength', 'portraitBeat', range('portraitBeatStrength', 'Сила пульсации') +
+                range('portraitBeatSensitivity', 'Чувствительность к басу') + range('portraitBeatRelease', 'Затухание пульсации'))}
+              <p class="muted">Пульсация использует звук эквалайзера и работает даже при скрытом рисунке. Она заменяет равномерное дыхание, пока включена.</p>`)}
           </section>
           <section id="ymc-home-track"><h3>Обложка и строка трека</h3>
             ${range('vibeCoverOpacity', 'Непрозрачность обложки трека')}
             ${range('vibeTrackOpacity', 'Подложка строки трека')}
             ${check('hideVibeTrack', 'Скрыть строку трека целиком')}
+          </section>
+          <section id="ymc-home-badges"><h3>Значки в правом нижнем углу</h3>
+            ${check('showCornerAppVersion', 'Показывать версию Яндекс Музыки')}
+            ${check('showCornerLoaderVersion', 'Показывать версию загрузчика мода')}
+            ${check('showCornerAudioFormat', 'Показывать формат аудио (FLAC, AAC, MP3)')}
+            <p class="muted">Показываются только значки, которые доступны в вашей версии клиента или загрузчика.</p>
           </section>
         </div>
         <div data-pane="player" hidden>
@@ -3427,6 +3789,29 @@
           </div></section>
         </div>
       </aside>
+      <footer class="editor-footer">
+        <button id="ymc-update-summary" type="button" class="btn update-trigger" aria-expanded="false" aria-controls="ymc-update-card" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2 6m-2-6V5m0 6h6"/></svg>
+          <span id="ymc-update-label">Обновления</span>
+        </button>
+        <p class="muted">v${version} · ${mac ? 'macOS' : 'Windows'}</p>
+        <div id="ymc-update-card" class="update-card" role="region" aria-labelledby="ymc-update-summary" hidden>
+          <strong>Обновления Customizer</strong>
+          <p id="ymc-update-status" class="muted" role="status">Проверка обновлений…</p>
+          <p id="ymc-update-notes" class="muted" hidden></p>
+          <div class="buttons">
+            <button type="button" id="ymc-update-check" class="btn">Проверить</button>
+            <button type="button" id="ymc-update-install" class="btn primary" hidden>Обновить и перезапустить</button>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <div id="ymc-update-toast" class="update-toast" role="group" aria-label="Уведомление об обновлении" hidden>
+      <div class="update-toast-head">
+        <div role="status"><strong id="ymc-update-toast-title"></strong><p class="muted">Обновите Customizer, чтобы получить новые настройки.</p></div>
+        <button id="ymc-update-toast-close" class="btn" type="button" aria-label="Закрыть уведомление об обновлении">✕</button>
+      </div>
+      <button id="ymc-update-toast-open" class="btn primary" type="button">Посмотреть обновление</button>
     </div>
     <div class="guide-layer" id="ymc-guide" hidden>
       <div id="ymc-guide-spot" class="guide-spot" aria-hidden="true"></div>
@@ -3522,17 +3907,20 @@
     'ymc-theme-palette': ['Основные цвета и название темы'],
     'ymc-theme-background': ['Градиент, сплошной цвет или обложка'],
     'ymc-theme-media': ['Свои фото, GIF и видео', 'appMediaEnabled'],
+    'ymc-theme-pattern': ['Звёзды, геометрия, ноты и свои символы', 'patternEnabled'],
     'ymc-theme-surfaces': ['Прозрачность, формы и неоновое свечение'],
     'ymc-theme-contrast': ['Проверка текста и иконок', 'contrastGuard'],
     'ymc-theme-fonts': ['Шрифт и размер интерфейса'],
     'ymc-theme-heart': ['Цвет, форма и анимация лайка', 'likedCustom'],
     'ymc-theme-bar': ['Цвет или фото для нижней панели', 'barCustom'],
     'ymc-home-buttons': ['Цвета и форма кнопок'],
+    'ymc-home-hero': ['Фото, имя исполнителя и надпись «Моя волна»'],
     'ymc-home-visibility': ['Выбор кнопок на главном экране'],
     'ymc-home-wave': ['Колесо, подсказки и штатный фон'],
     'ymc-home-motion': ['Скорость, карточки, аура и фон', 'motionEnabled'],
-    'ymc-home-portrait': ['Свечение и контур вокруг артиста'],
+    'ymc-home-portrait': ['Аура, обводка и пульсация в такт музыке'],
     'ymc-home-track': ['Видимость и прозрачность'],
+    'ymc-home-badges': ['Версии приложения и мода, формат аудио'],
     'ymc-player-layout': ['Размер, расположение и полоса прогресса'],
     'ymc-player-buttons': ['Видимые элементы и их цвета'],
     'ymc-player-overlay': ['Отдельное окно управления', 'playerOverlay'],
@@ -3738,6 +4126,10 @@
       gradientAngle: theme.mode === 'solid', backgroundDim: !withMedia && !photoMode,
       mediaFit: !withMedia && !photoMode, mediaX: !withMedia && !photoMode, mediaY: !withMedia && !photoMode,
       mediaBlur: !withMedia, mediaOpacity: !withMedia,
+      patternStyle: !theme.patternEnabled, patternSymbols: theme.patternStyle !== 'symbols',
+      patternPrimary: theme.patternPalette !== 'custom', patternSecondary: theme.patternPalette !== 'custom',
+      patternDirection: !['drift', 'both'].includes(theme.patternMotion), patternPeriod: theme.patternMotion === 'still',
+      patternNativeOpacity: !theme.vibeAnimation,
       sidebar: !theme.separateSurfaces, player: !theme.separateSurfaces,
       sidebarEnd: !theme.sidebarGradient, sidebarAngle: !(theme.separateSurfaces && theme.sidebarGradient),
       barOpacity: !theme.barCustom, barFit: !theme.barWallpaper, barImagePosition: !theme.barWallpaper,
@@ -3760,6 +4152,9 @@
       portraitColorSource: portraitOff, portraitColor: portraitOff || theme.portraitColorSource !== 'custom',
       portraitOutline: portraitOff || theme.portraitEffect === 'glow',
       portraitSpread: portraitOff || theme.portraitEffect === 'outline', portraitIntensity: portraitOff,
+      portraitBeat: !hasPortraitAura(theme), portraitBeatStrength: !hasPortraitAura(theme) || !theme.portraitBeat,
+      portraitBeatSensitivity: !hasPortraitAura(theme) || !theme.portraitBeat,
+      portraitBeatRelease: !hasPortraitAura(theme) || !theme.portraitBeat,
       smartTransition: !theme.smartTheme, smartStrength: !theme.smartTheme, smartPaletteStyle: !theme.smartTheme,
       motionDuration: !theme.motionEnabled, motionCurve: !theme.motionEnabled,
       motionCards: !theme.motionEnabled, motionCardScale: !theme.motionEnabled || !theme.motionCards,
@@ -3820,13 +4215,6 @@
     $('ymc-bar-clear').disabled = !theme.barWallpaper;
     $('ymc-liked-clear').disabled = !theme.likedImage;
     if (resetDraft) $('ymc-css').value = theme.customCss;
-    const preview = $('ymc-preview');
-    preview.style.background = theme.mode === 'solid' ? theme.background
-      : `linear-gradient(${theme.gradientAngle}deg,${theme.background},${theme.gradientEnd})`;
-    preview.style.color = theme.text;
-    preview.querySelector('span').style.background = theme.accent;
-    preview.querySelector('span').style.color = theme.background;
-    $('ymc-preview-name').textContent = theme.name || 'Без названия';
     syncPlaylistPreview();
     syncContrastReport();
     syncHistoryButtons();
@@ -3847,8 +4235,11 @@
     'ymc-theme-heart': 'лайк сердечко сердце',
     'ymc-theme-smart': 'умная тема по треку обложка хамелеон характер палитры',
     'ymc-theme-spectrum': 'эквалайзер на фоне визуализатор музыка спектр',
+    'ymc-theme-pattern': 'узоры фон символы звезды звездное небо геометрия частицы',
     'ymc-theme-contrast': 'невидимый черный белый читаемость',
-    'ymc-home-portrait': 'человек силуэт портрет обводка аура свечение'
+    'ymc-home-portrait': 'человек силуэт портрет обводка аура свечение бит бас пульсация',
+    'ymc-home-hero': 'заголовок моя волна скрыть артист фотография',
+    'ymc-home-badges': 'версия FLAC AAC MP3 качество правый нижний угол'
   };
   function settingsTools(selectTab, resetBlock) {
     const search = $('ymc-settings-search');
@@ -4130,7 +4521,7 @@
   let guidePositionFrame, guideAnimation, guideObserver, guideScrollPanel, guideTrigger;
   const GUIDE = [
     ['theme', 'ymc-theme-status', 'Применение темы',
-      'Нажмите на заголовок карточки, чтобы увидеть её настройки. Переключатели находятся рядом, а связанные ползунки раскрываются при включении. Поиск ведёт к настройке или к её переключателю. «Оригинал» временно возвращает штатный вид, а ↶ и ↷ отменяют и возвращают изменения.', 'theme'],
+      'Откройте карточку по её заголовку или найдите настройку поиском. «Оригинал» временно возвращает штатный вид, а ↶ и ↷ отменяют и возвращают изменения. Потяните левую границу редактора, чтобы изменить ширину. Внизу находится кнопка «Обновления»; о новой версии сообщит плашка справа сверху.', 'theme'],
     ['theme', 'ymc-theme-spectrum', 'Эквалайзер на фоне',
       'Включите эквалайзер и выберите готовый вид или форму. «Предпросмотр» показывает рисунок даже без музыки. Автоподбор даёт один оттенок. Для трёх ручных цветов отключите группу «Эквалайзер» в умной теме и откройте «Цвета и слои». Там же регулируются свечение, сетка и второй контур. Если сигнал запаздывает, нажмите «Подключить звук».', 'spectrum'],
     ['theme', 'ymc-theme-smart', 'Умная тема по треку',
@@ -4141,6 +4532,8 @@
       'Выберите сплошной цвет, градиент, локальную картинку или обложку трека. Для градиента задайте угол, а для изображения измените затемнение. Точное число можно ввести справа от ползунка.'],
     ['theme', 'ymc-theme-media', 'Фото, GIF и видео',
       'Загрузите файл для общего фона и включите его показ. «Заполнить экран» обрезает края, а «Уместить целиком» сохраняет весь кадр. Двигайте кадр по двум осям и меняйте размытие и непрозрачность. Из первого кадра можно выбрать один из шести вариантов палитры.'],
+    ['theme', 'ymc-theme-pattern', 'Узоры на фоне',
+      'Включите рисунок и выберите звёзды, геометрию, ноты или свои символы. Узор ложится на фото, видео или обычный фон. Настройте два цвета, плотность, размер и свечение. Дрейф и мерцание включаются отдельно. «Перемешать» меняет раскладку деталей.'],
     ['theme', 'ymc-theme-surfaces', 'Панели и карточки',
       'Общий цвет используется для панелей. Включите отдельные цвета, чтобы изменить боковую панель и плеер по отдельности. Для боковой панели можно задать второй цвет и угол. На 0% заливка исчезает. Размытие, скругления и неоновое свечение регулируются отдельно.'],
     ['theme', 'ymc-theme-contrast', 'Читаемость и стрелки',
@@ -4149,6 +4542,8 @@
       'Выберите шрифт приложения или один из системных. Включите ручной масштаб и задайте процент. При 100% размер соответствует базовому, а отключение ручного масштаба возвращает автоматику.'],
     ['theme', 'ymc-theme-heart', 'Отметка «Нравится»',
       'Включите оформление закрашенной отметки. Выберите цвет, размер, непрозрачность и форму. Настройте пульс или мерцание и длительность цикла. Можно загрузить картинку и оставить её цвета или перекрасить цветом лайка.'],
+    ['layout', 'ymc-home-hero', 'Портрет и надписи',
+      'Три независимые галочки скрывают фото, имя исполнителя и верхнюю надпись «Моя волна». Обложка текущего трека и управление остаются на месте.'],
     ['layout', 'ymc-home-buttons', 'Оформление кнопок «Моей волны»',
       'Включите свои цвета иконок. Цвет управления воспроизведением задаётся отдельно. Своими подложками можно настроить обычные кнопки, кнопку запуска и наведение, а затем изменить непрозрачность и скругление.', 'layout'],
     ['layout', 'ymc-home-visibility', 'Видимость кнопок',
@@ -4156,11 +4551,13 @@
     ['layout', 'ymc-home-wave', 'Колесо, анимация и подсказки',
       'Колесо выбора волны можно скрыть или сделать полупрозрачным. Анимация управляет движущимся рисунком. ИИ-подсказки о треках можно выключить целиком или приглушить ползунком.'],
     ['layout', 'ymc-home-motion', 'Редактор анимаций',
-      'Главный переключатель включает плавные переходы. Длительность и характер движения действуют на интерфейс. Карточки можно слегка поднять и увеличить при наведении. Пульсация ауры и движение фона включаются отдельно и имеют собственную скорость. При системном режиме уменьшения движения анимации автоматически отключаются.'],
+      'Главный переключатель включает плавные переходы. Карточки можно слегка поднять и увеличить при наведении. Равномерное дыхание ауры и движение градиента включаются отдельно. Пульсация по музыке находится в карточке «Портрет артиста». Системное уменьшение движения отключает анимации.'],
     ['layout', 'ymc-home-portrait', 'Портрет артиста',
-      'Выберите ауру, обводку или оба эффекта. Они повторяют силуэт вырезанного портрета. Цвет можно взять из темы, подобрать по фото или видео фона либо задать вручную. Радиус смягчает свечение, толщина меняет контур, а интенсивность регулирует силу эффекта.'],
+      'Выберите ауру, обводку или оба эффекта. Цвет можно взять из темы, подобрать по фону или задать вручную. «Пульсировать в такт музыке» усиливает ауру на басовых ударах. Настройте силу, чувствительность и затухание. Пульсация работает даже при скрытом эквалайзере.'],
     ['layout', 'ymc-home-track', 'Обложка и строка трека',
       'Первый ползунок меняет прозрачность обложки на главной. Второй регулирует подложку строки трека. Галочка скрывает строку целиком.'],
+    ['layout', 'ymc-home-badges', 'Значки в правом нижнем углу',
+      'Здесь можно по отдельности убрать номер версии Яндекс Музыки, версию загрузчика и формат аудио, например FLAC. Показать можно только значки, которые предоставляет клиент или загрузчик.'],
     ['player', 'ymc-player-layout', 'Конструктор нижнего плеера',
       'Выберите штатную, компактную, центрированную или просторную компоновку. Подстройте высоту, размеры обложки и управления, текст и интервалы. Полосу прогресса можно сделать постоянно видимой или показывать при фокусе. На узкой панели центральный режим использует обычный ряд.'],
     ['player', 'ymc-player-buttons', 'Элементы нижнего плеера',
@@ -4190,7 +4587,7 @@
     ['files', 'ymc-shop-files', 'Файлы темы',
       'JSON сохраняет параметры оформления, CSS выгружает правила. Импорт JSON применяет сохранённые параметры. Кнопка «Сбросить» здесь возвращает все параметры оформления и убирает активный фон.']
   ];
-  const QUICK_GUIDE = ['ymc-theme-status', 'ymc-theme-spectrum', 'ymc-theme-smart', 'ymc-home-portrait',
+  const QUICK_GUIDE = ['ymc-theme-status', 'ymc-theme-spectrum', 'ymc-theme-smart', 'ymc-theme-pattern', 'ymc-home-hero', 'ymc-home-portrait',
     'ymc-player-layout', 'ymc-playlists-gradient', 'ymc-shop-catalog'].map(id => GUIDE.find(step => step[1] === id));
 
   function guideWasSeen() {
@@ -4369,6 +4766,191 @@
   let seekPlayer;
   let seekRange;
 
+  let editorWidth = 0;
+  function editorBounds(viewport = window.innerWidth) {
+    const min = Math.round(viewport <= 580 ? Math.min(viewport, 400) : Math.min(510, viewport * .46));
+    const max = Math.max(min, Math.round(viewport <= 580 ? viewport : Math.min(1400, viewport * .84)));
+    return { min, max };
+  }
+
+  function syncEditorWidth() {
+    const { min, max } = editorBounds();
+    const storeWidth = mainPane(editorTab) === 'library' && window.innerWidth > 580
+      ? Math.min(970, window.innerWidth * .76) : min;
+    const width = Math.min(max, Math.max(min, Math.round(editorWidth || storeWidth)));
+    const resize = $('ymc-resize');
+    const rootStyle = document.documentElement.style;
+    if (rootStyle.getPropertyValue('--ymc-dock') !== width + 'px') rootStyle.setProperty('--ymc-dock', width + 'px');
+    resize.hidden = min === max;
+    resize.setAttribute('aria-valuemin', min);
+    resize.setAttribute('aria-valuemax', max);
+    resize.setAttribute('aria-valuenow', width);
+    resize.setAttribute('aria-valuetext', width + ' пикс.');
+    return width;
+  }
+
+  function setupEditorResize() {
+    const resize = $('ymc-resize'), editor = $('ymc-editor');
+    let drag;
+    try { editorWidth = bounded(Number(localStorage.getItem(EDITOR_WIDTH_KEY)) || null, 1, 1400, 0); } catch {}
+    const save = () => { try { localStorage.setItem(EDITOR_WIDTH_KEY, String(editorWidth)); } catch {} };
+    const choose = value => {
+      const { min, max } = editorBounds();
+      editorWidth = bounded(value, min, max, min);
+      syncEditorWidth();
+      queueGuidePosition();
+    };
+    resize.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || drag) return;
+      event.preventDefault();
+      const bounds = editor.getBoundingClientRect();
+      drag = { id: event.pointerId, offset: event.clientX - bounds.left, start: event.clientX, right: bounds.right };
+      resize.setPointerCapture(event.pointerId);
+      resize.focus({ preventScroll: true });
+      editor.setAttribute('data-resizing', '');
+    });
+    resize.addEventListener('pointermove', event => {
+      if (event.pointerId !== drag?.id || !drag.changed && Math.abs(drag.start - event.clientX) < 2) return;
+      drag.changed = true;
+      choose(drag.right - event.clientX + drag.offset);
+    });
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      resize.addEventListener(event, ({ pointerId }) => {
+        if (pointerId !== drag?.id) return;
+        if (drag.changed) save();
+        drag = undefined;
+        editor.removeAttribute('data-resizing');
+      });
+    }
+    resize.addEventListener('dblclick', () => { choose(editorBounds().min); save(); });
+    resize.addEventListener('keydown', event => {
+      const { min, max } = editorBounds(), current = syncEditorWidth(), step = event.shiftKey ? 60 : 20;
+      const next = { ArrowLeft: current + step, ArrowRight: current - step, Home: min, End: max }[event.key];
+      if (next === undefined) return;
+      event.preventDefault();
+      event.stopPropagation();
+      choose(next);
+      save();
+    });
+    syncEditorWidth();
+  }
+
+  function setUpdateCard(open, focus = false) {
+    const trigger = $('ymc-update-summary'), card = $('ymc-update-card');
+    if (open && trigger.hidden) return;
+    card.hidden = !open;
+    trigger.setAttribute('aria-expanded', String(open));
+    if (focus) {
+      const check = $('ymc-update-check');
+      (open && !check.disabled ? check : trigger).focus({ preventScroll: true });
+    }
+  }
+
+  function setupUpdates() {
+    if (!discordBridge?.checkUpdate || !discordBridge?.installUpdate) return;
+    const trigger = $('ymc-update-summary'), label = $('ymc-update-label'), card = $('ymc-update-card');
+    const check = $('ymc-update-check'), install = $('ymc-update-install');
+    const status = $('ymc-update-status'), notes = $('ymc-update-notes'), toast = $('ymc-update-toast');
+    let latest = '', dismissed, swipe;
+    try { dismissed = localStorage.getItem(UPDATE_DISMISSED_KEY); } catch {}
+    trigger.hidden = false;
+    const dismiss = () => {
+      if (latest) {
+        dismissed = latest;
+        try { localStorage.setItem(UPDATE_DISMISSED_KEY, latest); } catch {}
+      }
+      toast.hidden = true;
+    };
+    const showAvailable = (next, message) => {
+      latest = next;
+      trigger.toggleAttribute('data-available', Boolean(latest));
+      setText(label, latest ? 'Обновления · v' + latest : 'Обновления');
+      install.hidden = !latest;
+      notes.hidden = !latest || !message;
+      setText(notes, latest ? message || '' : '');
+      toast.hidden = !latest || latest === dismissed || !card.hidden;
+      if (!toast.hidden) setText($('ymc-update-toast-title'), 'Вышел Customizer ' + latest);
+    };
+    const checkUpdate = async () => {
+      if (check.disabled) return;
+      check.disabled = install.disabled = true;
+      setText(status, 'Проверка обновлений…');
+      try {
+        const result = await discordBridge.checkUpdate();
+        const next = result?.available && typeof result.version === 'string' && /^\d+\.\d+\.\d+$/.test(result.version)
+          ? result.version : '';
+        showAvailable(next, result?.notes);
+        setText(status, result?.error || (next ? 'Доступна версия ' + next + '.' : 'Установлена актуальная версия.'));
+      } catch {
+        showAvailable('');
+        setText(status, 'Не удалось проверить обновления.');
+      } finally {
+        check.disabled = install.disabled = false;
+      }
+    };
+    trigger.addEventListener('click', () => {
+      if (card.hidden && !toast.hidden) dismiss();
+      setUpdateCard(card.hidden);
+    });
+    check.addEventListener('click', checkUpdate);
+    install.addEventListener('click', async () => {
+      if (!latest || install.disabled) return;
+      dismiss();
+      check.disabled = install.disabled = true;
+      setText(status, 'Скачивание и проверка обновления…');
+      try {
+        const result = await discordBridge.installUpdate();
+        if (result?.restarting) {
+          setText(status, 'Перезапуск Яндекс Музыки…');
+          return;
+        }
+        setText(status, result?.error || 'Не удалось установить обновление.');
+      } catch {
+        setText(status, 'Не удалось установить обновление.');
+      }
+      check.disabled = install.disabled = false;
+    });
+    $('ymc-update-toast-close').addEventListener('click', dismiss);
+    $('ymc-update-toast-open').addEventListener('click', () => {
+      dismiss();
+      if (activeDialog !== 'editor') showDialog('editor', launcher);
+      else closeGuide(false);
+      setUpdateCard(true, true);
+    });
+    toast.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      dismiss();
+    });
+    toast.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || swipe || event.target.closest('button')) return;
+      swipe = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      toast.setPointerCapture(event.pointerId);
+    });
+    toast.addEventListener('pointermove', event => {
+      if (event.pointerId !== swipe?.id || reducedMotion()) return;
+      const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y;
+      if (Math.abs(dx) > Math.max(8, Math.abs(dy))) toast.style.translate = dx + 'px';
+    });
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      toast.addEventListener(event, e => {
+        if (e.pointerId !== swipe?.id) return;
+        const dx = Math.abs(e.clientX - swipe.x), dy = Math.abs(e.clientY - swipe.y);
+        swipe = undefined;
+        toast.style.removeProperty('translate');
+        if (event === 'pointerup' && dx > Math.max(60, dy * 1.35)) dismiss();
+      });
+    }
+    document.addEventListener('pointerdown', event => {
+      if (!card.hidden && !event.composedPath().some(node => node === card || node === trigger || node === toast)) {
+        setUpdateCard(false);
+      }
+    }, true);
+    checkUpdate();
+    setInterval(checkUpdate, 6 * 60 * 60 * 1000);
+  }
+
   function showDialog(name, trigger) {
     if (name !== 'editor') closeGuide(false);
     if (name !== 'editor' && compareNative) {
@@ -4382,9 +4964,10 @@
     }
     if (trigger) returnFocus = trigger;
     activeDialog = name;
+    if (name !== 'editor') setUpdateCard(false);
     $('ymc-editor').hidden = name !== 'editor';
     document.documentElement.toggleAttribute('data-ymc-editor-open', name === 'editor');
-    document.documentElement.toggleAttribute('data-ymc-store-open', name === 'editor' && mainPane(editorTab) === 'library');
+    if (name === 'editor') syncEditorWidth();
     $('ymc-now').hidden = name !== 'now';
     if (name === 'editor') $('ymc-guide-offer').hidden = guideWasSeen();
     launcher?.setAttribute('aria-expanded', String(Boolean(name)));
@@ -4454,6 +5037,8 @@
     if (profile && launcher.nextElementSibling !== profile) profile.before(launcher);
     if (!profile) launcher.remove();
     syncAppBackground();
+    syncPatternMount(fullscreen);
+    syncBeatPortrait(fullscreen);
     syncBottomBar(fullscreen);
   }
 
@@ -4496,6 +5081,10 @@
     appBackdrop = document.createElement('div');
     appBackdrop.dataset.ymcAppBackdrop = '';
     appBackdrop.setAttribute('aria-hidden', 'true');
+    patternLayer = document.createElement('div');
+    patternLayer.dataset.ymcPattern = '';
+    patternLayer.setAttribute('aria-hidden', 'true');
+    patternLayer.innerHTML = patternMarkup;
     Object.assign(host.style, { position: 'fixed', inset: '0', pointerEvents: 'none', zIndex: '2147483640' });
     shadow = host.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
@@ -4505,6 +5094,7 @@
     shadow.append(style, frame);
     document.body.append(host);
     setupEditorSections();
+    setupEditorResize();
 
     launcher = document.createElement('button');
     launcher.type = 'button';
@@ -4545,9 +5135,11 @@
       }
       if (!activeDialog) return;
       if (e.key === 'Escape') {
+        if ($('ymc-update-toast').contains(target)) return;
         e.preventDefault();
         e.stopPropagation();
         if (guideIndex >= 0) closeGuide();
+        else if (activeDialog === 'editor' && !$('ymc-update-card').hidden) setUpdateCard(false, true);
         else showDialog('');
       } else if (activeDialog === 'now' && e.key === 'Tab') {
         const current = $(activeDialog === 'editor' ? 'ymc-editor' : 'ymc-now');
@@ -4577,7 +5169,7 @@
     function tab(name) {
       editorTab = name;
       const group = mainPane(name);
-      document.documentElement.toggleAttribute('data-ymc-store-open', activeDialog === 'editor' && group === 'library');
+      syncEditorWidth();
       tabs.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.tab === group)));
       $('ymc-shop-nav').hidden = group !== 'library';
       $('ymc-show-catalog').setAttribute('aria-pressed', String(name === 'library'));
@@ -4590,6 +5182,7 @@
     }
     function openTab(name) {
       closeGuide(false);
+      setUpdateCard(false);
       tab(name);
     }
     [...tabs, cssTab].forEach(button => button.addEventListener('click', () => openTab(button.dataset.tab)));
@@ -4638,6 +5231,10 @@
       if (spectrumPreview) $('ymc-spectrum-sample').scrollIntoView({ block: 'nearest' });
     });
     $('ymc-spectrum-retry').addEventListener('click', retrySpectrum);
+    $('ymc-pattern-shuffle').addEventListener('click', () => {
+      const jump = 1 + crypto.getRandomValues(new Uint16Array(1))[0] % 65534;
+      update({ patternSeed: (theme.patternSeed - 1 + jump) % 65535 + 1 }, { sync: false });
+    });
     tab('theme');
     $('ymc-discord-save').addEventListener('click', saveDiscord);
     $('ymc-discord-album').addEventListener('change', () => syncDiscordPreview());
@@ -4876,7 +5473,9 @@
       refresh();
     });
 
-    window.addEventListener('resize', () => { checkedLayout = undefined; refresh(); });
+    window.addEventListener('resize', () => { syncEditorWidth(); checkedLayout = undefined; refresh(); });
+    reducedMotion();
+    motionPreference.addEventListener('change', refresh);
     document.addEventListener('visibilitychange', () => {
       refresh();
     });
@@ -4884,6 +5483,7 @@
       overlaySpectrum = false;
       if (spectrumFrame !== undefined) cancelAnimationFrame(spectrumFrame);
       spectrumFrame = undefined;
+      resetBeat();
       releaseSpectrumInput();
       spectrumContext?.close().catch(() => {});
       spectrumContext = undefined;
@@ -4904,49 +5504,7 @@
       apply();
       refresh();
     });
-    if (discordBridge?.checkUpdate && discordBridge?.installUpdate) {
-      const updates = $('ymc-updates');
-      const check = $('ymc-update-check'), install = $('ymc-update-install');
-      const status = $('ymc-update-status'), notes = $('ymc-update-notes');
-      updates.hidden = false;
-      const checkUpdate = async () => {
-        if (check.disabled) return;
-        check.disabled = install.disabled = true;
-        status.textContent = 'Проверка обновлений…';
-        try {
-          const result = await discordBridge.checkUpdate();
-          const available = Boolean(result?.available);
-          $('ymc-update-summary').textContent = available ? 'Обновления · v' + result.version : 'Обновления';
-          install.hidden = !available;
-          notes.hidden = !available || !result.notes;
-          notes.textContent = available ? result.notes : '';
-          status.textContent = result?.error || (available ? 'Доступна версия ' + result.version + '.' : 'Установлена актуальная версия.');
-        } catch {
-          install.hidden = notes.hidden = true;
-          status.textContent = 'Не удалось проверить обновления.';
-        } finally {
-          check.disabled = install.disabled = false;
-        }
-      };
-      check.addEventListener('click', checkUpdate);
-      install.addEventListener('click', async () => {
-        check.disabled = install.disabled = true;
-        status.textContent = 'Скачивание и проверка обновления…';
-        try {
-          const result = await discordBridge.installUpdate();
-          if (result?.restarting) {
-            status.textContent = 'Перезапуск Яндекс Музыки…';
-            return;
-          }
-          status.textContent = result?.error || 'Не удалось установить обновление.';
-        } catch {
-          status.textContent = 'Не удалось установить обновление.';
-        }
-        check.disabled = install.disabled = false;
-      });
-      checkUpdate();
-      setInterval(checkUpdate, 6 * 60 * 60 * 1000);
-    }
+    setupUpdates();
     let mountFrame;
     new MutationObserver(() => {
       if (mountFrame !== undefined) return;
@@ -5013,15 +5571,32 @@
         width:2.75rem; justify-content:center; padding:0;
       }
       ${SELECTOR.navbar}:has([class*="NavbarDesktopUserWidget_userMeta_collapsed__"]) [data-ymc-launcher] span { display:none; }
-      :root { --ymc-dock:min(510px,46vw); --ymc-reserved-width:0px; }
-      html[data-ymc-store-open] { --ymc-dock:min(970px,76vw); }
-      @media(max-width:580px) { :root,html[data-ymc-store-open] { --ymc-dock:min(100vw,400px); } }
+      :root { --ymc-dock:0px; --ymc-reserved-width:0px; }
       html[data-ymc-editor-open] { --ymc-reserved-width:var(--ymc-dock); }
       html[data-ymc-editor-open] ${SELECTOR.layout} { width:calc(100% - var(--ymc-dock)) !important; min-width:0 !important; }
-      body:has(> [data-ymc-app-backdrop],> [data-ymc-page-spectrum]) { isolation:isolate; }
+      body:has(> [data-ymc-app-backdrop],> [data-ymc-pattern],> [data-ymc-page-spectrum]) { isolation:isolate; }
       html body:has(> [data-ymc-app-backdrop]) { background-image:none !important; }
       html[data-ymc-active="yes"]:has([data-ymc-app-backdrop]) ${SELECTOR.layout} { background:transparent !important; }
       [data-ymc-app-backdrop] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-1; pointer-events:none; overflow:hidden; }
+      [data-ymc-pattern] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-1; pointer-events:none; overflow:hidden; }
+      ${patternRules('[data-ymc-pattern]')}
+      @media (prefers-reduced-motion:no-preference) {
+        @keyframes ymc-pattern-travel {
+          to { mask-position:calc(var(--ymc-pattern-x) + var(--ymc-pattern-dx))
+                            calc(var(--ymc-pattern-y) + var(--ymc-pattern-dy)); }
+        }
+        @keyframes ymc-pattern-shimmer {
+          0%,100% { opacity:var(--ymc-pattern-alpha); }
+          50% { opacity:calc(var(--ymc-pattern-alpha) * .53); }
+        }
+        [data-ymc-pattern]:is([data-motion="drift"],[data-motion="both"]) .ymc-pattern-ink {
+          animation:ymc-pattern-travel var(--ymc-pattern-period) linear infinite;
+        }
+        [data-ymc-pattern]:is([data-motion="shimmer"],[data-motion="both"]) .ymc-pattern-inner {
+          animation:ymc-pattern-shimmer var(--ymc-pattern-period) ease-in-out infinite;
+        }
+        [data-ymc-pattern][data-paused] :is(.ymc-pattern-ink,.ymc-pattern-inner) { animation-play-state:paused; }
+      }
       [data-ymc-page-spectrum] { position:fixed; inset:auto var(--ymc-reserved-width) 0 0; height:var(--ymc-spectrum-height); z-index:-1; pointer-events:none; }
       [data-ymc-page-spectrum] canvas { display:block; width:100%; height:100%; opacity:var(--ymc-spectrum-alpha); }
       [data-ymc-app-backdrop]::after { content:""; position:absolute; inset:0; background:var(--ymc-media-dim,transparent); }
