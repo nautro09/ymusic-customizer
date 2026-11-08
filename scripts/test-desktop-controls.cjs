@@ -13,7 +13,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.7.2';
+          const version = localStorage.getItem('test:next-version') ?? '0.7.3';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -26,7 +26,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const ui = page.locator('#ymusic-customizer-root');
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.2/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.3/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -34,7 +34,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.7.2'));
+      .querySelector('#ymc-update-label').textContent.includes('0.7.3'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -43,15 +43,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.7.3');
+    await nextRelease('0.7.4');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.3');
-    await nextRelease('0.7.4');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.4');
+    await nextRelease('0.7.5');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -196,8 +196,29 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
         '</ul></nav><div><a class="PinItem_root__fixture" href="#pin" aria-label="Мой плейлист">Мой плейлист</a></div></div>');
       const root = document.querySelector('#vibe-fixture');
       const cover = root.querySelector('#fixture-track-cover');
-      cover.classList.add('VibePage_albumCover__fixture');
-      root.style.cssText = 'container-type:size;height:440px';
+      const artist = root.querySelector('[data-test-id=VIBE_DYNAMIC_ARTISTS] a');
+      artist.className = 'VibePage_text__fixture';
+      artist.style.cssText = 'font-size:56px;line-height:1';
+      artist.textContent = 'Имя исполнителя';
+      const titleBlock = document.createElement('div');
+      titleBlock.className = 'VibePage_textContainer__fixture VibePage_textContainer_withCover__fixture';
+      titleBlock.style.cssText = 'display:flex;align-items:flex-end;justify-content:center;height:155px';
+      artist.parentElement.before(titleBlock);
+      titleBlock.append(artist.parentElement);
+      const portrait = root.querySelector('[data-test-id=VIBE_ARTIST_COVER]');
+      portrait.style.cssText = 'position:absolute;inset:165px auto auto 50%;transform:translateX(-50%)';
+      const stage = document.createElement('div');
+      stage.className = 'VibePage_playerBlock__fixture';
+      stage.style.cssText = 'position:absolute;inset:auto 0 12px;height:120px';
+      stage.innerHTML = '<section class="VibePlayerBar_root__fixture" style="position:relative;height:100%">' +
+        '<div class="VibePage_albumCover__fixture AlbumCover_root__fixture" ' +
+        'style="position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);width:96px;height:96px"></div></section>';
+      stage.querySelector('.AlbumCover_root__fixture').append(cover);
+      cover.style.cssText = 'display:block;width:100%;height:100%';
+      root.append(stage);
+      root.style.cssText = 'container-type:size;height:580px;position:relative';
+      const profile = nav.querySelector('[class*="NavbarDesktopUserWidget_userProfileContainer__"]');
+      profile.style.cssText = 'display:flex;width:100%;flex-shrink:0';
       root.insertAdjacentHTML('afterbegin',
         '<div class="VibePage_vibeAnimation__fixture" style="opacity:1">Анимация</div>' +
         '<div class="VibePlayerControls_root__fixture">' +
@@ -224,7 +245,13 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await dockToggle.getAttribute('aria-expanded'), 'true');
     assert.equal(await ui.locator('#p-sidebarCompact').isChecked(), false);
     assert.equal(await navRoot.evaluate(el => getComputedStyle(el).scrollbarWidth), 'none');
-    assert.ok((await search.locator('span').boundingBox()).y > (await search.locator('svg').boundingBox()).y);
+    const searchIcon = await search.locator('svg').boundingBox();
+    assert.ok((await search.locator('span').boundingBox()).y > searchIcon.y);
+    const topBar = await navRoot.boundingBox();
+    const profile = await navRoot.locator('[class*="NavbarDesktopUserWidget_userProfileContainer__"]').boundingBox();
+    assert.ok(profile.y < searchIcon.y + searchIcon.height + 25 && profile.y + profile.height <= topBar.y + topBar.height);
+    const editorLeft = (await ui.locator('#ymc-editor').boundingBox()).x;
+    assert.ok(topBar.width > editorLeft - 45, { topBar, editorLeft });
     await ui.locator('#p-sidebarCompact').check();
     assert.ok(await search.locator('span').isHidden());
     await rows.filter({ hasText: 'Поиск' }).getByRole('button', { name: 'Скрыть: Поиск' }).click();
@@ -234,8 +261,21 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.match(await rows.first().textContent(), /Мой плейлист/);
     assert.ok((await page.locator('.PinItem_root__fixture').boundingBox()).x <
       (await page.locator('[data-test-id=NAVBAR_NAVIGATION_ITEM_HOME]').boundingBox()).x);
-    await docks.selectOption('right');
-    assert.equal(await navRoot.getAttribute('data-ymc-nav-dock'), 'right');
+    const edgeToggle = page.locator('[data-ymc-nav-edge]');
+    const layout = page.locator('.DefaultLayout_root__demo');
+    for (const side of ['top', 'bottom', 'left', 'right']) {
+      await docks.selectOption(side);
+      assert.equal(await edgeToggle.getAttribute('data-ymc-nav-edge'), side);
+      await edgeToggle.click();
+      assert.equal(await navRoot.getAttribute('data-ymc-nav-collapsed'), side);
+      assert.ok(await navRoot.evaluate(el => el.inert));
+      assert.equal(await layout.evaluate(el => el.style.getPropertyValue('--ymc-nav-reserve')), '0px');
+      assert.equal(await edgeToggle.getAttribute('aria-expanded'), 'false');
+      await edgeToggle.click();
+      assert.equal(await navRoot.getAttribute('data-ymc-nav-collapsed'), null);
+      assert.equal(await navRoot.evaluate(el => el.inert), false);
+      assert.equal(await edgeToggle.getAttribute('aria-expanded'), 'true');
+    }
     await ui.locator('#ymc-sidebar-reset').click();
     assert.equal(await search.isVisible(), true);
     assert.equal(await navRoot.getAttribute('data-ymc-nav-dock'), null);
@@ -243,8 +283,12 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await ui.locator('#ymc-home-track .section-toggle').click();
     const adaptive = ui.locator('#p-vibeAdaptiveCover');
     const trackArt = wave.locator('#fixture-track-cover');
+    const name = artist.locator('a');
+    const baseline = await trackArt.boundingBox();
+    const titleBaseline = await name.boundingBox();
     await adaptive.check();
     assert.equal(await trackArt.isHidden(), true);
+    assert.deepEqual(await name.boundingBox(), titleBaseline);
     await portrait.evaluate(el => { el.removeAttribute('src'); });
     await page.waitForFunction(() => {
       const img = document.querySelector('#fixture-track-cover');
@@ -257,7 +301,22 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const mediumCover = await coverWidth(70);
     const largeCover = await coverWidth(100);
     assert.ok(largeCover > mediumCover * 1.35, { mediumCover, largeCover });
+    const assertTitleClear = async () => {
+      const cover = await trackArt.boundingBox();
+      const title = await name.boundingBox();
+      assert.ok(cover.y >= title.y + title.height + 10, { cover, title });
+      assert.deepEqual(await name.boundingBox(), titleBaseline);
+    };
+    await assertTitleClear();
+    await wave.evaluate(el => { el.style.height = '450px'; });
+    await page.waitForFunction(previous => document.querySelector('#fixture-track-cover').getBoundingClientRect().width < previous - 30, largeCover);
+    await assertTitleClear();
+    await wave.evaluate(el => { el.style.height = '580px'; });
     await adaptive.uncheck();
+    assert.equal(await wave.getAttribute('data-ymc-track-art'), null);
+    assert.equal(await wave.locator('[data-ymc-sized-cover]').count(), 0);
+    assert.deepEqual(await trackArt.boundingBox(), baseline);
+    assert.deepEqual(await name.boundingBox(), titleBaseline);
     await portrait.evaluate((el, src) => { el.src = src; }, await trackArt.getAttribute('src'));
 
     await page.emulateMedia({ reducedMotion: 'reduce' });

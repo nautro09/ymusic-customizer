@@ -153,7 +153,7 @@ try {
         if (Test-Path -LiteralPath $pending -PathType Leaf) { Remove-Item -LiteralPath $pending -Force }
     }
     if ($movedDuplicate) { Write-Host ("Копия прежнего отключённого файла: " + $duplicateBackup) }
-    Write-Host 'YMusic Customizer v0.7.1 установлен.' -ForegroundColor Green
+    Write-Host 'YMusic Customizer v0.7.2 установлен.' -ForegroundColor Green
     if ($target -eq $disabled) {
         Write-Host 'Мод был отключён. Включите его в разделе «Моды», затем перезапустите приложение.'
     } else {

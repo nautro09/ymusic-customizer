@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.7.1 for Windows and macOS. MIT.
+ * YMusic Customizer v0.7.2 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.7.1';
+  const version = '0.7.2';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -87,7 +87,7 @@
     waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 63, waveTone: 36,
     waveClearRail: true, waveNativeOpacity: 100, vibeAdaptiveCover: false, vibeAdaptiveCoverSize: 78,
     sidebarDock: 'native', sidebarAlign: 'center', sidebarSize: 62, sidebarGap: 5, sidebarInset: 10,
-    sidebarCompact: true, sidebarOrder: '', sidebarHidden: '',
+    sidebarCompact: true, sidebarCollapsed: false, sidebarOrder: '', sidebarHidden: '',
     showCornerAppVersion: true, showCornerLoaderVersion: true, showCornerAudioFormat: true,
     patternEnabled: false, patternStyle: 'stars', patternScope: 'app', patternPalette: 'theme',
     patternPrimary: '#B5D4FF', patternSecondary: '#A88AFF', patternSymbols: '✦ ◇ ♪',
@@ -280,7 +280,7 @@
   const TOGGLES = ['enabled', 'manualScale', 'separateSurfaces', 'widePlayer', 'playerOverlay', 'visualizer', 'addonEnabled', 'addonPalette',
     'vibeAnimation', 'hideVibeTrack', 'hideVibeControls', 'appMediaEnabled', 'barCustom', 'barSpectrum', 'sidebarGradient',
     'showVibePortrait', 'showVibeArtist', 'showVibeHeading', 'showCornerAppVersion', 'showCornerLoaderVersion',
-    'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'sidebarCompact',
+    'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'sidebarCompact', 'sidebarCollapsed',
     'customVibeIcons', 'aiTrackCards', 'showVibeWheel', 'playlistButtons', 'likedCustom', 'likedTintImage',
     'customAccentStates', 'spectrumPeaks', 'customVibeButtons', 'hideVibeVolume', 'hideVibeMenu', 'hideVibeLike',
     'hideVibeDislike', 'hideVibeSkip', 'hideVibePlay', 'hideBarVolume', 'hideBarQueue', 'hideBarCover', 'hideBarTitle', 'hideBarArtist',
@@ -742,8 +742,6 @@
 
   function waveStyles(t) {
     const wavePage = '[data-ymc-on-wave]';
-    const hero = ':is([class*="VibePage_root__"],[data-test-id="VIBE_PAGE"]):not([class*="VibePage_bigCardPanel_opened__"])';
-    const stage = selector => scoped(hero + ' ' + selector);
     const clear = t.waveClearRail && t.vibeAnimation;
     return `
       ${t.vibeAnimation && t.waveStyle === 'custom' ? `
@@ -760,38 +758,19 @@
           overflow:visible !important;
         }
       ` : ''}
-      ${stage('[class*="VibePage_meta__"]')} {
-        justify-content:center !important; gap:clamp(4px,1.4cqh,14px) !important;
-        padding-inline:clamp(12px,3cqw,40px) !important;
-        padding-block:clamp(8px,3cqh,32px) !important;
-      }
-      ${stage(':is([class*="VibePage_entityMeta__"],[class*="VibePage_entityMetaBody__"])')} {
-        flex:0 0 auto !important; height:auto !important; max-height:none !important;
-      }
-      ${stage('[class*="VibePage_textContainer__"]')} {
-        position:relative !important; inset:auto !important; transform:none !important;
-        height:auto !important; padding-block-end:0 !important;
-      }
-      ${stage('[class*="VibePage_artistCover__"]')} {
-        flex:0 0 auto !important; height:clamp(48px,42cqh,30rem); margin-block-start:4px;
-      }
-      ${stage('[class*="VibePage_artistCover__"]:not(:has(' + PORTRAIT + ' img))')} { display:none !important; }
-      ${!t.showVibePortrait ? `${stage('[class*="VibePage_artistCover__"]')} { display:none !important; }` : ''}
-      ${stage('[class*="VibePage_playerBlock__"]')} { flex:0 0 auto !important; min-height:0; }
       ${t.vibeAdaptiveCover ? `
-        ${scoped('[data-ymc-track-art="portrait"] ' + VIBE_ALBUM)} { display:none !important; }
-        ${scoped('[data-ymc-track-art="cover"]')} {
-          --ymc-large-art:calc(max(24px,min(100cqw - 2rem,100cqh - 15rem,32rem)) * ${t.vibeAdaptiveCoverSize / 100});
-          --album-cover-size:var(--ymc-large-art) !important;
+        ${scoped('[data-ymc-track-art="portrait"] ' + VIBE_ALBUM)} {
+          visibility:hidden !important; pointer-events:none !important;
         }
-        ${scoped('[data-ymc-track-art="cover"] [class*="VibePage_meta__"]')} {
+        ${scoped('[data-ymc-track-art="cover"] [data-ymc-sized-cover]')} {
           --album-cover-size:var(--ymc-large-art) !important;
-        }
-        ${scoped('[data-ymc-track-art="cover"] ' + VIBE_ALBUM)} {
           width:var(--ymc-large-art) !important; height:var(--ymc-large-art) !important;
         }
-        ${scoped('[data-ymc-track-art="cover"] ' + VIBE_ALBUM + ' img')} {
+        ${scoped('[data-ymc-track-art="cover"] [data-ymc-sized-cover] img')} {
           width:100% !important; height:100% !important; object-fit:cover;
+        }
+        ${scoped('[data-ymc-track-art="cover"] [data-ymc-art-no-room]')} {
+          visibility:hidden !important; pointer-events:none !important;
         }
       ` : ''}
     `;
@@ -879,6 +858,55 @@
     }
   }
 
+  const WAVE_TITLES = '[class*="VibePage_text__"],[data-test-id="VIBE_DYNAMIC_TITLE_VIBE"],[data-test-id="VIBE_DYNAMIC_TITLE_GENERATIVE"]';
+  let sizedArt, sizedHero, artObserver, artTargets = [];
+
+  function resizeAdaptiveArt() {
+    if (!sizedArt?.isConnected || !sizedHero?.isConnected) return;
+    const frame = sizedHero.getBoundingClientRect();
+    const player = sizedArt.closest(SELECTOR.vibe);
+    const art = sizedArt.getBoundingClientRect();
+    if (!player) return;
+    const artBottom = Math.min(art.bottom, player.getBoundingClientRect().top);
+    let titleBottom = frame.top;
+    for (const title of artTargets.slice(2)) {
+      const box = title.getBoundingClientRect();
+      if (box.height && getComputedStyle(title).visibility === 'visible') titleBottom = Math.max(titleBottom, box.bottom);
+    }
+    const room = Math.floor(Math.min(352, frame.width * .66, artBottom - titleBottom - 12));
+    const size = Math.max(0, Math.floor(room * theme.vibeAdaptiveCoverSize / 100));
+    sizedArt.toggleAttribute('data-ymc-art-no-room', size < 16);
+    const css = Math.max(1, size) + 'px';
+    if (sizedArt.style.getPropertyValue('--ymc-large-art') !== css) sizedArt.style.setProperty('--ymc-large-art', css);
+  }
+
+  function syncAdaptiveArt(hero, portrait) {
+    const cover = hero && !portrait ? hero.querySelector(VIBE_ALBUM) : null;
+    const art = cover?.closest(SELECTOR.vibe) ? cover : null;
+    if (sizedArt !== art) {
+      sizedArt?.removeAttribute('data-ymc-sized-cover');
+      sizedArt?.removeAttribute('data-ymc-art-no-room');
+      sizedArt?.style.removeProperty('--ymc-large-art');
+      sizedArt = art;
+    }
+    sizedHero = hero;
+    const titles = art ? [...hero.querySelectorAll(WAVE_TITLES)] : [];
+    const targets = art ? [hero, art.closest(SELECTOR.vibe) || art, ...titles] : [];
+    if (targets.length !== artTargets.length || targets.some((node, index) => node !== artTargets[index])) {
+      artObserver?.disconnect();
+      artTargets = targets;
+      if (art) {
+        artObserver ||= new ResizeObserver(resizeAdaptiveArt);
+        for (const node of new Set(targets)) artObserver.observe(node);
+      }
+    }
+    if (art) {
+      // Measure the native anchor before applying the new dimensions on the first pass.
+      resizeAdaptiveArt();
+      art.setAttribute('data-ymc-sized-cover', '');
+    }
+  }
+
   function syncWaveMount(fullscreen) {
     const hero = !fullscreen && isStyled() ? [...document.querySelectorAll(VIBE_HERO)]
       .find(node => node.getClientRects().length && !node.closest('[aria-hidden="true"]')) : null;
@@ -888,9 +916,10 @@
     portraitNode = hero && theme.showVibePortrait && (theme.vibeAdaptiveCover || hasBeatAura(theme)) ? [...hero.querySelectorAll(SELECTOR.portrait)]
       .find(img => img.complete && img.naturalWidth > 0 && img.getClientRects().length &&
         getComputedStyle(img).visibility === 'visible') : undefined;
-    if (hero && theme.vibeAdaptiveCover) {
-      hero.dataset.ymcTrackArt = portraitNode ? 'portrait' : 'cover';
-    } else hero?.removeAttribute('data-ymc-track-art');
+    const adaptiveHero = theme.vibeAdaptiveCover && !hero?.matches('[class*="VibePage_bigCardPanel_opened__"]') ? hero : null;
+    if (adaptiveHero) adaptiveHero.dataset.ymcTrackArt = portraitNode ? 'portrait' : 'cover';
+    else hero?.removeAttribute('data-ymc-track-art');
+    syncAdaptiveArt(adaptiveHero, portraitNode);
     if (hero && recoloredWave(theme)) paintCustomWave(visualTheme());
     else if (waveKey) syncWavePalette(null);
   }
@@ -915,9 +944,10 @@
     [data-ymc-nav-dock]:is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="center"] { top:calc(50% + 12px); translate:0 -50%; }
     [data-ymc-nav-dock]:is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="end"] { bottom:var(--ymc-nav-bottom); }
     [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) {
-      flex-direction:row !important; flex-wrap:wrap; align-items:center; justify-content:center; width:max-content !important;
-      max-width:calc(100vw - var(--ymc-reserved-width) - var(--ymc-nav-inset) * 2);
-      min-height:var(--ymc-nav-size); max-height:32dvh; overflow-x:hidden;
+      flex-direction:row !important; flex-wrap:nowrap; align-items:center; justify-content:safe center;
+      inset-inline:var(--ymc-nav-inset) calc(var(--ymc-nav-inset) + var(--ymc-reserved-width));
+      width:auto !important; padding-inline-end:40px;
+      min-height:var(--ymc-nav-size); max-height:32dvh; overflow-x:auto; overflow-y:hidden;
     }
     [data-ymc-nav-dock] [class*="NavbarDesktop_collapseButton__"] { display:none !important; }
     [data-ymc-nav-toggle] {
@@ -926,7 +956,7 @@
     }
     [data-ymc-nav-toggle]:is(:hover,:focus-visible) { background:color-mix(in srgb,currentColor 13%,transparent); }
     [data-ymc-nav-toggle] svg { width:16px; height:16px; }
-    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) :is([data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[data-ymc-launcher]) {
+    [data-ymc-nav-dock][data-ymc-nav-edited]:not([data-ymc-nav-compact]) :is([data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[data-ymc-launcher]) {
       display:flex !important; flex-direction:column !important; justify-content:center; align-items:center;
       gap:3px !important; padding:4px 7px !important; width:auto !important; min-width:42px;
     }
@@ -942,13 +972,23 @@
       content:attr(data-ymc-pin-caption); display:block; font-size:11px; max-width:80px;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
-    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) [data-ymc-pin-caption] > [class*="Meta_"] { display:none !important; }
+    [data-ymc-nav-dock] [data-ymc-pin-caption] :is([class*="Pin_meta__"],[class*="Meta_"]) { display:none !important; }
     [data-ymc-nav-dock="top"] { top:var(--ymc-nav-top); }
     [data-ymc-nav-dock="bottom"] { bottom:var(--ymc-nav-bottom); }
     [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) > [data-ymc-launcher] { margin:0; }
-    [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="start"] { left:var(--ymc-nav-inset); }
-    [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="center"] { left:calc((100% - var(--ymc-reserved-width)) / 2); translate:-50% 0; }
-    [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="end"] { right:calc(var(--ymc-nav-inset) + var(--ymc-reserved-width)); }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="start"] { justify-content:safe start; }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="end"] { justify-content:safe end; }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) > [class*="NavbarDesktopUserWidget_"] {
+      width:auto !important; height:auto !important; padding:4px 6px !important; margin:0 !important;
+    }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-compact] :is([class*="NavbarDesktopUserWidget_userId"],[class*="NavbarDesktopUserWidget_userMeta"]) {
+      display:none !important;
+    }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]):not([data-ymc-nav-compact]) :is([class*="NavbarDesktopUserWidget_userProfileContainer__"],[class*="NavbarDesktopUserWidget_userProfile__"]) {
+      display:flex !important; flex-direction:column !important; align-items:center; gap:3px;
+    }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) [class*="NavbarDesktopUserWidget_userProfile__"] { margin:0 !important; }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) [class*="NavbarDesktop_logoWrapper__"] { max-width:145px; }
     [data-ymc-nav-dock] [data-ymc-nav-item] { margin:0 !important; }
     [data-ymc-nav-dock] [data-ymc-nav-item] :is(a,button) { max-width:100%; }
     [data-ymc-nav-compact] :is([class*="NavigationItem_title"],[class*="NavigationItem_description"],[class*="NavbarDesktop_title"],[class*="PinItem_title"],[class*="PinItem_description"],[class*="PinItem_text"],[class*="NavbarDesktopUserWidget_userInfo"],[data-ymc-launcher] span) { display:none !important; }
@@ -965,9 +1005,35 @@
     [data-ymc-nav-layout="right"] { padding-inline-end:var(--ymc-nav-reserve) !important; }
     [data-ymc-nav-layout="top"] { padding-block-start:calc(32px + var(--ymc-nav-reserve)) !important; }
     [data-ymc-nav-layout="bottom"] { padding-block-end:var(--ymc-nav-reserve) !important; }
+
+    [data-ymc-nav-dock], [data-ymc-nav-collapsed] { transition:opacity .18s ease,transform .18s ease,visibility .18s; }
+    [data-ymc-nav-collapsed] { visibility:hidden !important; opacity:0 !important; pointer-events:none !important; }
+    [data-ymc-nav-collapsed="left"] { transform:translateX(-100%) !important; }
+    [data-ymc-nav-collapsed="right"] { transform:translateX(100%) !important; }
+    [data-ymc-nav-collapsed="top"] { transform:translateY(calc(-100% - 36px)) !important; }
+    [data-ymc-nav-collapsed="bottom"] { transform:translateY(100%) !important; }
+    [data-ymc-nav-edge] {
+      position:fixed; z-index:13; display:grid; place-items:center; width:28px; height:28px; padding:0;
+      border:1px solid color-mix(in srgb,currentColor 16%,transparent); border-radius:8px;
+      color:var(--ym-controls-color-secondary-text-enabled,#eee);
+      background:color-mix(in srgb,var(--ym-background-color-primary-enabled-content,#292b33) 80%,transparent);
+      backdrop-filter:blur(12px); cursor:pointer; opacity:.76;
+    }
+    [data-ymc-nav-edge]:hover, [data-ymc-nav-edge]:focus-visible { opacity:1; }
+    [data-ymc-nav-edge]:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+    [data-ymc-nav-edge] svg { width:14px; height:14px; rotate:var(--ymc-edge-rotation,0deg); }
+    [data-ymc-nav-edge="left"] { left:var(--ymc-edge-offset); top:calc(50% - 14px); --ymc-edge-rotation:180deg; }
+    [data-ymc-nav-edge="right"] { right:calc(var(--ymc-reserved-width) + var(--ymc-edge-offset)); top:calc(50% - 14px); }
+    [data-ymc-nav-edge="top"] { top:calc(max(32px,var(--ymc-edge-inset)) + 6px); --ymc-edge-rotation:-90deg; }
+    [data-ymc-nav-edge="bottom"] { bottom:calc(var(--ymc-edge-inset) + 6px); --ymc-edge-rotation:90deg; }
+    :is([data-ymc-nav-edge="top"],[data-ymc-nav-edge="bottom"]) { right:calc(var(--ymc-reserved-width) + var(--ymc-edge-inset) + 6px); }
+    [data-ymc-nav-edge][aria-expanded="false"] svg { rotate:calc(var(--ymc-edge-rotation,0deg) + 180deg); }
+    @media (prefers-reduced-motion:reduce) {
+      [data-ymc-nav-dock], [data-ymc-nav-collapsed] { transition:none; }
+    }
   `;
 
-  let navRoot, navLayout, navSlot, navObserver, navToggle, navEntries = [], navMarked = new Set(), navMenuKey = '';
+  let navRoot, navLayout, navSlot, navObserver, navToggle, navEdgeToggle, navEntries = [], navMarked = new Set(), navMenuKey = '';
   function navKey(prefix, value) {
     if (!value) return prefix + ':';
     let hash = 2166136261;
@@ -980,12 +1046,14 @@
     const entries = [];
     for (const node of nodes) {
       if (entries.some(item => item.node.contains(node))) continue;
-      const control = node.matches('a,button') ? node : node.querySelector('a[href],button,[data-test-id]');
-      const label = (control?.getAttribute('aria-label') || node.getAttribute('aria-label') ||
+      const pinned = node.matches('[class*="PinItem_root__"]');
+      const control = pinned ? node.querySelector('[class*="Pin_link__"]') || node :
+        node.matches('a,button') ? node : node.querySelector('a[href],button,[data-test-id]');
+      const pinTitle = pinned ? node.querySelector('[class*="Pin_title__"]')?.textContent.trim() : '';
+      const label = (pinTitle || control?.getAttribute('aria-label') || node.getAttribute('aria-label') ||
         node.getAttribute('title') || node.textContent.trim() || control?.getAttribute('title') || '').slice(0, 100);
       const test = node.dataset.testId;
       const href = control?.getAttribute('href');
-      const pinned = node.matches('[class*="PinItem_root__"]');
       const logo = node.matches('[class*="NavbarDesktop_logoWrapper__"]');
       const key = logo ? 'logo' : pinned ? navKey('pin', href || label) : navKey('link', test || href || label);
       if (key.endsWith(':') || entries.some(item => item.key === key)) continue;
@@ -1039,27 +1107,66 @@
       ?.querySelector('[data-nav-action="' + action + '"]:not(:disabled)')?.focus({ preventScroll: true });
   }
 
-  function reserveHorizontalDock() {
-    if (!navRoot || !navLayout || !['top', 'bottom'].includes(navRoot.dataset.ymcNavDock)) return;
-    const size = Math.ceil(navRoot.getBoundingClientRect().height + theme.sidebarInset);
-    navLayout.style.setProperty('--ymc-nav-reserve', size + 'px');
+  const horizontalDock = dock => dock === 'top' || dock === 'bottom';
+  let collapsedNav, wasNavInert;
+
+  function setNavCollapsed(nav, edge) {
+    if (collapsedNav && collapsedNav !== nav) {
+      collapsedNav.removeAttribute('data-ymc-nav-collapsed');
+      collapsedNav.inert = wasNavInert;
+      collapsedNav = null;
+    }
+    if (!nav) return;
+    if (!collapsedNav) {
+      collapsedNav = nav;
+      wasNavInert = nav.inert;
+      nav.inert = true;
+    }
+    nav.dataset.ymcNavCollapsed = edge;
+  }
+
+  function syncDockGeometry() {
+    if (!navRoot || !navEdgeToggle.isConnected) return;
+    const dock = navRoot.dataset.ymcNavDock;
+    const rect = navRoot.getBoundingClientRect();
+    const collapsed = navRoot.hasAttribute('data-ymc-nav-collapsed');
+    if (navLayout && horizontalDock(dock)) {
+      navLayout.style.setProperty('--ymc-nav-reserve', collapsed ? '0px' : Math.ceil(rect.height + theme.sidebarInset) + 'px');
+    }
+    if (!horizontalDock(dock)) {
+      const offset = dock ? rect.width + theme.sidebarInset + 4 : rect.right + 4;
+      navEdgeToggle.style.setProperty('--ymc-edge-offset', (collapsed ? 4 : Math.ceil(offset)) + 'px');
+    }
+  }
+
+  function scrollDock(event) {
+    const dock = event.currentTarget;
+    if (!horizontalDock(dock.dataset.ymcNavDock) || dock.scrollWidth <= dock.clientWidth ||
+        event.ctrlKey || event.metaKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+    event.preventDefault();
+    dock.scrollLeft += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? dock.clientWidth : 1);
   }
 
   function syncSidebar(nav, fullscreen) {
-    const move = isStyled() && !fullscreen && nav && theme.sidebarDock !== 'native';
-    const edit = isStyled() && !fullscreen && nav && Boolean(move || theme.sidebarOrder || theme.sidebarHidden);
-    const layout = move ? nav.closest(SELECTOR.layout) : null;
-    const slot = move ? nav.closest('[class*="DefaultLayout_navbar__"]') : null;
+    const available = Boolean(isStyled() && !fullscreen && nav?.getClientRects().length);
+    const move = available && theme.sidebarDock !== 'native';
+    const collapsed = available && theme.sidebarCollapsed;
+    const edit = available && Boolean(move || theme.sidebarOrder || theme.sidebarHidden);
+    const edge = theme.sidebarDock === 'native' ? 'left' : theme.sidebarDock;
+    const layout = move || collapsed ? nav.closest(SELECTOR.layout) : null;
+    const slot = move || collapsed ? nav.closest('[class*="DefaultLayout_navbar__"]') : null;
     if (navRoot !== nav) {
       navRoot?.removeAttribute('data-ymc-nav-edited');
       navRoot?.removeAttribute('data-ymc-nav-dock');
       navRoot?.removeAttribute('data-ymc-nav-align');
       navRoot?.removeAttribute('data-ymc-nav-compact');
       navObserver?.disconnect();
+      navRoot?.removeEventListener('wheel', scrollDock);
       navRoot = nav;
       if (navRoot) {
-        navObserver ||= new ResizeObserver(reserveHorizontalDock);
+        navObserver ||= new ResizeObserver(syncDockGeometry);
         navObserver.observe(navRoot);
+        navRoot.addEventListener('wheel', scrollDock, { passive: false });
       }
     }
     if (navLayout !== layout) navLayout?.removeAttribute('data-ymc-nav-layout');
@@ -1067,6 +1174,16 @@
     navLayout = layout;
     navSlot = slot;
     slot?.toggleAttribute('data-ymc-nav-slot', true);
+    setNavCollapsed(collapsed ? nav : null, edge);
+    if (available) {
+      if (!navEdgeToggle.isConnected) document.body.append(navEdgeToggle);
+      navEdgeToggle.dataset.ymcNavEdge = edge;
+      navEdgeToggle.setAttribute('aria-expanded', String(!collapsed));
+      navEdgeToggle.title = collapsed ? 'Развернуть панель навигации' : 'Свернуть панель навигации';
+      navEdgeToggle.setAttribute('aria-label', navEdgeToggle.title);
+      navEdgeToggle.style.setProperty('--ymc-edge-inset', (collapsed ? 0 : theme.sidebarInset) + 'px');
+      if (layout) layout.dataset.ymcNavLayout = move ? edge : 'native-collapsed';
+    } else navEdgeToggle.remove();
     nav?.toggleAttribute('data-ymc-nav-edited', Boolean(edit));
     nav?.toggleAttribute('data-ymc-nav-compact', Boolean(move && theme.sidebarCompact));
     if (move) {
@@ -1076,14 +1193,12 @@
       navToggle.setAttribute('aria-expanded', String(!theme.sidebarCompact));
       navToggle.title = theme.sidebarCompact ? 'Показать подписи' : 'Скрыть подписи';
       navToggle.setAttribute('aria-label', navToggle.title);
-      if (layout) layout.dataset.ymcNavLayout = theme.sidebarDock;
       const side = ['left', 'right'].includes(theme.sidebarDock);
       const width = theme.sidebarCompact ? theme.sidebarSize : theme.sidebarSize + 104;
       nav.style.setProperty('--ymc-nav-inset', theme.sidebarInset + 'px');
       nav.style.setProperty('--ymc-nav-size', theme.sidebarSize + 'px');
       nav.style.setProperty('--ymc-nav-width', width + 'px');
-      if (side) layout?.style.setProperty('--ymc-nav-reserve', (width + theme.sidebarInset * 2) + 'px');
-      else reserveHorizontalDock();
+      if (side) layout?.style.setProperty('--ymc-nav-reserve', (collapsed ? 0 : width + theme.sidebarInset * 2) + 'px');
     } else {
       navToggle.remove();
       nav?.removeAttribute('data-ymc-nav-dock');
@@ -1119,6 +1234,7 @@
       node.style.removeProperty('--ymc-nav-order');
     }
     navMarked = next;
+    syncDockGeometry();
     renderNavMenu();
   }
 
@@ -4145,7 +4261,8 @@
                 <option value="end">В конце</option></select></label>
               ${check('sidebarCompact', 'Только значки, без подписей')}${range('sidebarSize', 'Размер панели')}
               ${range('sidebarGap', 'Расстояние между пунктами')}${range('sidebarInset', 'Отступ от края')}`)}
-            <p class="muted">Стрелки меняют порядок. Так можно поднять закреплённый плейлист выше обычных разделов.</p>
+            ${check('sidebarCollapsed', 'Свернуть панель целиком')}
+            <p class="muted">Кнопка у края сворачивает панель целиком и возвращает её на прежнее место. Стрелки меняют порядок. Так можно поднять закреплённый плейлист выше обычных разделов.</p>
             <p id="ymc-sidebar-status" class="muted" aria-live="polite"></p>
             <ul id="ymc-sidebar-items" class="sidebar-items" aria-label="Пункты панели"></ul>
             <button class="btn" id="ymc-sidebar-reset" type="button">Вернуть штатную панель</button>
@@ -5332,7 +5449,7 @@
     ['layout', 'ymc-home-visibility', 'Видимость кнопок',
       'Скройте весь ряд или отдельные кнопки воспроизведения, переключения, лайка, дизлайка, громкости и меню. Снимите нужную галочку, чтобы вернуть элемент. Нижний плеер настраивается отдельно.'],
     ['layout', 'ymc-home-sidebar', 'Панель навигации',
-      'Выберите сторону окна. Сверху и снизу панель становится горизонтальной. Привязка задаёт угол или центр. Стрелки рядом с пунктами меняют порядок, в том числе у закреплённых плейлистов. Скрытые пункты можно вернуть в этом же списке.'],
+      'Выберите сторону окна. Сверху и снизу панель становится горизонтальной. Привязка задаёт угол или центр. Кнопка у края скрывает и возвращает всю панель. Стрелки рядом с пунктами меняют порядок, в том числе у закреплённых плейлистов. Скрытые пункты можно вернуть в этом же списке.'],
     ['layout', 'ymc-home-animation', 'Анимация «Моей волны»',
       'Кастомная анимация перекрашивает привычное движение «Моей волны». В режиме «Авто» цветной фон даёт соседний тон, чёрный — серый, а белый берёт оттенок из обложки. Можно выбрать свой цвет, видимость и контраст. Прозрачная навигация убирает полосу поверх рисунка.'],
     ['layout', 'ymc-home-wave', 'Колесо и подсказки',
@@ -5342,7 +5459,7 @@
     ['layout', 'ymc-home-portrait', 'Портрет артиста',
       'Выберите мягкую ауру, обводку или плотное свечение. У плотного свечения мягкие края, а пульс заметнее. Цвет можно взять из темы, подобрать по фону или задать вручную. «Пульсировать в такт музыке» усиливает ауру на басовых ударах. Настройте силу, чувствительность и затухание. Силу можно поднять до 250%. Пульсация работает даже при скрытом эквалайзере.'],
     ['layout', 'ymc-home-track', 'Обложка и строка трека',
-      'Включите адаптивную обложку: с видимым портретом она скроется, без портрета займёт больше места между названием и управлением. Выберите размер. Прозрачность обложки и подложка строки трека настраиваются отдельно.'],
+      'Включите адаптивную обложку: с видимым портретом она скроется, без портрета займёт больше места между названием и управлением. Имя сохраняет штатный размер. Большая обложка занимает только свободное место под ним. Прозрачность обложки и подложка строки трека настраиваются отдельно.'],
     ['layout', 'ymc-home-badges', 'Значки в правом нижнем углу',
       'Здесь можно по отдельности убрать номер версии Яндекс Музыки, версию загрузчика и формат аудио, например FLAC. Показать можно только значки, которые предоставляет клиент или загрузчик.'],
     ['player', 'ymc-player-layout', 'Конструктор нижнего плеера',
@@ -5392,7 +5509,11 @@
       'Штатная анимация «Моей волны» перекрашивается без изменения движения. Все кнопки получают цвета темы.',
       'Плотная аура без контура, выровненный экран и исправленный размер крупной обложки.',
       'Подписи под значками панели, меню по группам и закрытые ручные разделы умной темы.'
-    ], steps: ['ymc-home-animation', 'ymc-home-portrait', 'ymc-home-track', 'ymc-home-sidebar', 'ymc-home-buttons', 'ymc-theme-smart'] }
+    ], steps: ['ymc-home-animation', 'ymc-home-portrait', 'ymc-home-track', 'ymc-home-sidebar', 'ymc-home-buttons', 'ymc-theme-smart'] },
+    { version: '0.7.2', notes: [
+      '«Моя волна» сохраняет штатный размер имени и раскладку. Крупная обложка ограничена местом между именем и плеером.',
+      'Горизонтальная навигация занимает доступную ширину. Кнопка у края сворачивает и возвращает всю панель.'
+    ], steps: ['ymc-home-track', 'ymc-home-sidebar'] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -5981,6 +6102,11 @@
     navToggle.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 5h12M4 10h12M6 15h8"/></svg>';
     navToggle.addEventListener('click', () => update({ sidebarCompact: !theme.sidebarCompact }));
 
+    navEdgeToggle = document.createElement('button');
+    navEdgeToggle.type = 'button';
+    navEdgeToggle.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 4 6 6-6 6"/></svg>';
+    navEdgeToggle.addEventListener('click', () => update({ sidebarCollapsed: !theme.sidebarCollapsed }));
+
     launcher = document.createElement('button');
     launcher.type = 'button';
     launcher.dataset.ymcLauncher = '';
@@ -6078,7 +6204,7 @@
     [...tabs, cssTab].forEach(button => button.addEventListener('click', () => openTab(button.dataset.tab)));
     $('ymc-show-catalog').addEventListener('click', () => openTab('library'));
     $('ymc-sidebar-reset').addEventListener('click', () => update(Object.fromEntries(
-      Object.entries(DEFAULT).filter(([key]) => ['sidebarDock','sidebarAlign','sidebarSize','sidebarGap','sidebarInset','sidebarCompact','sidebarOrder','sidebarHidden'].includes(key)))));
+      Object.entries(DEFAULT).filter(([key]) => ['sidebarDock','sidebarAlign','sidebarSize','sidebarGap','sidebarInset','sidebarCompact','sidebarCollapsed','sidebarOrder','sidebarHidden'].includes(key)))));
     $('ymc-sidebar-items').addEventListener('click', event => {
       const button = event.target.closest('[data-nav-action]');
       const id = button?.closest('li')?.dataset.navKey;
