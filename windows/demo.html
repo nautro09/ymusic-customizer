@@ -124,7 +124,8 @@
       for (let i = 0; i < length; i++) {
         const time = i / rate;
         const note = Math.sin(2 * Math.PI * time * 220) + Math.sin(2 * Math.PI * time * 330);
-        view.setInt16(44 + i * 2, 1700 * note * Math.sin(Math.PI * time) ** 2, true);
+        const bass = Math.sin(2 * Math.PI * time * 90) * Math.exp(-14 * (time % .5));
+        view.setInt16(44 + i * 2, 1700 * note * Math.sin(Math.PI * time) ** 2 + 4600 * bass, true);
       }
       return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
     }

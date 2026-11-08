@@ -13,7 +13,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.7.4';
+          const version = localStorage.getItem('test:next-version') ?? '0.7.5';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -26,7 +26,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const ui = page.locator('#ymusic-customizer-root');
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.4/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.5/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -34,7 +34,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.7.4'));
+      .querySelector('#ymc-update-label').textContent.includes('0.7.5'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -43,15 +43,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.7.5');
+    await nextRelease('0.7.6');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.5');
-    await nextRelease('0.7.6');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.6');
+    await nextRelease('0.7.7');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -69,6 +69,30 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await page.keyboard.press('Escape');
     assert.equal(await updateCard.isHidden(), true);
     assert.equal(await editor.isVisible(), true);
+
+    // The desktop client's startup can replace the body and reset its root styles.
+    const themeBackground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    await page.evaluate(() => {
+      const previous = document.body;
+      const next = document.createElement('body');
+      next.className = previous.className;
+      const owned = new Set([
+        document.getElementById('ymusic-customizer-root'),
+        document.getElementById('ymc-native-wave-tint').ownerSVGElement
+      ]);
+      next.append(...[...previous.childNodes].filter(node => !owned.has(node)));
+      previous.replaceWith(next);
+      document.getElementById('ymc-dynamic-theme').remove();
+      const root = document.documentElement;
+      root.removeAttribute('style');
+      root.removeAttribute('data-ymc-active');
+      root.removeAttribute('data-ymc-editor-open');
+    });
+    await page.waitForFunction(background => getComputedStyle(document.body).backgroundColor === background &&
+      document.documentElement.hasAttribute('data-ymc-editor-open') &&
+      document.documentElement.style.getPropertyValue('--ymc-paint-0'), themeBackground);
+    assert.equal(await ui.locator('#ymc-close').isVisible(), true);
+    assert.equal(await page.locator('#ymc-native-wave-tint').count(), 1);
 
     const handle = ui.getByRole('separator', { name: 'Ширина редактора' });
     const width = () => editor.evaluate(node => Math.round(node.getBoundingClientRect().width));
@@ -278,18 +302,23 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
         const symbol = el.querySelector('[data-ymc-nav-symbol] svg');
         const pin = el.querySelector('[data-ymc-nav-cell="pin"]');
         const avatar = el.querySelector('.UserProfile_avatarContainer__fixture');
+        const profile = el.querySelector('[data-ymc-nav-cell="profile"]');
+        const fold = el.querySelector('[data-ymc-nav-cell="fold"]');
         return {
           panel: size(el), cells: [...el.querySelectorAll('[data-ymc-nav-cell]')].map(size),
           icon: size(symbol), pin: size(pin.querySelector('[data-ymc-nav-symbol]')), avatar: size(avatar),
+          profile: size(profile), fold: size(fold),
           scroll: [el.scrollWidth - el.clientWidth, el.scrollHeight - el.clientHeight]
         };
       });
-      const { panel, cells, icon, pin, avatar, scroll } = geometry;
+      const { panel, cells, icon, pin, avatar, profile, fold, scroll } = geometry;
       assert.ok(scroll[0] <= 1 && scroll[1] <= 1, JSON.stringify({ side, compact, scroll }));
       assert.ok(cells.every(cell => cell.x >= panel.x && cell.right <= panel.right &&
         cell.y >= panel.y && cell.bottom <= panel.bottom), JSON.stringify({ side, compact, panel, cells }));
       const center = box => horizontal ? box.y + box.height / 2 : box.x + box.width / 2;
       for (const box of [pin, avatar]) assert.ok(Math.abs(center(box) - center(icon)) <= 1, JSON.stringify({ side, compact, icon, box }));
+      const gap = horizontal ? fold.x - profile.right : fold.y - profile.bottom;
+      assert.ok(gap >= 0 && gap <= 16, JSON.stringify({ side, compact, fold, profile }));
       const logo = navRoot.locator('[data-ymc-nav-brand-part="' + (compact ? 'mark' : 'full') + '"] svg');
       const logoBox = await logo.boundingBox();
       const brandCell = await navRoot.locator('[data-ymc-nav-cell="brand"]').boundingBox();
@@ -333,12 +362,14 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await edgeToggle.click();
       assert.equal(await navRoot.getAttribute('data-ymc-nav-collapsed'), side);
       assert.ok(await navRoot.evaluate(el => el.inert));
+      assert.equal(await edgeToggle.evaluate(el => el.parentElement === document.body), true);
       assert.equal(await layout.evaluate(el => el.style.getPropertyValue('--ymc-nav-reserve')), '0px');
       assert.equal(await edgeToggle.getAttribute('aria-expanded'), 'false');
       await edgeToggle.click();
       assert.equal(await navRoot.getAttribute('data-ymc-nav-collapsed'), null);
       assert.equal(await navRoot.evaluate(el => el.inert), false);
       assert.equal(await edgeToggle.getAttribute('aria-expanded'), 'true');
+      assert.equal(await edgeToggle.getAttribute('data-ymc-nav-cell'), 'fold');
     }
     await ui.locator('#ymc-sidebar-reset').click();
     assert.equal(await search.isVisible(), true);
