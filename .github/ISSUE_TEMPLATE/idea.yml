@@ -1,0 +1,16 @@
+name: Предложить идею
+description: Новый эффект, настройка или улучшение интерфейса
+title: '[Идея]: '
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Что хочется изменить?
+      description: Укажите экран или вкладку и опишите, как должна работать настройка.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Пример или референс
+      description: Можно добавить ссылку или скриншот без данных аккаунта.

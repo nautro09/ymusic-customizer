@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 330" width="1200" height="330" role="img" aria-labelledby="title desc">
+  <title id="title">YMusic Customizer</title>
+  <desc id="desc">Музыка звучит как прежде. Выглядит по-твоему.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#161123"/>
+      <stop offset="1" stop-color="#251633"/>
+    </linearGradient>
+    <radialGradient id="light">
+      <stop stop-color="#82285e" stop-opacity=".65"/>
+      <stop offset="1" stop-color="#82285e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="signal" x1="0" x2="1">
+      <stop stop-color="#ffa17b"/>
+      <stop offset=".55" stop-color="#f66cb3"/>
+      <stop offset="1" stop-color="#a990ff"/>
+    </linearGradient>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0v28" fill="none" stroke="#e6c2ff" stroke-opacity=".09"/>
+    </pattern>
+    <clipPath id="frame"><rect x="1" y="1" width="1198" height="328" rx="25"/></clipPath>
+  </defs>
+  <g clip-path="url(#frame)">
+    <path fill="url(#background)" d="M0 0h1200v330H0z"/>
+    <ellipse cx="1028" cy="160" rx="420" ry="260" fill="url(#light)"/>
+    <path fill="url(#grid)" d="M685 0h515v330H685z"/>
+    <path d="M686 181h35l17-24 18 41 28-81 24 112 31-152 30 196 34-228 31 251 33-219 27 148 26-87 25 64 18-39 19 18h84" fill="none" stroke="#0e0b17" stroke-opacity=".35" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M686 181h35l17-24 18 41 28-81 24 112 31-152 30 196 34-228 31 251 33-219 27 148 26-87 25 64 18-39 19 18h84" fill="none" stroke="url(#signal)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+      <text x="56" y="78" fill="#f9b698" font-size="15" font-weight="700" letter-spacing="3">МОД ДЛЯ ЯНДЕКС МУЗЫКИ</text>
+      <text x="52" y="162" fill="#fff5fd" font-size="67" font-weight="800" letter-spacing="-2">YMusic Customizer</text>
+      <text x="57" y="207" fill="#e7d5ed" font-size="25">Музыка звучит как прежде. Выглядит по-твоему.</text>
+      <rect x="56" y="250" width="191" height="36" rx="18" fill="#ffffff" fill-opacity=".08" stroke="#d9b9ee" stroke-opacity=".4"/>
+      <text x="74" y="274" fill="#f2e4f7" font-size="15" font-weight="600">macOS  ·  Windows</text>
+    </g>
+  </g>
+  <rect x="1" y="1" width="1198" height="328" rx="25" fill="none" stroke="#d9b9ee" stroke-opacity=".28" stroke-width="2"/>
+</svg>

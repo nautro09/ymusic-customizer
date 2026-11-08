@@ -22,7 +22,17 @@ cp "$project/macos/Info.plist" "$contents/Info.plist"
 cp "$project/macos/"{bootstrap,preload,discord,discord-activity}.cjs "$contents/Resources/"
 cp "$project/mod/ymusic-customizer.js" "$project/LICENSE" "$project/licenses/Next-Music-Client-MIT.txt" "$contents/Resources/"
 python3 "$project/../scripts/embed-update-key.py" "$contents/Resources/update.cjs"
-/usr/bin/codesign --force --sign - --timestamp=none "$app"
+if [[ -n "${YMC_MACOS_SIGN_IDENTITY:-}" ]]; then
+    /usr/bin/codesign --force --sign "$YMC_MACOS_SIGN_IDENTITY" --options runtime --timestamp "$app"
+    # Accept a certificate name or fingerprint, but reject other certificate types.
+    signature=$(/usr/bin/codesign -dv --verbose=4 "$app" 2>&1)
+    if [[ "$signature" != *$'\nAuthority=Developer ID Application:'* ]]; then
+        printf '%s\n' 'Для выпуска нужен сертификат Developer ID Application.' >&2
+        exit 1
+    fi
+else
+    /usr/bin/codesign --force --sign - --timestamp=none "$app"
+fi
 /usr/bin/codesign --verify --strict "$app"
 
 target="$destination/${app##*/}"

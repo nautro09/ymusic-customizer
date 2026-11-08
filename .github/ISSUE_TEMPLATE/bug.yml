@@ -1,0 +1,33 @@
+name: Сообщить о проблеме
+description: Ошибка при установке, обновлении или работе Customizer
+title: '[Ошибка]: '
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Система
+      options:
+        - macOS
+        - Windows
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Версии Customizer, Яндекс Музыки и системы
+      description: Версия Customizer указана в верхней части редактора. Если он не открывается, укажите версию релиза.
+      placeholder: Customizer 0.5.6, Яндекс Музыка 5.125.3, macOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Что произошло и как повторить
+      description: Опишите шаги, ожидаемый результат и точный текст ошибки.
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Скриншоты
+      description: Перед загрузкой уберите из кадра данные аккаунта, личные пути и токены.
