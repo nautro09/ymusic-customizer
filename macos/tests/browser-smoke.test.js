@@ -17,7 +17,7 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
-        checkUpdate: async () => ({ available: true, version: '0.7.1', notes: 'Новая версия для проверки' }),
+        checkUpdate: async () => ({ available: true, version: '0.7.2', notes: 'Новая версия для проверки' }),
         installUpdate: async () => {
           window.ymcInstallRequested = true;
           return { error: 'Тестовая установка остановлена.' };
@@ -31,7 +31,7 @@ async function run() {
         ...(platform === 'Win32' ? {} : { reportTrack: track => { window.lastDiscordTrack = track; } })
       };
       if (!localStorage.getItem('ymc:theme:v1')) {
-        localStorage.setItem('ymc:last-version', '0.7.0');
+        localStorage.setItem('ymc:last-version', '0.7.1');
         localStorage.setItem('ymc:theme:v1', JSON.stringify({ version: 1, name: 'Старая тема', round: 9, customCss: 'body{--legacy:1}' }));
       }
     }, process.env.YMC_TEST_PLATFORM);
@@ -55,7 +55,7 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
-    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.7.1').waitFor();
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.7.2').waitFor();
     assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
     await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
@@ -667,7 +667,7 @@ async function run() {
     }
     assert.equal(await guide.isHidden(), true);
     assert.equal(await offer.isHidden(), true);
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.7.0');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.7.1');
     await page.reload();
     await launcher.click();
     assert.equal(await offer.isHidden(), true);
@@ -677,7 +677,7 @@ async function run() {
     });
     await page.reload();
     await ui.locator('#ymc-whats-new').waitFor();
-    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0.5.6 до v0.7.0/);
+    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0.5.6 до v0.7.1/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /v0.6.0/);
     await ui.locator('#ymc-release-guide').click();
     assert.match(await progress.textContent(), /Шаг 1 из 12/);
@@ -886,7 +886,11 @@ async function run() {
       mode: 'solid', barSpectrum: true, spectrumStyle: 'bars', spectrumGradient: 'vertical', smartSpectrum: true,
       spectrumStart: '#DE2020', spectrumMid: '#28DF35', spectrumEnd: '#254CE0', smartSpectrumAmount: 70
     }));
-    assert.equal(await page.locator('body').evaluate(el => getComputedStyle(el).backgroundImage), 'none');
+    const backgroundImage = () => page.locator('body').evaluate(el => getComputedStyle(el).backgroundImage);
+    assert.match(await backgroundImage(), /^linear-gradient/, 'smart gradient owns the background even with a saved solid mode');
+    await ui.locator('#p-smartGradient').uncheck();
+    assert.equal(await backgroundImage(), 'none');
+    await ui.locator('#p-smartGradient').check();
     await ui.locator('#ymc-spectrum-show-preview').click();
     await page.waitForFunction(() => {
       const preview = document.querySelector('#ymusic-customizer-root').shadowRoot.querySelector('#ymc-spectrum-preview');

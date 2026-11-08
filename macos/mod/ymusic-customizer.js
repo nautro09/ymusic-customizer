@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.7.0 for Windows and macOS. MIT.
+ * YMusic Customizer v0.7.1 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.7.0';
+  const version = '0.7.1';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -84,7 +84,7 @@
     vibeCoverOpacity: 100, vibeTrackOpacity: 100, vibeControlsOpacity: 100,
     vibeAnimation: true, hideVibeTrack: false, hideVibeControls: false, appMediaEnabled: true,
     showVibePortrait: true, showVibeArtist: true, showVibeHeading: true,
-    waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 63, waveSpeed: 20, waveTone: 36,
+    waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 63, waveTone: 36,
     waveClearRail: true, waveNativeOpacity: 100, vibeAdaptiveCover: false, vibeAdaptiveCoverSize: 78,
     sidebarDock: 'native', sidebarAlign: 'center', sidebarSize: 62, sidebarGap: 5, sidebarInset: 10,
     sidebarCompact: true, sidebarOrder: '', sidebarHidden: '',
@@ -117,7 +117,6 @@
     portraitEffect: 'off', portraitColorSource: 'theme', portraitColor: '#A855F7',
     portraitOutline: 3, portraitSpread: 24, portraitIntensity: 80,
     portraitBeat: false, portraitBeatStrength: 70, portraitBeatSensitivity: 70, portraitBeatRelease: 260,
-    portraitRibbonWidth: 11, portraitRibbonShape: 52, portraitRibbonSpeed: 72,
     smartTheme: false, smartTransition: 2200, smartStrength: 92, smartPaletteStyle: 'balanced',
     ...Object.fromEntries(smartGroups.flatMap(key => [[key, true], [key + 'Amount', 100]])),
     motionEnabled: false, motionDuration: 420, motionCurve: 'smooth', motionCards: true,
@@ -225,7 +224,7 @@
     arial: 'Arial, sans-serif', verdana: 'Verdana, sans-serif'
   };
   const CHOICE = {
-    waveStyle: ['native', 'mist', 'ribbons', 'orbits'], wavePalette: ['auto', 'cover', 'custom'],
+    waveStyle: ['native', 'custom'], wavePalette: ['auto', 'cover', 'custom'],
     sidebarDock: ['native', 'left', 'right', 'top', 'bottom'], sidebarAlign: ['start', 'center', 'end'],
     mode: ['solid', 'gradient', 'image', 'cover'], font: Object.keys(FONTS),
     spectrumPlacement: ['bar', 'page'], spectrumStyle: ['bars', 'line', 'wave', 'segments', 'dots'],
@@ -235,7 +234,7 @@
     playlistGradient: ['native', 'palette', 'theme', 'solid', 'off'],
     likedShape: ['native', 'star', 'diamond', 'image'], likedMotion: ['off', 'pulse', 'sparkle'],
     mediaFit: ['cover', 'contain'], barFit: ['cover', 'contain'], barImagePosition: ['center', 'top', 'bottom'],
-    portraitEffect: ['off', 'glow', 'outline', 'both', 'ribbon'], portraitColorSource: ['theme', 'background', 'custom'],
+    portraitEffect: ['off', 'glow', 'outline', 'both', 'bloom'], portraitColorSource: ['theme', 'background', 'custom'],
     patternStyle: Object.keys(PATTERNS), patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
     patternMotion: ['still', 'drift', 'shimmer', 'both'], patternDirection: Object.keys(PATTERN_DIRECTIONS),
     smartPaletteStyle: Object.keys(PALETTE_VARIANTS),
@@ -249,9 +248,8 @@
     'playlistButtonHover', 'playlistSearchFill', 'playlistSearchText', 'barButtonFill', 'barButtonText', 'barButtonHover',
     'portraitColor', 'navigationFill', 'navigationText', 'patternPrimary', 'patternSecondary'];
   const RANGES = {
-    waveNativeOpacity: [0, 100, '%'], waveOpacity: [0, 100, '%'], waveSpeed: [4, 60, 'с'], waveTone: [10, 72, '%'],
+    waveNativeOpacity: [0, 100, '%'], waveOpacity: [0, 100, '%'], waveTone: [10, 72, '%'],
     vibeAdaptiveCoverSize: [35, 100, '%'], sidebarSize: [44, 120, 'px'], sidebarGap: [0, 28, 'px'], sidebarInset: [0, 36, 'px'],
-    portraitRibbonWidth: [3, 28, 'px'], portraitRibbonShape: [0, 100, '%'], portraitRibbonSpeed: [10, 160, '%'],
     blur: [0, 40, 'px'], round: [0, 40, 'px'], panelOpacity: [0, 100, '%'], barOpacity: [0, 100, '%'],
     backgroundDim: [0, 80, '%'], gradientAngle: [0, 360, '°'], cardRound: [0, 40, 'px'], scale: [85, 125, '%'],
     vibeCoverOpacity: [0, 100, '%'], vibeTrackOpacity: [0, 100, '%'], vibeControlsOpacity: [0, 100, '%'],
@@ -318,6 +316,9 @@
     for (const [key, values] of Object.entries(CHOICE)) {
       if (values.includes(value[key])) safe[key] = value[key];
     }
+    // Imported 0.7.0 themes retain an effect after the old animation and contour are replaced.
+    if (['mist', 'ribbons', 'orbits'].includes(value.waveStyle)) safe.waveStyle = 'custom';
+    if (value.portraitEffect === 'ribbon') safe.portraitEffect = 'bloom';
     for (const key of TOGGLES) {
       if (typeof value[key] === 'boolean') safe[key] = value[key];
     }
@@ -488,7 +489,9 @@
     if (passing.length) return passing[0].color;
     return [ink, ...candidates.map(({ color }) => color)].sort((a, b) => score(b) - score(a))[0];
   }
-  const smartOn = (t, group) => Boolean(t.coverColors && t[group] && t[group + 'Amount'] && t.smartStrength);
+  const smartGroupEnabled = (t, group) => Boolean(t.enabled && t.smartTheme && t[group] && t[group + 'Amount'] && t.smartStrength);
+  const smartOn = (t, group) => Boolean(t.coverColors && smartGroupEnabled(t, group));
+  const smartOwnsBackdrop = t => smartGroupEnabled(t, 'smartBackground') || smartGroupEnabled(t, 'smartGradient');
   const guardedInk = (t, ink, fill) => t.contrastGuard ? readableText(ink, fill, t.contrastLevel / 10) : ink;
   const blendedFill = (fill, opacity, behind) => mixHex(behind, fill, opacity / 100);
   const panelFill = (t, fill = t.panel) => blendedFill(fill, t.panelOpacity, t.background);
@@ -637,7 +640,7 @@
   }
 
   function portraitFilter(t, color) {
-    if (['off', 'ribbon'].includes(t.portraitEffect) || t.portraitIntensity === 0) return 'none';
+    if (['off', 'bloom'].includes(t.portraitEffect) || t.portraitIntensity === 0) return 'none';
     const glow = t.portraitEffect !== 'outline' ? `
       <feMorphology in="SourceAlpha" operator="dilate" radius="${t.portraitSpread / 6}" result="spread"/>
       <feGaussianBlur in="spread" stdDeviation="${t.portraitSpread / 3}" result="soft"/>
@@ -653,7 +656,7 @@
     return cssUrl('data:image/svg+xml,' + encodeURIComponent(svg) + '#portrait');
   }
 
-  const hasPortraitAura = t => t.showVibePortrait && t.portraitIntensity > 0 && ['glow', 'both', 'ribbon'].includes(t.portraitEffect);
+  const hasPortraitAura = t => t.showVibePortrait && t.portraitIntensity > 0 && ['glow', 'both', 'bloom'].includes(t.portraitEffect);
   const hasBeatAura = t => hasPortraitAura(t) && t.portraitBeat && t.portraitBeatStrength > 0;
 
   const navigationFill = t => t.navigationCustom ? blendedFill(t.navigationFill, t.navigationOpacity, t.background) : t.background;
@@ -723,51 +726,66 @@
     `;
   }
 
-  function waveTransportStyles(paint, playInk, pauseInk) {
-    const button = VIBE_TRANSPORT + ' ' + VIBE_PLAY;
-    const icon = ':is(svg,[class*="VibePlayerControls_playButtonIcon__"])';
-    const playing = ':is([class*="_playButton_playing__"],[aria-label="Пауза" i],[aria-label="Pause" i],[data-test-id="PAUSE_BUTTON"],[data-playing="true"])';
-    const foreground = (selector, ink) => `
-      ${scoped(selector)} { --accent-color:${paint(ink)} !important; color:${paint(ink)} !important; }
-      ${scoped(selector + ' ' + icon)} { --accent-color:inherit !important; color:inherit !important; opacity:1 !important; }
-      ${scoped(selector + ' svg:not([fill="none"]), ' + selector + ' svg :is([fill]:not([fill="none"]),use:not([stroke],[fill="none"]))')} { fill:currentColor !important; }
-      ${scoped(selector + ' svg[stroke]:not([stroke="none"]), ' + selector + ' svg [stroke]:not([stroke="none"])')} { stroke:currentColor !important; }
+  function waveButtonInk(t, paint, ordinaryInk, playInk) {
+    const controls = VIBE_TRANSPORT + ' :is(button,[role="button"])';
+    const play = VIBE_TRANSPORT + ' ' + VIBE_PLAY;
+    const styledHeart = t.likedCustom || smartOn(t, 'smartHeart');
+    const svg = ':is(svg' + (styledHeart ? ':not(' + SELECTOR.liked + ')' : '') + ')';
+    const paintInk = (selector, color) => `
+      ${scoped(selector)} { --accent-color:${paint(color)} !important; color:var(--accent-color) !important; }
+      ${scoped(selector + ' ' + svg)} { --accent-color:inherit !important; color:var(--accent-color) !important; opacity:1 !important; }
+      ${scoped(selector + ' ' + svg + ':not([fill="none"]), ' + selector + ' ' + svg + ' :is([fill]:not([fill="none"]),use:not([stroke],[fill="none"]))')} { fill:currentColor !important; }
+      ${scoped(selector + ' ' + svg + '[stroke]:not([stroke="none"]), ' + selector + ' ' + svg + ' [stroke]:not([stroke="none"])')} { stroke:currentColor !important; }
     `;
-    return foreground(button + ':not(' + playing + ')', playInk) + foreground(button + playing, pauseInk);
+    return paintInk(controls + ':not(' + VIBE_PLAY + ')', ordinaryInk) + paintInk(play, playInk);
   }
 
-  function waveStyles(t, nativeWave) {
+  function waveStyles(t) {
     const wavePage = '[data-ymc-on-wave]';
+    const hero = ':is([class*="VibePage_root__"],[data-test-id="VIBE_PAGE"]):not([class*="VibePage_bigCardPanel_opened__"])';
+    const stage = selector => scoped(hero + ' ' + selector);
     const clear = t.waveClearRail && t.vibeAnimation;
     return `
-      ${t.waveStyle !== 'native' ? `${scoped(SELECTOR.vibeAnimation)} { visibility:hidden !important; }` : ''}
+      ${t.vibeAnimation && t.waveStyle === 'custom' ? `
+        ${scoped(SELECTOR.vibeAnimation)} { filter:url(#ymc-native-wave-tint) !important; }
+      ` : ''}
       ${clear ? `
         ${ACTIVE}${wavePage} :is([class*="DefaultLayout_navbar__"],${SELECTOR.navbar}) {
           background:transparent !important; backdrop-filter:none !important; box-shadow:none !important;
         }
         ${ACTIVE}${wavePage} [class*="NavbarDesktop_scrollableContainer__"]::before,
         ${ACTIVE}${wavePage} [class*="NavbarDesktop_scrollableContainer__"]::after { background:none !important; }
-        ${nativeWave ? `
-          ${ACTIVE}${wavePage} { overflow-x:clip; }
-          ${ACTIVE}${wavePage} :is([class*="Content_root__"],[class*="Content_main__"]):has([class*="VibePage_vibeAnimation__"]) {
-            overflow:visible !important;
-          }
-        ` : ''}
+        ${ACTIVE}${wavePage} { overflow-x:clip; }
+        ${ACTIVE}${wavePage} :is([class*="Content_root__"],[class*="Content_main__"]):has([class*="VibePage_vibeAnimation__"]) {
+          overflow:visible !important;
+        }
       ` : ''}
+      ${stage('[class*="VibePage_meta__"]')} {
+        justify-content:center !important; gap:clamp(4px,1.4cqh,14px) !important;
+        padding-inline:clamp(12px,3cqw,40px) !important;
+        padding-block:clamp(8px,3cqh,32px) !important;
+      }
+      ${stage(':is([class*="VibePage_entityMeta__"],[class*="VibePage_entityMetaBody__"])')} {
+        flex:0 0 auto !important; height:auto !important; max-height:none !important;
+      }
+      ${stage('[class*="VibePage_textContainer__"]')} {
+        position:relative !important; inset:auto !important; transform:none !important;
+        height:auto !important; padding-block-end:0 !important;
+      }
+      ${stage('[class*="VibePage_artistCover__"]')} {
+        flex:0 0 auto !important; height:clamp(48px,42cqh,30rem); margin-block-start:4px;
+      }
+      ${stage('[class*="VibePage_artistCover__"]:not(:has(' + PORTRAIT + ' img))')} { display:none !important; }
+      ${!t.showVibePortrait ? `${stage('[class*="VibePage_artistCover__"]')} { display:none !important; }` : ''}
+      ${stage('[class*="VibePage_playerBlock__"]')} { flex:0 0 auto !important; min-height:0; }
       ${t.vibeAdaptiveCover ? `
-        ${scoped('[data-ymc-track-art="portrait"] ' + VIBE_ALBUM)} { visibility:hidden !important; pointer-events:none !important; }
+        ${scoped('[data-ymc-track-art="portrait"] ' + VIBE_ALBUM)} { display:none !important; }
         ${scoped('[data-ymc-track-art="cover"]')} {
-          --ymc-large-art:clamp(4rem, ${Math.round(t.vibeAdaptiveCoverSize * .47)}cqh, min(42vw,22rem));
+          --ymc-large-art:calc(max(24px,min(100cqw - 2rem,100cqh - 15rem,32rem)) * ${t.vibeAdaptiveCoverSize / 100});
           --album-cover-size:var(--ymc-large-art) !important;
         }
         ${scoped('[data-ymc-track-art="cover"] [class*="VibePage_meta__"]')} {
           --album-cover-size:var(--ymc-large-art) !important;
-        }
-        ${scoped('[data-ymc-track-art="cover"] [class*="VibePage_playerBlock__"]')} {
-          flex-basis:auto !important;
-        }
-        ${scoped('[data-ymc-track-art="cover"] [class*="VibePage_textContainer_withCover__"]')} {
-          position:relative !important; transform:none !important; height:100% !important;
         }
         ${scoped('[data-ymc-track-art="cover"] ' + VIBE_ALBUM)} {
           width:var(--ymc-large-art) !important; height:var(--ymc-large-art) !important;
@@ -779,37 +797,26 @@
     `;
   }
 
-  const EFFECT_STYLES = `
-    body:has(> [data-ymc-wave-effect]) { isolation:isolate; }
-    [data-ymc-wave-effect] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-1;
-      pointer-events:none; overflow:hidden; opacity:var(--ymc-wave-alpha,.6); transition:opacity .3s ease; }
-    [data-ymc-wave-effect] i { display:block; position:absolute; inset:8% 7%; border-radius:50%; color:var(--ymc-wave-ink);
-      background:radial-gradient(ellipse at 37% 50%,currentColor 0%,transparent 66%);
-      transform:translate(-8%,-4%) scale(1.08); opacity:.84; }
-    [data-ymc-wave-effect] i:nth-child(2) { color:var(--ymc-wave-secondary); transform:translate(14%,13%) rotate(-24deg); opacity:.72; }
-    [data-ymc-wave-effect] i:nth-child(3) { transform:translate(-15%,21%) rotate(26deg); opacity:.48; }
-    [data-ymc-wave-effect="ribbons"] i {
-      background:radial-gradient(ellipse at 50% 76%,transparent 38%,currentColor 55%,transparent 71%);
-      inset:-6% -2%; }
-    [data-ymc-wave-effect="orbits"] i {
-      background:radial-gradient(ellipse at center,transparent 34%,currentColor 52%,transparent 67%);
-      inset:2% 12%; }
-    @media (prefers-reduced-motion:no-preference) {
-      [data-ymc-wave-effect] i { animation:ymc-wave-motion var(--ymc-wave-speed,20s) ease-in-out infinite alternate; }
-      [data-ymc-wave-effect] i:nth-child(2) { animation-delay:calc(var(--ymc-wave-speed,20s) * -.65); animation-direction:alternate-reverse; }
-      [data-ymc-wave-effect] i:nth-child(3) { animation-delay:calc(var(--ymc-wave-speed,20s) * -.32); animation-duration:calc(var(--ymc-wave-speed,20s) * 1.41); }
-      [data-ymc-wave-effect][data-paused] i { animation-play-state:paused; }
-      @keyframes ymc-wave-motion { from { translate:-9% -7%; rotate:-24deg; scale:.87 1.02; } to { translate:13% 9%; rotate:21deg; scale:1.16 .92; } }
+  const AURA_STYLE = `
+    [data-ymc-aura-host] { position:relative; isolation:isolate; }
+    [data-ymc-portrait-aura] {
+      position:absolute; z-index:-1; overflow:clip; pointer-events:none;
+      opacity:clamp(0,calc(var(--ymc-aura-alpha,.8) * (.82 + var(--ymc-aura-beat,0) * .45)),1);
+      --ymc-aura-wide:calc(38% + var(--ymc-aura-spread,24) * .22%);
+      --ymc-aura-tall:calc(37% + var(--ymc-aura-spread,24) * .26%);
+      mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,black 55%,transparent 100%);
     }
-    [data-ymc-ribbon-host] { isolation:isolate; position:relative; }
-    [data-ymc-portrait-ribbon] { position:absolute; inset:auto; z-index:-1; overflow:visible;
-      pointer-events:none; opacity:var(--ymc-ribbon-alpha,.8); }
-    [data-ymc-portrait-ribbon] path { stroke:var(--ymc-ribbon-color); fill:none; stroke-width:var(--ymc-ribbon-width);
-      vector-effect:non-scaling-stroke; stroke-linejoin:round; }
-    [data-ymc-portrait-ribbon] path:first-child { filter:blur(var(--ymc-ribbon-blur)); stroke-width:calc(var(--ymc-ribbon-width)*2.4); opacity:.64; }
+    [data-ymc-portrait-aura]::before {
+      content:""; position:absolute; inset:0;
+      background:
+        radial-gradient(ellipse var(--ymc-aura-wide) var(--ymc-aura-tall) at 50% 47%,var(--ymc-aura-color) 10%,transparent 100%),
+        radial-gradient(ellipse 30% 42% at 35% 57%,var(--ymc-aura-color),transparent 100%),
+        radial-gradient(ellipse 31% 40% at 66% 58%,var(--ymc-aura-color),transparent 100%);
+      transform:scale(calc(1 + var(--ymc-aura-beat,0) * .20));
+    }
   `;
 
-  let waveLayer, waveSample, waveKey = '', waveAbort, waveRetry = 0, waveFailures = 0, activeHero, portraitNode;
+  let waveMatrix, waveSample, waveKey = '', waveAbort, waveRetry = 0, waveFailures = 0, activeHero, portraitNode;
 
   function waveBackground(t) {
     const sample = t.appMediaEnabled && vibeMedia ? suggestedPalette?.sample : t.mode === 'image' ? portraitWallpaper.sample : null;
@@ -824,24 +831,22 @@
     return t.wavePalette === 'cover' || t.wavePalette === 'auto' && luminance(background) >= .63;
   }
 
+  const recoloredWave = t => t.vibeAnimation && t.waveStyle === 'custom';
   function paintCustomWave(t) {
-    if (!waveLayer?.isConnected) return;
+    if (!activeHero || !recoloredWave(t)) return;
     const background = waveBackground(t);
-    const light = luminance(background);
     const coverInk = waveSample && (waveSample.sample.achromatic ? waveSample.spectrumMid : waveSample.portraitAccent);
-    const seed = t.wavePalette === 'custom' ? t.waveTint : waveNeedsCover(t, background) && coverInk ? coverInk : background;
-    const seedIsBackground = seed === background && t.wavePalette !== 'custom';
-    const ink = seedIsBackground ? mixHex(seed, light > .40 ? '#232323' : '#EEEEEE', t.waveTone / 100)
-      : mixHex(seed, background, 1 - t.waveTone / 100);
-    const secondary = mixHex(ink, light > .42 ? '#171717' : '#FFFFFF', light > .42 ? .09 : .14);
-    const style = waveLayer.style;
-    const properties = {
-      '--ymc-wave-ink': ink, '--ymc-wave-secondary': secondary,
-      '--ymc-wave-alpha': String(t.waveOpacity / 100), '--ymc-wave-speed': t.waveSpeed + 's'
-    };
-    for (const [name, value] of Object.entries(properties)) {
-      if (style.getPropertyValue(name) !== value) style.setProperty(name, value);
-    }
+    const base = luminance(background) > .40 ? '#232323' : '#EEEEEE';
+    const seed = t.wavePalette === 'custom' ? t.waveTint : waveNeedsCover(t, background) && coverInk || base;
+    const ink = mixHex(background, seed, t.waveTone / 100);
+    const low = rgb(background).split(',').map(Number);
+    const high = rgb(ink).split(',').map(Number);
+    // Recolor each rendered native pixel using its luminance while retaining its alpha.
+    const matrix = low.flatMap((channel, i) => {
+      const span = (high[i] - channel) / 255;
+      return [.2126 * span, .7152 * span, .0722 * span, 0, channel / 255];
+    }).concat(0, 0, 0, 1, 0).map(value => value.toFixed(4)).join(' ');
+    if (waveMatrix.getAttribute('values') !== matrix) waveMatrix.setAttribute('values', matrix);
   }
 
   async function syncWavePalette(track, shared = false) {
@@ -880,28 +885,20 @@
     if (activeHero && activeHero !== hero) activeHero.removeAttribute('data-ymc-track-art');
     activeHero = hero;
     document.documentElement.toggleAttribute('data-ymc-on-wave', Boolean(hero));
-    portraitNode = hero && theme.showVibePortrait && (theme.vibeAdaptiveCover || hasBeatAura(theme) || theme.portraitEffect === 'ribbon') ? [...hero.querySelectorAll(SELECTOR.portrait)]
+    portraitNode = hero && theme.showVibePortrait && (theme.vibeAdaptiveCover || hasBeatAura(theme)) ? [...hero.querySelectorAll(SELECTOR.portrait)]
       .find(img => img.complete && img.naturalWidth > 0 && img.getClientRects().length &&
         getComputedStyle(img).visibility === 'visible') : undefined;
     if (hero && theme.vibeAdaptiveCover) {
       hero.dataset.ymcTrackArt = portraitNode ? 'portrait' : 'cover';
     } else hero?.removeAttribute('data-ymc-track-art');
-    if (!hero || !theme.vibeAnimation || theme.waveStyle === 'native' || !theme.waveOpacity) {
-      waveLayer.remove();
-      if (waveKey) syncWavePalette(null);
-      return;
-    }
-    waveLayer.dataset.ymcWaveEffect = theme.waveStyle;
-    waveLayer.toggleAttribute('data-paused', document.hidden);
-    if (appBackdrop.isConnected) {
-      if (appBackdrop.nextElementSibling !== waveLayer) appBackdrop.after(waveLayer);
-    } else if (!waveLayer.isConnected) document.body.prepend(waveLayer);
-    paintCustomWave(visualTheme());
+    if (hero && recoloredWave(theme)) paintCustomWave(visualTheme());
+    else if (waveKey) syncWavePalette(null);
   }
 
   const NAV_ENTRY = '[data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[class*="PinItem_root__"],[class*="NavbarDesktop_logoWrapper__"],[class*="NavbarDesktop_disabledNavigationItem__"]';
   const NAV_STYLES = `
-    [data-ymc-nav-edited] { display:flex !important; reading-flow:flex-visual; gap:var(--ymc-nav-gap,5px); overflow:auto; scrollbar-width:thin; }
+    [data-ymc-nav-edited] { display:flex !important; reading-flow:flex-visual; gap:var(--ymc-nav-gap,5px); overflow:auto; scrollbar-width:none; }
+    [data-ymc-nav-edited]::-webkit-scrollbar { display:none; }
     [data-ymc-nav-edited] [data-ymc-nav-group] { display:contents !important; }
     [data-ymc-nav-edited] [data-ymc-nav-group]::before,[data-ymc-nav-edited] [data-ymc-nav-group]::after { content:none !important; }
     [data-ymc-nav-edited] [data-ymc-nav-item] { order:var(--ymc-nav-order); flex:none; max-width:100%; }
@@ -918,11 +915,34 @@
     [data-ymc-nav-dock]:is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="center"] { top:calc(50% + 12px); translate:0 -50%; }
     [data-ymc-nav-dock]:is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="end"] { bottom:var(--ymc-nav-bottom); }
     [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) {
-      flex-direction:row !important; align-items:center; width:max-content !important;
+      flex-direction:row !important; flex-wrap:wrap; align-items:center; justify-content:center; width:max-content !important;
       max-width:calc(100vw - var(--ymc-reserved-width) - var(--ymc-nav-inset) * 2);
-      min-height:var(--ymc-nav-size); max-height:calc(var(--ymc-nav-size) + 12px);
-      overflow-x:auto; overflow-y:hidden;
+      min-height:var(--ymc-nav-size); max-height:32dvh; overflow-x:hidden;
     }
+    [data-ymc-nav-dock] [class*="NavbarDesktop_collapseButton__"] { display:none !important; }
+    [data-ymc-nav-toggle] {
+      display:grid; place-items:center; flex:none; min-width:32px; min-height:32px; padding:0;
+      border:0; border-radius:8px; background:transparent; color:inherit; cursor:pointer; order:999;
+    }
+    [data-ymc-nav-toggle]:is(:hover,:focus-visible) { background:color-mix(in srgb,currentColor 13%,transparent); }
+    [data-ymc-nav-toggle] svg { width:16px; height:16px; }
+    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) :is([data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[data-ymc-launcher]) {
+      display:flex !important; flex-direction:column !important; justify-content:center; align-items:center;
+      gap:3px !important; padding:4px 7px !important; width:auto !important; min-width:42px;
+    }
+    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) :is([data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[data-ymc-launcher]) > span:last-child {
+      position:static !important; opacity:1 !important; visibility:visible !important; transform:none !important;
+      animation:none !important; display:block !important; font-size:11px; max-width:80px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) [data-ymc-pin-caption] {
+      display:flex !important; flex-direction:column !important; align-items:center; gap:3px;
+    }
+    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) [data-ymc-pin-caption]::after {
+      content:attr(data-ymc-pin-caption); display:block; font-size:11px; max-width:80px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) [data-ymc-pin-caption] > [class*="Meta_"] { display:none !important; }
     [data-ymc-nav-dock="top"] { top:var(--ymc-nav-top); }
     [data-ymc-nav-dock="bottom"] { bottom:var(--ymc-nav-bottom); }
     [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) > [data-ymc-launcher] { margin:0; }
@@ -932,6 +952,7 @@
     [data-ymc-nav-dock] [data-ymc-nav-item] { margin:0 !important; }
     [data-ymc-nav-dock] [data-ymc-nav-item] :is(a,button) { max-width:100%; }
     [data-ymc-nav-compact] :is([class*="NavigationItem_title"],[class*="NavigationItem_description"],[class*="NavbarDesktop_title"],[class*="PinItem_title"],[class*="PinItem_description"],[class*="PinItem_text"],[class*="NavbarDesktopUserWidget_userInfo"],[data-ymc-launcher] span) { display:none !important; }
+    [data-ymc-nav-compact] [data-test-id^="NAVBAR_NAVIGATION_ITEM_"] > span:last-child { display:none !important; }
     [data-ymc-nav-compact] :is([data-ymc-nav-item], [data-ymc-nav-item]>a, [data-ymc-launcher]) {
       inline-size:auto !important; min-inline-size:38px; justify-content:center; padding-inline:6px !important; }
     [data-ymc-nav-slot] { width:0 !important; min-width:0 !important; margin:0 !important; }
@@ -946,7 +967,7 @@
     [data-ymc-nav-layout="bottom"] { padding-block-end:var(--ymc-nav-reserve) !important; }
   `;
 
-  let navRoot, navLayout, navSlot, navEntries = [], navMarked = new Set(), navMenuKey = '';
+  let navRoot, navLayout, navSlot, navObserver, navToggle, navEntries = [], navMarked = new Set(), navMenuKey = '';
   function navKey(prefix, value) {
     if (!value) return prefix + ':';
     let hash = 2166136261;
@@ -968,7 +989,7 @@
       const logo = node.matches('[class*="NavbarDesktop_logoWrapper__"]');
       const key = logo ? 'logo' : pinned ? navKey('pin', href || label) : navKey('link', test || href || label);
       if (key.endsWith(':') || entries.some(item => item.key === key)) continue;
-      entries.push({ node, key, label: label || (pinned ? 'Закреплённая карточка' : test?.split('ITEM_').at(-1) || 'Логотип') });
+      entries.push({ node, control, pinned, key, label: label || (pinned ? 'Закреплённая карточка' : test?.split('ITEM_').at(-1) || 'Логотип') });
     }
     return entries;
   }
@@ -1018,6 +1039,12 @@
       ?.querySelector('[data-nav-action="' + action + '"]:not(:disabled)')?.focus({ preventScroll: true });
   }
 
+  function reserveHorizontalDock() {
+    if (!navRoot || !navLayout || !['top', 'bottom'].includes(navRoot.dataset.ymcNavDock)) return;
+    const size = Math.ceil(navRoot.getBoundingClientRect().height + theme.sidebarInset);
+    navLayout.style.setProperty('--ymc-nav-reserve', size + 'px');
+  }
+
   function syncSidebar(nav, fullscreen) {
     const move = isStyled() && !fullscreen && nav && theme.sidebarDock !== 'native';
     const edit = isStyled() && !fullscreen && nav && Boolean(move || theme.sidebarOrder || theme.sidebarHidden);
@@ -1028,7 +1055,12 @@
       navRoot?.removeAttribute('data-ymc-nav-dock');
       navRoot?.removeAttribute('data-ymc-nav-align');
       navRoot?.removeAttribute('data-ymc-nav-compact');
+      navObserver?.disconnect();
       navRoot = nav;
+      if (navRoot) {
+        navObserver ||= new ResizeObserver(reserveHorizontalDock);
+        navObserver.observe(navRoot);
+      }
     }
     if (navLayout !== layout) navLayout?.removeAttribute('data-ymc-nav-layout');
     if (navSlot !== slot) navSlot?.removeAttribute('data-ymc-nav-slot');
@@ -1040,14 +1072,20 @@
     if (move) {
       nav.dataset.ymcNavDock = theme.sidebarDock;
       nav.dataset.ymcNavAlign = theme.sidebarAlign;
+      if (navToggle.parentElement !== nav) nav.append(navToggle);
+      navToggle.setAttribute('aria-expanded', String(!theme.sidebarCompact));
+      navToggle.title = theme.sidebarCompact ? 'Показать подписи' : 'Скрыть подписи';
+      navToggle.setAttribute('aria-label', navToggle.title);
       if (layout) layout.dataset.ymcNavLayout = theme.sidebarDock;
       const side = ['left', 'right'].includes(theme.sidebarDock);
       const width = theme.sidebarCompact ? theme.sidebarSize : theme.sidebarSize + 104;
       nav.style.setProperty('--ymc-nav-inset', theme.sidebarInset + 'px');
       nav.style.setProperty('--ymc-nav-size', theme.sidebarSize + 'px');
       nav.style.setProperty('--ymc-nav-width', width + 'px');
-      layout?.style.setProperty('--ymc-nav-reserve', (side ? width + theme.sidebarInset * 2 : theme.sidebarSize + theme.sidebarInset + 12) + 'px');
+      if (side) layout?.style.setProperty('--ymc-nav-reserve', (width + theme.sidebarInset * 2) + 'px');
+      else reserveHorizontalDock();
     } else {
+      navToggle.remove();
       nav?.removeAttribute('data-ymc-nav-dock');
       nav?.removeAttribute('data-ymc-nav-align');
     }
@@ -1057,7 +1095,12 @@
     const next = new Set();
     if (edit) {
       const hidden = new Set(navIds(theme.sidebarHidden));
-      for (const [index, { node, key }] of orderedNav(theme).entries()) {
+      for (const [index, { node, control, pinned, key, label }] of orderedNav(theme).entries()) {
+        if (move && control && !control.hasAttribute('aria-label')) control.setAttribute('aria-label', label);
+        if (move && pinned && control) {
+          next.add(control);
+          control.setAttribute('data-ymc-pin-caption', label);
+        }
         next.add(node);
         node.toggleAttribute('data-ymc-nav-item', true);
         node.toggleAttribute('data-ymc-nav-hide', hidden.has(key));
@@ -1072,6 +1115,7 @@
       node.removeAttribute('data-ymc-nav-item');
       node.removeAttribute('data-ymc-nav-hide');
       node.removeAttribute('data-ymc-nav-group');
+      node.removeAttribute('data-ymc-pin-caption');
       node.style.removeProperty('--ymc-nav-order');
     }
     navMarked = next;
@@ -1095,8 +1139,8 @@
     const portraitColor = portraitEffectColor(t, portraitBackground);
     const portrait = portraitFilter(t, portraitColor);
     const portraitRule = portrait === 'none' ? 'none' : paint(portrait);
-    const beatPortrait = hasBeatAura(t) && t.portraitEffect !== 'ribbon';
-    const pulsePortrait = t.motionEnabled && t.motionAura && hasPortraitAura(t) && t.portraitEffect !== 'ribbon' && !beatPortrait;
+    const beatPortrait = hasBeatAura(t) && t.portraitEffect !== 'bloom';
+    const pulsePortrait = t.motionEnabled && t.motionAura && hasPortraitAura(t) && t.portraitEffect !== 'bloom' && !beatPortrait;
     const hiddenElements = [
       [t.showVibePortrait, PORTRAIT], [t.showVibeArtist, SELECTOR.vibeArtist], [t.showVibeHeading, SELECTOR.vibeHeading],
       [t.showCornerAppVersion, SELECTOR.cornerVersion], [t.showCornerLoaderVersion, SELECTOR.cornerLoader],
@@ -1109,8 +1153,7 @@
     const bodySurfaces = t.mode === 'solid' ? [t.background] : [t.background, t.gradientEnd];
     // Fade the native overlay progressively as the effective background becomes light.
     const smartWaveOpacity = Math.max(.16, .38 - Math.max(0, luminance(t.background) - .31) * .55);
-    const nativeWave = t.vibeAnimation && t.waveStyle === 'native';
-    const nativeAlpha = t.waveNativeOpacity / 100;
+    const nativeAlpha = (recoloredWave(t) ? t.waveOpacity : t.waveNativeOpacity) / 100;
     const smartBackground = smartOn(t, 'smartBackground') || smartOn(t, 'smartGradient');
     const textInk = (ink, surfaces) => smartText ? tintedInk(ink, surfaces, minimum) : guardedInk(t, ink, surfaces[0]);
     const bodyText = textInk(t.text, bodySurfaces);
@@ -1122,12 +1165,12 @@
     const smartButtons = smartOn(t, 'smartButtons');
     const buttonInk = (ink, surface) => smartButtons ? tintedInk(ink, [surface], minimum) : guardedInk(t, ink, surface);
     const styleVibeButtons = t.customVibeButtons || smartButtons;
-    const vibeInk = buttonInk(t.customVibeIcons || smartButtons ? t.vibeIcon : bodyText,
+    const chosenIcon = t.customVibeIcons || smartButtons ? t.vibeIcon : bodyText;
+    const vibeInk = buttonInk(chosenIcon,
       styleVibeButtons ? blendedFill(t.vibeFill, t.vibeControlsOpacity, t.background) : t.background);
     const playSurface = styleVibeButtons ? blendedFill(t.vibePlayFill, t.vibeControlsOpacity, t.background) : t.accent;
-    const transportInk = buttonInk(t.customVibeIcons || smartButtons ? t.vibeTransport : bodyText, playSurface);
-    const pauseInk = styleVibeButtons ? transportInk : textInk(t.customVibeIcons ? t.vibeTransport : bodyText, bodySurfaces);
-    const skipInk = textInk(t.customVibeIcons || smartButtons ? t.vibeTransport : bodyText, bodySurfaces);
+    const playInk = styleVibeButtons ? buttonInk(t.customVibeIcons && !smartButtons ? t.vibeTransport : chosenIcon, playSurface)
+      : textInk(t.customVibeIcons ? t.vibeTransport : chosenIcon, bodySurfaces);
     const textTokens = (ink, subtext) => {
       const primary = paint(ink), secondary = paint(subtext);
       return `
@@ -1171,7 +1214,7 @@
         ${FONTS[t.font] ? `font-family:${FONTS[t.font]} !important;` : ''}
       }
       ${scoped(SELECTOR.surface + ', [class*="VibePage_root__"]')} { background:transparent !important; }
-      ${nativeWave && (smartBackground || nativeAlpha < 1) ? `
+      ${t.vibeAnimation && (smartBackground || nativeAlpha < 1) ? `
         ${scoped(SELECTOR.vibeAnimation)} { opacity:${paint(Math.min(nativeAlpha, smartBackground ? smartWaveOpacity : 1).toFixed(3))} !important; }
       ` : ''}
       ${smartText ? `
@@ -1262,12 +1305,7 @@
         hover: t.barButtonHover, opacity: t.barButtonOpacity, radius: t.barButtonsCustom ? t.barButtonRound : null,
         behind: panelFill(t, player), minimum, tonal: smartButtons
       }, paint) : ''}
-      ${t.customVibeIcons || smartButtons ? `
-        ${scoped(`${SELECTOR.vibe} ${SELECTOR.vibeButtons}:not(${VIBE_PLAY}), ${SELECTOR.vibe} ${SELECTOR.vibeTrack} button`)} { color:${paint(vibeInk)} !important; }
-        ${scoped(`${SELECTOR.vibeControls} button:not(${VIBE_PLAY})`)} { color:${paint(skipInk)} !important; }
-      ` : ''}
-      ${useCustomizerPalette || t.customVibeIcons || styleVibeButtons || smartText ? waveTransportStyles(paint, transportInk, pauseInk) : ''}
-      ${waveStyles(t, nativeWave)}
+      ${waveStyles(t)}
       ${playlistStyles(t, useCustomizerPalette, paint)}
       ${t.playlistButtons && useCustomizerPalette ? `
         ${scoped(SELECTOR.hoverButtons)} {
@@ -1314,10 +1352,12 @@
           radius: t.customVibeButtons ? t.vibeButtonRound : null, behind: t.background, minimum, tonal: smartButtons
         }, paint)}
         ${buttonRules(`:is(${SELECTOR.vibe},${SELECTOR.vibeControls}) ${VIBE_PLAY}`, {
-          fill: t.vibePlayFill, ink: transportInk, hover: t.vibeHover, opacity: t.vibeControlsOpacity,
+          fill: t.vibePlayFill, ink: playInk, hover: t.vibeHover, opacity: t.vibeControlsOpacity,
           radius: t.customVibeButtons ? t.vibeButtonRound : null, behind: t.background, minimum, tonal: smartButtons
         }, paint)}
       ` : ''}
+      ${useCustomizerPalette || t.customVibeIcons || styleVibeButtons || smartText ? waveButtonInk(t, paint, vibeInk, playInk) : ''}
+      ${scoped('[class*="VibePage_bigCardPanel_opened__"] [class*="VibePage_vibeAnimation__"]')} { opacity:0 !important; }
       ${t.hideVibeTrack ? `${scoped(SELECTOR.vibeTrack)} { visibility:hidden !important; pointer-events:none !important; }` : ''}
       ${t.hideVibeControls ? `${scoped(`${SELECTOR.vibe} ${SELECTOR.vibeButtons}, ${SELECTOR.vibeControls}`)} {
         visibility:hidden !important; pointer-events:none !important;
@@ -1522,13 +1562,17 @@
   const coverPalettes = new Map();
   let visualBase, visualColors, visualSnapshot;
   function visualTheme() {
-    if (!dynamicColors) return theme;
     if (visualBase !== theme || visualColors !== dynamicColors) {
       visualBase = theme;
       visualColors = dynamicColors;
-      visualSnapshot = { ...theme, coverColors: true };
+      visualSnapshot = { ...theme, coverColors: Boolean(dynamicColors) };
       for (const [group, { fields }] of Object.entries(SMART_GROUPS)) {
         if (smartOn(visualSnapshot, group)) for (const field of fields) visualSnapshot[field] = dynamicColors[field];
+      }
+      if (smartOwnsBackdrop(theme)) {
+        visualSnapshot.mode = smartGroupEnabled(theme, 'smartGradient') ? 'gradient' : 'solid';
+        visualSnapshot.gradientAngle = DEFAULT.gradientAngle;
+        visualSnapshot.appMediaEnabled = false;
       }
     }
     return visualSnapshot;
@@ -1636,7 +1680,7 @@
       }
     }
     paintCustomWave(styledTheme);
-    if (portraitRibbon) paintRibbonColor(styledTheme, portraitEffectColor(styledTheme, portraitBackground));
+    if (portraitAura) paintAura(styledTheme, portraitEffectColor(styledTheme, portraitBackground));
     if (theme.patternEnabled) paintPattern(patternLayer, styledTheme, !colorOnly);
     if (previewSession?.kind === 'pattern') paintPattern($('ymc-pattern-sample'), previewVisual('pattern'), !colorOnly, .56);
     if (!colorOnly) {
@@ -2143,8 +2187,9 @@
   }
 
   function syncVibeControls() {
-    $('ymc-vibe-pick').disabled = vibeBusy;
-    $('ymc-vibe-clear').disabled = vibeBusy || (!vibeMedia && !vibeError);
+    const locked = smartOwnsBackdrop(theme);
+    $('ymc-vibe-pick').disabled = vibeBusy || locked;
+    $('ymc-vibe-clear').disabled = locked || vibeBusy || (!vibeMedia && !vibeError);
     $('ymc-vibe-status').textContent = vibeBusy ? 'Подождите…'
       : vibeError || vibeMedia?.name || 'Файл фона пока не выбран.';
     syncHistoryButtons();
@@ -2205,7 +2250,7 @@
 
   let appBackdrop;
   function syncAppBackground() {
-    const visible = isStyled() && theme.appMediaEnabled && Boolean(vibeMedia);
+    const visible = isStyled() && visualTheme().appMediaEnabled && Boolean(vibeMedia);
     if (!visible) appBackdrop.remove();
     else if (!appBackdrop.isConnected) document.body.prepend(appBackdrop);
     const element = vibeMedia?.element;
@@ -2403,10 +2448,7 @@
       return;
     }
     if (appBackdrop.isConnected) {
-      const behind = waveLayer.isConnected ? waveLayer : appBackdrop;
-      if (behind.nextElementSibling !== patternLayer) behind.after(patternLayer);
-    } else if (waveLayer.isConnected) {
-      if (waveLayer.nextElementSibling !== patternLayer) waveLayer.after(patternLayer);
+      if (appBackdrop.nextElementSibling !== patternLayer) appBackdrop.after(patternLayer);
     } else if (!patternLayer.isConnected) document.body.prepend(patternLayer);
     patternLayer.toggleAttribute('data-paused', document.hidden);
   }
@@ -2712,7 +2754,7 @@
   let portraitWallpaper = { source: '', color: '' };
 
   function samplePortraitWallpaper() {
-    const visible = theme.mode === 'image' && !(theme.appMediaEnabled && vibeMedia) &&
+    const visible = visualTheme().mode === 'image' && !(visualTheme().appMediaEnabled && vibeMedia) &&
       !(theme.addonEnabled && theme.addonPalette);
     const forAura = theme.portraitEffect !== 'off' && theme.portraitColorSource === 'background';
     const forWave = theme.vibeAnimation && theme.waveStyle !== 'native' && theme.wavePalette === 'auto';
@@ -2979,91 +3021,53 @@
   const previewLevels = new Float32Array(120);
   const previewPeaks = new Float32Array(120);
   const demoLevels = new Float32Array(120);
-  let portraitRibbon, ribbonHost, ribbonImage, ribbonObserver, ribbonTime = -Infinity;
-  const ribbonPoints = Array.from({ length: 28 }, (_, i) => i * 2 * Math.PI / 28);
-  function ribbonPath(t, phase, beat = 0, bins) {
-    const shape = t.portraitRibbonShape / 100;
-    const strength = t.portraitBeatStrength / 100;
-    const points = ribbonPoints.map((angle, index) => {
-      const band = bins ? bins[3 + Math.round(48 * (Math.sin(angle * 2 + .8) + 1) / 2)] : -100;
-      const energy = Math.max(0, Math.min(1, (band + 77) / 54));
-      const ripple = Math.sin(angle * 3 + phase) * 4.3 + Math.cos(angle * 5 - phase * .8) * 2.6;
-      const distance = 1 + (ripple * shape + (beat * 4.2 + energy * Math.sin(index * 1.9 + phase) * 1.6) * strength) / 45;
-      return [50 + Math.cos(angle) * 43 * distance, 51 + Math.sin(angle) * 43 * distance];
+  let portraitAura, auraImage, auraHost, auraObserver;
+
+  function paintAura(t, color, layer = portraitAura) {
+    if (!layer) return;
+    layer.style.setProperty('--ymc-aura-color', color);
+    layer.style.setProperty('--ymc-aura-alpha', String(t.portraitIntensity / 100));
+    layer.style.setProperty('--ymc-aura-spread', String(t.portraitSpread));
+  }
+
+  function sizeAura() {
+    if (!auraImage || !portraitAura?.isConnected) return;
+    const host = auraHost.getBoundingClientRect();
+    const image = auraImage.getBoundingClientRect();
+    if (!(image.width && image.height && host.width && host.height)) return;
+    const pad = Math.min(image.width, image.height) * .13;
+    const left = Math.max(0, image.left - host.left - pad);
+    const top = Math.max(0, image.top - host.top);
+    const width = Math.min(host.width - left, image.right - host.left + pad - left);
+    const height = Math.min(host.height - top, image.height);
+    Object.assign(portraitAura.style, {
+      left: left.toFixed(1) + 'px', top: top.toFixed(1) + 'px',
+      width: width.toFixed(1) + 'px', height: height.toFixed(1) + 'px'
     });
-    let path = 'M' + points[0].map(n => n.toFixed(1)).join(' ');
-    const n = points.length;
-    for (let i = 0; i < n; i++) {
-      const before = points[(i + n - 1) % n], from = points[i], to = points[(i + 1) % n], after = points[(i + 2) % n];
-      const controls = [from[0] + (to[0] - before[0]) / 6, from[1] + (to[1] - before[1]) / 6,
-        to[0] - (after[0] - from[0]) / 6, to[1] - (after[1] - from[1]) / 6, ...to];
-      path += 'C' + controls.map(value => value.toFixed(1)).join(' ');
-    }
-    return path + 'Z';
   }
 
-  function drawPortraitRibbon(t, phase = 0, beat = 0, bins, svg = portraitRibbon) {
-    if (!svg) return;
-    const path = ribbonPath(t, phase, beat, bins);
-    for (const stroke of svg.children) stroke.setAttribute('d', path);
-  }
-
-  function paintRibbonColor(t, color, svg = portraitRibbon) {
-    if (!svg) return;
-    svg.style.setProperty('--ymc-ribbon-color', color);
-    svg.style.setProperty('--ymc-ribbon-width', t.portraitRibbonWidth + 'px');
-    svg.style.setProperty('--ymc-ribbon-blur', Math.max(2, t.portraitSpread / 4) + 'px');
-    svg.style.setProperty('--ymc-ribbon-alpha', String(t.portraitIntensity / 100));
-  }
-
-  function sizeRibbon() {
-    if (!ribbonImage || !portraitRibbon?.isConnected) return;
-    const hostRect = ribbonHost.getBoundingClientRect();
-    const imageRect = ribbonImage.getBoundingClientRect();
-    if (!(imageRect.width && imageRect.height)) return;
-    const pad = Math.min(imageRect.width, imageRect.height) * .065;
-    const style = portraitRibbon.style;
-    style.left = (imageRect.left - hostRect.left - pad).toFixed(1) + 'px';
-    style.top = (imageRect.top - hostRect.top - pad).toFixed(1) + 'px';
-    style.width = (imageRect.width + pad * 2).toFixed(1) + 'px';
-    style.height = (imageRect.height + pad * 2).toFixed(1) + 'px';
-  }
-
-  function syncRibbon(portrait) {
-    const next = theme.portraitEffect === 'ribbon' && hasPortraitAura(theme) ? portrait?.closest(PORTRAIT) : null;
-    if (next !== ribbonHost) {
-      resetBeat();
-      ribbonHost?.removeAttribute('data-ymc-ribbon-host');
-      portraitRibbon?.remove();
-      portraitRibbon = undefined;
-      ribbonHost = next;
-      if (next) {
-        next.setAttribute('data-ymc-ribbon-host', '');
-        portraitRibbon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        portraitRibbon.setAttribute('data-ymc-portrait-ribbon', '');
-        portraitRibbon.setAttribute('viewBox', '0 0 100 100');
-        portraitRibbon.setAttribute('preserveAspectRatio', 'none');
-        portraitRibbon.setAttribute('aria-hidden', 'true');
-        portraitRibbon.innerHTML = '<path/><path/>';
-        next.prepend(portraitRibbon);
-        ribbonTime = -Infinity;
-      }
-    }
-    const image = next ? portrait : null;
-    if (image !== ribbonImage) {
-      ribbonObserver?.disconnect();
-      ribbonImage = image;
-      if (image) {
-        ribbonObserver ||= new ResizeObserver(sizeRibbon);
-        ribbonObserver.observe(image);
-        ribbonObserver.observe(ribbonHost);
-      }
-    }
-    if (!portraitRibbon) return;
-    sizeRibbon();
+  function syncPortraitAura(portrait) {
+    const image = theme.portraitEffect === 'bloom' && hasPortraitAura(theme) ? portrait : null;
+    if (image === auraImage) return;
+    auraObserver?.disconnect();
+    auraHost?.removeAttribute('data-ymc-aura-host');
+    portraitAura?.remove();
+    portraitAura = null;
+    auraImage = image;
+    auraHost = image?.closest(PORTRAIT);
+    resetBeat();
+    if (!auraHost) return;
+    auraHost.setAttribute('data-ymc-aura-host', '');
+    portraitAura = document.createElement('div');
+    portraitAura.setAttribute('data-ymc-portrait-aura', '');
+    portraitAura.setAttribute('aria-hidden', 'true');
+    auraHost.prepend(portraitAura);
+    auraObserver ||= new ResizeObserver(sizeAura);
+    auraObserver.observe(auraHost);
+    auraObserver.observe(image);
     const t = visualTheme();
-    paintRibbonColor(t, portraitEffectColor(t, portraitBackgroundColor()));
-    if (!hasBeatAura(t) || reducedMotion() || !portraitRibbon.firstElementChild.hasAttribute('d')) drawPortraitRibbon(t);
+    paintAura(t, portraitEffectColor(t, portraitBackgroundColor()));
+    sizeAura();
   }
 
   let beatPortrait, beatSource, beatValue = 0;
@@ -3105,7 +3109,7 @@
       beatPortrait?.style.removeProperty('--ymc-beat-pulse');
       beatPortrait?.style.removeProperty('--ymc-beat-spread');
     }
-    if (portraitRibbon && beatValue) drawPortraitRibbon(visualTheme());
+    portraitAura?.style.removeProperty('--ymc-aura-beat');
     beatValue = 0;
     beatSource = undefined;
     beatState.average = beatState.recent = beatState.impulse = beatState.level = beatState.cooldown = 0;
@@ -3121,7 +3125,7 @@
     }
   }
 
-  function paintBeat(t, input, bins, dt, now) {
+  function paintBeat(t, input, bins, dt) {
     if (bins && input !== beatSource) {
       beatState.average = beatState.recent = beatState.cooldown = 0;
       beatSource = input;
@@ -3131,7 +3135,8 @@
       dt, t.portraitBeatSensitivity, t.portraitBeatRelease);
     const value = Math.round(level * t.portraitBeatStrength);
     if (value !== beatValue) {
-      if (t.portraitEffect !== 'ribbon') {
+      if (portraitAura) portraitAura.style.setProperty('--ymc-aura-beat', (value / 100).toFixed(2));
+      else {
         if (value) {
           beatPortrait.style.setProperty('--ymc-beat-pulse', Math.min(100, value) + '%');
           beatPortrait.style.setProperty('--ymc-beat-spread', (value * .23).toFixed(1) + 'px');
@@ -3141,10 +3146,6 @@
         }
       }
       beatValue = value;
-    }
-    if (portraitRibbon && now - ribbonTime >= 28 && (bins || level > 0 || beatValue === 0)) {
-      drawPortraitRibbon(t, bins || level > 0 ? now * t.portraitRibbonSpeed / 80_000 : 0, level, bins);
-      ribbonTime = now;
     }
     return level > 0;
   }
@@ -3557,7 +3558,7 @@
     const drawSpectrum = background || overlay;
     if (drawSpectrum) updateSpectrumLevels(t, bins, input?.analyser?.context.sampleRate || 48000, dt);
     const fading = drawSpectrum && spectrumLevels.subarray(0, t.spectrumBands).some(level => level > .004);
-    const beatFading = beat && paintBeat(t, input, bins, dt, now);
+    const beatFading = beat && paintBeat(t, input, bins, dt);
     if (background && activeDialog !== 'now') {
       if (barCanvas.dataset.signal !== spectrumSignal) barCanvas.dataset.signal = spectrumSignal;
       setText($('ymc-bar-status'), SPECTRUM_STATUS[spectrumSignal]);
@@ -3790,14 +3791,20 @@
     .store-save label{flex:1;min-width:min(100%,210px)}
     .head-actions .btn{text-decoration:none}
     .buttons a.btn{text-decoration:none}
-    #ymc-ribbon-preview{opacity:var(--ymc-ribbon-alpha,.8)}
-    #ymc-ribbon-preview path{stroke:var(--ymc-ribbon-color);fill:none;stroke-width:var(--ymc-ribbon-width)}
-    #ymc-ribbon-preview path:first-child{filter:blur(var(--ymc-ribbon-blur));opacity:.64}
+    ${AURA_STYLE}
+    .portrait-preview-art{position:relative;isolation:isolate;flex:none;width:108px;height:108px}
+    #ymc-aura-preview{inset:0}
     .sidebar-items{display:grid;gap:6px;list-style:none;padding:0;margin:10px 0}
     .sidebar-items li{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:5px}
     .sidebar-items li span{overflow-wrap:anywhere}
     .sidebar-items .btn{padding:5px 8px;min-height:32px}
-    [data-auto-locked]{opacity:.72}
+    [data-auto-locked]{display:none !important}
+    .settings-group + .settings-group{margin-top:18px}
+    .settings-group > .section-label{margin:0 0 6px 4px}
+    [data-section-lock] .section-toggle{opacity:1;cursor:default}
+    [data-section-lock] .section-toggle small{display:none}
+    [data-section-lock] .section-toggle strong::after{content:"Умная тема";margin-inline-start:8px;font-size:10px;color:var(--muted);font-weight:500}
+    [data-section-lock] .section-arrow{visibility:hidden}
     .release-dialog{pointer-events:auto;box-sizing:border-box;width:min(510px,calc(100vw - 32px));max-height:calc(100dvh - 40px);
       border:1px solid var(--border,#8887);border-radius:22px;padding:24px;color:var(--fg,#f8f6ff);background:var(--bg,#21182e);
       box-shadow:0 20px 80px #0006;}
@@ -3919,10 +3926,11 @@
         </div>
         <div data-pane="theme">
           ${paneIntro('theme')}
-          <section id="ymc-theme-status"><h3>Применение темы</h3>${check('enabled', 'Включить Customizer')}<span class="pill" id="ymc-status"></span>
+          <section id="ymc-theme-status"><h3>Текущая тема</h3>${check('enabled', 'Включить Customizer')}<span class="pill" id="ymc-status"></span>
+            <label>Название темы<input type="text" data-prop="name" maxlength="60"></label>
+            <div class="buttons"><button class="btn" id="ymc-open-store">Открыть магазин тем</button></div>
           </section>
-          <section id="ymc-theme-palette"><h3>Палитра</h3><label>Название темы<input type="text" data-prop="name" maxlength="60"></label>
-            <div class="buttons"><button class="btn" id="ymc-open-store">Открыть магазин тем</button></div><div class="grid">
+          <section id="ymc-theme-palette"><h3>Палитра</h3><div class="grid">
               ${swatch('accent', 'Акцент')}${swatch('text', 'Заголовки и текст')}${swatch('textSecondary', 'Подписи')}${swatch('background', 'Фон')}${swatch('gradientEnd', 'Конец градиента')}
             </div>
             ${check('customAccentStates', 'Свои оттенки акцента для наведения и нажатия')}
@@ -3979,7 +3987,7 @@
             }).map(([role, label]) => `<span data-role="${role}">${label}<code></code></span>`).join('')}</div>
             <details id="ymc-smart-groups" class="settings-more"><summary>Переход и отдельные цвета</summary>
               ${range('smartTransition', 'Длительность перехода')}
-              <p class="muted">Если группа целиком заменяет ручной цвет, его поле недоступно. Выключите группу или уменьшите её силу, чтобы смешать цвет обложки со своим. У эквалайзера при автоподборе всегда используется один оттенок.</p>
+              <p class="muted">Каждая включённая группа закрывает свои ручные настройки. Чтобы вернуть их, выключите группу или поставьте её силу на 0%. Ваши прежние значения сохраняются.</p>
               <p class="muted">Автоцвет эквалайзера — один оттенок обложки с плавным изменением яркости. Для своих трёх цветов отключите группу «Эквалайзер» здесь и выберите цвета в карточке эквалайзера.</p>
               ${Object.entries(SMART_GROUPS).map(([key, { label }]) => `<div class="smart-group">
                 ${check(key, label)}${whenAvailable(key + 'Amount', key, range(key + 'Amount', 'Сила · ' + label.toLowerCase()))}
@@ -4135,7 +4143,7 @@
             ${whenAvailable('sidebarAlign', 'sidebarDock', `
               <label>Привязка к краю<select data-prop="sidebarAlign"><option value="start">В начале</option><option value="center">По центру</option>
                 <option value="end">В конце</option></select></label>
-              ${check('sidebarCompact', 'Компактные значки')}${range('sidebarSize', 'Размер панели')}
+              ${check('sidebarCompact', 'Только значки, без подписей')}${range('sidebarSize', 'Размер панели')}
               ${range('sidebarGap', 'Расстояние между пунктами')}${range('sidebarInset', 'Отступ от края')}`)}
             <p class="muted">Стрелки меняют порядок. Так можно поднять закреплённый плейлист выше обычных разделов.</p>
             <p id="ymc-sidebar-status" class="muted" aria-live="polite"></p>
@@ -4145,15 +4153,15 @@
           <section id="ymc-home-animation"><h3>Анимация «Моей волны»</h3>
             ${check('vibeAnimation', 'Показывать анимацию «Моей волны»')}
             ${whenAvailable('waveStyle', 'vibeAnimation', `
-              <label>Вид анимации<select data-prop="waveStyle"><option value="native">Штатная</option><option value="mist">Дымка</option>
-                <option value="ribbons">Ленты</option><option value="orbits">Орбиты</option></select></label>
+              <label>Вид анимации<select data-prop="waveStyle"><option value="native">Штатная</option>
+                <option value="custom">Кастомная анимация «Моей волны»</option></select></label>
               ${check('waveClearRail', 'Прозрачная панель поверх волны')}
               ${whenAvailable('waveNativeOpacity', 'waveStyle', range('waveNativeOpacity', 'Видимость штатной анимации'))}
               ${whenAvailable('wavePalette', 'waveStyle', `
                 <label>Цвет анимации<select data-prop="wavePalette"><option value="auto">Авто: по фону или обложке</option>
                   <option value="cover">Всегда из обложки</option><option value="custom">Свой цвет</option></select></label>
                 ${whenAvailable('waveTint', 'wavePalette', swatch('waveTint', 'Цвет волны'))}
-                ${range('waveOpacity', 'Видимость анимации')}${range('waveTone', 'Разница с фоном')}${range('waveSpeed', 'Длительность движения')}`)}`)}
+                ${range('waveOpacity', 'Видимость анимации')}${range('waveTone', 'Разница с фоном')}`)}`)}
           </section>
           <section id="ymc-home-wave"><h3>Колесо и подсказки</h3>
             ${check('showVibeWheel', 'Показывать колесо «Моей волны»')}
@@ -4178,17 +4186,17 @@
             <p class="muted">Эффект появляется, когда «Моя волна» показывает вырезанный портрет.</p>
             <div class="buttons">${previewButton('portrait', 'ymc-portrait-sample')}</div>
             <div id="ymc-portrait-sample" class="portrait-preview" hidden>
+              <div class="portrait-preview-art"><div id="ymc-aura-preview" data-ymc-portrait-aura hidden></div>
               <svg id="ymc-portrait-preview" viewBox="0 0 108 108" aria-hidden="true">
-                <g id="ymc-ribbon-preview" hidden transform="translate(5 5) scale(.98)"><path/><path/></g>
                 <path fill="#bdc6d7" d="M54 20c-11 0-19 9-19 21 0 9 4 16 10 20v7c-11 4-22 9-25 24h68c-3-15-14-20-25-24v-7c6-4 10-11 10-20 0-12-8-21-19-21Z"/>
                 <path fill="#7886a0" d="M20 92c2-11 10-17 21-22l13 11 13-11c11 5 19 11 21 22Z"/>
-              </svg>
+              </svg></div>
               <div class="portrait-preview-label"><strong>Образец</strong><br><span class="portrait-chip" id="ymc-portrait-chip"></span><span id="ymc-portrait-color"></span></div>
             </div>
             <div class="grid">
               <label>Эффект портрета<select data-prop="portraitEffect">
                 <option value="off">Выключен</option><option value="glow">Мягкая аура</option>
-                <option value="outline">Обводка</option><option value="both">Аура и обводка</option><option value="ribbon">Лента вокруг портрета</option>
+                <option value="outline">Обводка</option><option value="both">Аура и обводка</option><option value="bloom">Плотное свечение</option>
               </select></label>
               ${whenAvailable('portraitColorSource', 'portraitEffect', `<label>Источник цвета<select data-prop="portraitColorSource">
                 <option value="theme">Акцент темы</option><option value="background">Подобрать по фону</option><option value="custom">Свой цвет</option>
@@ -4199,9 +4207,6 @@
             ${whenAvailable('portraitSpread', 'portraitEffect', range('portraitSpread', 'Радиус ауры'))}
             ${whenAvailable('portraitOutline', 'portraitEffect', range('portraitOutline', 'Толщина обводки'))}
             ${whenAvailable('portraitIntensity', 'portraitEffect', range('portraitIntensity', 'Интенсивность эффекта'))}
-            ${whenAvailable('portraitRibbonWidth', 'portraitEffect', range('portraitRibbonWidth', 'Толщина ленты') +
-              range('portraitRibbonShape', 'Неровность контура'))}
-            ${whenAvailable('portraitRibbonSpeed', 'portraitBeat', range('portraitRibbonSpeed', 'Скорость движения ленты'))}
             ${whenAvailable('portraitBeat', 'portraitEffect', `
               ${check('portraitBeat', 'Пульсировать в такт музыке')}
               ${whenAvailable('portraitBeatStrength', 'portraitBeat', range('portraitBeatStrength', 'Сила пульсации') +
@@ -4508,7 +4513,7 @@
   const SECTION_SUMMARIES = {
     'ymc-theme-smart': ['Цвета трека для фона, текста и акцентов', 'smartTheme'],
     'ymc-theme-spectrum': ['Рисунок, который реагирует на музыку', 'barSpectrum'],
-    'ymc-theme-palette': ['Основные цвета и название темы'],
+    'ymc-theme-palette': ['Основные цвета интерфейса'],
     'ymc-theme-background': ['Градиент, сплошной цвет или обложка'],
     'ymc-theme-media': ['Свои фото, GIF и видео', 'appMediaEnabled'],
     'ymc-theme-pattern': ['Звёзды, геометрия, ноты и свои символы', 'patternEnabled'],
@@ -4521,10 +4526,10 @@
     'ymc-home-hero': ['Фото, имя исполнителя и надпись «Моя волна»'],
     'ymc-home-visibility': ['Выбор кнопок на главном экране'],
     'ymc-home-sidebar': ['Расположение, порядок и видимость пунктов'],
-    'ymc-home-animation': ['Штатная волна, дымка, ленты и орбиты', 'vibeAnimation'],
+    'ymc-home-animation': ['Исходное движение и настройка цвета', 'vibeAnimation'],
     'ymc-home-wave': ['Колесо выбора волны и ИИ-подсказки'],
     'ymc-home-motion': ['Скорость, карточки, аура и фон', 'motionEnabled'],
-    'ymc-home-portrait': ['Аура, обводка и лента в такт музыке'],
+    'ymc-home-portrait': ['Мягкая аура, обводка и плотное свечение в такт'],
     'ymc-home-track': ['Авторазмер обложки, видимость и прозрачность'],
     'ymc-home-badges': ['Версии приложения и мода, формат аудио'],
     'ymc-player-layout': ['Размер, расположение и полоса прогресса'],
@@ -4575,19 +4580,14 @@
 
   function setSettingsSection(section, open, immediate = false) {
     const button = section?.querySelector('.section-toggle');
-    if (!button) return;
+    if (!button || (open && section.hasAttribute('data-section-lock'))) return;
     if (button.getAttribute('aria-expanded') !== String(open)) button.setAttribute('aria-expanded', String(open));
     if (setFold($(button.getAttribute('aria-controls')), open, immediate)) syncSpectrumAnimation();
   }
 
   function setupEditorSections() {
-    const manual = $('ymc-theme-palette');
-    const title = document.createElement('p');
-    title.className = 'section-label';
-    title.textContent = 'Ручное оформление';
     const smart = $('ymc-theme-smart'), spectrumSection = $('ymc-theme-spectrum');
-    smart.dataset.feature = spectrumSection.dataset.feature = '';
-    manual.before(smart, spectrumSection, title);
+    smart.dataset.feature = '';
     for (const [id, [description, switchKey]] of Object.entries(SECTION_SUMMARIES)) {
       const section = $(id);
       const heading = section.querySelector('h3');
@@ -4636,11 +4636,41 @@
       setFold(content, false, true);
       button.addEventListener('click', () => setSettingsSection(section, content.inert));
     }
+    const groups = {
+      theme: {
+        'Автоматические цвета': ['theme-smart'],
+        'Цвета и фон': ['theme-palette', 'theme-background', 'theme-media'],
+        'Визуальные эффекты': ['theme-spectrum', 'theme-pattern', 'theme-heart'],
+        'Интерфейс': ['theme-surfaces', 'theme-fonts', 'theme-contrast']
+      },
+      layout: {
+        'Экран «Моя волна»': ['home-hero', 'home-track', 'home-animation', 'home-portrait'],
+        'Управление': ['home-buttons', 'home-visibility', 'home-wave'],
+        'Панель и детали': ['home-sidebar', 'home-badges', 'home-motion']
+      },
+      player: {
+        'Нижний плеер': ['player-layout', 'player-buttons', 'theme-bar'],
+        'Дополнительно': ['player-overlay', 'discord']
+      },
+      playlists: {
+        'Оформление': ['playlists-gradient', 'playlists-buttons'],
+        'Навигация и поиск': ['playlists-navigation', 'playlists-details']
+      }
+    };
+    for (const [pane, sections] of Object.entries(groups)) {
+      const page = shadow.querySelector('[data-pane="' + pane + '"]');
+      for (const [label, ids] of Object.entries(sections)) {
+        const group = document.createElement('div');
+        group.className = 'settings-group';
+        const title = document.createElement('h3');
+        title.className = 'section-label';
+        title.textContent = label;
+        group.append(title, ...ids.map(id => $('ymc-' + id)));
+        page.append(group);
+      }
+    }
     if (theme.smartTheme) setSettingsSection(smart, true, true);
     else if (theme.barSpectrum) setSettingsSection(spectrumSection, true, true);
-    const bar = $('ymc-theme-bar');
-    const playerPane = shadow.querySelector('[data-pane="player"]');
-    playerPane.insertBefore(bar, $('ymc-player-overlay'));
   }
 
   function contrastPairs(t) {
@@ -4707,13 +4737,9 @@
   function syncPortraitPreview(backgroundColor, displayTheme = theme) {
     const color = portraitEffectColor(displayTheme, backgroundColor);
     $('ymc-portrait-preview').style.filter = portraitFilter(displayTheme, color);
-    const ribbon = $('ymc-ribbon-preview');
-    const ribbonVisible = displayTheme.portraitEffect === 'ribbon' && displayTheme.portraitIntensity > 0;
-    ribbon.toggleAttribute('hidden', !ribbonVisible);
-    if (ribbonVisible) {
-      paintRibbonColor(displayTheme, color, ribbon);
-      drawPortraitRibbon(displayTheme, .4, displayTheme.portraitBeat ? .55 : 0, null, ribbon);
-    }
+    const aura = $('ymc-aura-preview');
+    aura.hidden = displayTheme.portraitEffect !== 'bloom' || displayTheme.portraitIntensity === 0;
+    if (!aura.hidden) paintAura(displayTheme, color, aura);
     $('ymc-portrait-chip').style.backgroundColor = color;
     setText($('ymc-portrait-color'), color.toUpperCase());
     const hint = displayTheme.portraitEffect === 'off' ? 'Выберите эффект, чтобы настроить цвет и силу свечения.'
@@ -4727,13 +4753,44 @@
     setText($('ymc-portrait-hint'), hint);
   }
 
+  let lockedManualFields = new Set();
+
+  function syncSmartLocks(t) {
+    lockedManualFields = new Set();
+    for (const [group, { fields }] of Object.entries(SMART_GROUPS)) {
+      if (smartGroupEnabled(t, group)) for (const key of fields) lockedManualFields.add(key);
+    }
+    if (smartGroupEnabled(t, 'smartAccent')) lockedManualFields.add('customAccentStates');
+    if (smartGroupEnabled(t, 'smartPortrait')) lockedManualFields.add('portraitColorSource');
+    if (smartOwnsBackdrop(t)) {
+      for (const key of ['mode','wallpaper','gradientAngle','backgroundDim','appMediaEnabled','vibeMedia',
+        'appMediaFile','mediaFit','mediaX','mediaY','mediaBlur','mediaOpacity']) lockedManualFields.add(key);
+    }
+    const sections = {
+      'ymc-theme-palette': ['accent', 'text', 'textSecondary', 'background', 'gradientEnd']
+        .every(key => lockedManualFields.has(key)),
+      'ymc-theme-background': smartOwnsBackdrop(t),
+      'ymc-theme-media': smartOwnsBackdrop(t)
+    };
+    for (const [id, locked] of Object.entries(sections)) {
+      const section = $(id);
+      const toggle = section.querySelector('.section-toggle');
+      if (locked) {
+        setSettingsSection(section, false, true);
+        section.setAttribute('data-section-lock', '');
+      } else section.removeAttribute('data-section-lock');
+      toggle.disabled = locked;
+      toggle.title = locked ? 'Управляется умной темой' : '';
+    }
+  }
+
   function syncControls(resetDraft, syncCss = resetDraft) {
     const t = editorTheme();
     const withMedia = Boolean(vibeMedia && t.appMediaEnabled);
     const photoMode = ['image', 'cover'].includes(t.mode);
     const playlistGradient = ['palette', 'theme'].includes(t.playlistGradient);
     const portraitOff = t.portraitEffect === 'off';
-    const ribbon = t.portraitEffect === 'ribbon';
+    const bloom = t.portraitEffect === 'bloom';
     const customWave = t.vibeAnimation && t.waveStyle !== 'native';
     const unavailable = {
       scale: !t.manualScale, addonEnabled: !t.addonSheets.length, addonPalette: !t.addonEnabled,
@@ -4748,7 +4805,7 @@
       patternNativeOpacity: !t.vibeAnimation || t.waveStyle !== 'native',
       waveStyle: !t.vibeAnimation, waveClearRail: !t.vibeAnimation, waveNativeOpacity: !t.vibeAnimation || customWave,
       wavePalette: !customWave, waveTint: !customWave || t.wavePalette !== 'custom',
-      waveOpacity: !customWave, waveTone: !customWave, waveSpeed: !customWave,
+      waveOpacity: !customWave, waveTone: !customWave,
       sidebarAlign: t.sidebarDock === 'native', sidebarSize: t.sidebarDock === 'native',
       sidebarGap: t.sidebarDock === 'native', sidebarInset: t.sidebarDock === 'native', sidebarCompact: t.sidebarDock === 'native',
       vibeAdaptiveCoverSize: !t.vibeAdaptiveCover,
@@ -4772,8 +4829,7 @@
       vibeHover: !t.customVibeButtons, vibeButtonRound: !t.customVibeButtons,
       vibeWheelOpacity: !t.showVibeWheel, vibeAiOpacity: !t.aiTrackCards,
       portraitColorSource: portraitOff, portraitColor: portraitOff || t.portraitColorSource !== 'custom',
-      portraitOutline: portraitOff || t.portraitEffect === 'glow' || ribbon,
-      portraitRibbonWidth: !ribbon, portraitRibbonShape: !ribbon, portraitRibbonSpeed: !ribbon || !t.portraitBeat,
+      portraitOutline: portraitOff || t.portraitEffect === 'glow' || bloom,
       portraitSpread: portraitOff || t.portraitEffect === 'outline', portraitIntensity: portraitOff,
       portraitBeat: !hasPortraitAura(t), portraitBeatStrength: !hasPortraitAura(t) || !t.portraitBeat,
       portraitBeatSensitivity: !hasPortraitAura(t) || !t.portraitBeat,
@@ -4812,45 +4868,38 @@
       'Selected', 'ButtonHover', 'ButtonOpacity', 'ButtonRound']) {
       unavailable['playlist' + key] = !t.playlistButtons || !t.playlistCustomButtons;
     }
-    const autoLocked = new Map();
-    for (const [group, { label, fields }] of Object.entries(SMART_GROUPS)) {
-      const strength = t.enabled && t.smartTheme && t[group] ? t.smartStrength * t[group + 'Amount'] : 0;
-      if (strength && (strength === 10000 || group === 'smartSpectrum')) {
-        for (const field of fields) autoLocked.set(field, label);
+    syncSmartLocks(t);
+    for (const el of shadow.querySelectorAll('[data-prop], [data-number], [data-setting]')) {
+      const key = el.dataset.prop || el.dataset.number || el.dataset.setting;
+      const locked = lockedManualFields.has(key);
+      const row = el.closest('.line') || el.closest('label');
+      if (row && !el.dataset.number) row.toggleAttribute('data-auto-locked', locked);
+      if (el.dataset.setting) {
+        if (locked) el.disabled = true;
+        else if (el.hasAttribute('data-smart-locked')) el.disabled = false;
+        el.toggleAttribute('data-smart-locked', locked);
+        continue;
       }
-    }
-    for (const el of shadow.querySelectorAll('[data-prop]')) {
-      const key = el.dataset.prop;
       const value = t[key];
-      const group = autoLocked.get(key);
-      const label = el.closest('label') || el.closest('.line');
-      if (group) {
-        label?.setAttribute('data-auto-locked', '');
-        label?.setAttribute('title', 'Цвет задаёт умная тема · «' + group + '»');
-      } else if (label?.hasAttribute('data-auto-locked')) {
-        label.removeAttribute('data-auto-locked');
-        label.removeAttribute('title');
-      }
-      if (el.type === 'checkbox') el.checked = value;
+      if (el.dataset.number) {
+        if (el !== shadow.activeElement || el.disabled || resetDraft) el.value = value / (key === 'contrastLevel' ? 10 : 1);
+      } else if (el.type === 'checkbox') el.checked = value;
       else if (el.value !== String(value)) el.value = value;
-      el.disabled = Boolean(unavailable[key] || group);
-    }
-    for (const el of shadow.querySelectorAll('[data-number]')) {
-      const key = el.dataset.number;
-      if (el !== shadow.activeElement || el.disabled || resetDraft) el.value = t[key] / (key === 'contrastLevel' ? 10 : 1);
-      el.disabled = Boolean(unavailable[key]);
+      el.disabled = Boolean(unavailable[key] || locked);
     }
     if (suggestedPalette) showPaletteSuggestion(false);
     $('ymc-addon-clear').disabled = !t.addonSheets.length;
     $('ymc-addon-name').textContent = t.addonSheets.map(sheet => sheet.name).join(', ') || 'CSS дополнения не выбран.';
     for (const group of shadow.querySelectorAll('[data-available]')) {
-      setFold(group, !unavailable[group.dataset.available], !group.hasAttribute('aria-hidden'));
+      setFold(group, !unavailable[group.dataset.available] && !lockedManualFields.has(group.dataset.available), !group.hasAttribute('aria-hidden'));
     }
     const spectrumProfile = Object.entries(SPECTRUM_PROFILES).find(([, { settings }]) =>
       Object.entries(settings).every(([key, value]) => t[key] === value));
     $('ymc-spectrum-profile').value = spectrumProfile?.[0] || '';
     $('ymc-spectrum-retry').disabled = previewSession?.kind === 'spectrum';
-    $('ymc-image-options').hidden = t.mode !== 'image';
+    $('ymc-image-options').hidden = t.mode !== 'image' || smartOwnsBackdrop(t);
+    $('ymc-apply-palette').disabled = [...lockedManualFields].some(key => COLORS.includes(key));
+    syncVibeControls();
     $('ymc-image-status').textContent = t.wallpaper ? 'Локальное изображение загружено.' : 'Выберите PNG, JPG или WebP. Пока используется градиент.';
     $('ymc-bar-clear').disabled = !t.barWallpaper;
     $('ymc-liked-clear').disabled = !t.likedImage;
@@ -5019,6 +5068,7 @@
       }
       const fragment = document.createDocumentFragment();
       for (const entry of index) {
+        if (lockedManualFields.has(entry.key) || entry.control.closest('[data-section-lock]')) continue;
         if (changedOnly && !isChanged(entry.key)) continue;
         if (!tokens.every(token => entry.searchable.includes(token))) continue;
         const button = document.createElement('button');
@@ -5064,9 +5114,9 @@
     });
     return () => {
       for (const { button, keys } of resetButtons) {
-        button.disabled = !keys.some(isChanged) || (keys.includes('vibeMedia') && vibeBusy);
+        button.disabled = !keys.some(key => !lockedManualFields.has(key) && isChanged(key)) || (keys.includes('vibeMedia') && vibeBusy);
       }
-      if (changed.getAttribute('aria-pressed') === 'true') render();
+      if (search.value || changed.getAttribute('aria-pressed') === 'true') render();
     };
   }
 
@@ -5258,7 +5308,7 @@
     ['theme', 'ymc-theme-spectrum', 'Эквалайзер на фоне',
       'Включите эквалайзер и выберите готовый вид или форму. «Предпросмотр» показывает рисунок даже без музыки. Изменения остаются в образце до нажатия «Применить». Автоподбор даёт один оттенок. Для трёх ручных цветов отключите группу «Эквалайзер» в умной теме и откройте «Цвета и слои». Там же регулируются свечение, сетка и второй контур. Если сигнал запаздывает, нажмите «Подключить звук».', 'spectrum'],
     ['theme', 'ymc-theme-smart', 'Умная тема по треку',
-      'Основной фон берёт цвет крупного участка обложки. Для градиента может добавиться второй цвет, если он занимает заметную часть обложки. Заметные детали могут задать акцент и ауру. Эквалайзер использует один оттенок с плавным переходом по яркости. В «Переход и отдельные цвета» можно изменить силу или отключить каждую группу. Если цвет полностью задаёт умная тема, ручное поле блокируется. Выключите соответствующую группу, чтобы снова задать свой цвет.', 'cover'],
+      'Основной фон берёт цвет крупного участка обложки. Для градиента может добавиться второй цвет, если он занимает заметную часть обложки. Заметные детали могут задать акцент и ауру. Эквалайзер использует один оттенок с плавным переходом по яркости. В «Переход и отдельные цвета» можно изменить силу или отключить каждую группу. Включённые группы закрывают ручные поля и разделы. Выключите соответствующую группу, чтобы снова задать свой цвет.', 'cover'],
     ['theme', 'ymc-theme-palette', 'Палитра',
       'Акцент красит основные действия, а «Текст» меняет надписи. «Фон» и «Конец градиента» задают общую заливку. Включите свои оттенки акцента, чтобы выбрать цвета при наведении и нажатии. Название видно в магазине при сохранении.', 'theme'],
     ['theme', 'ymc-theme-background', 'Тип фона',
@@ -5284,13 +5334,13 @@
     ['layout', 'ymc-home-sidebar', 'Панель навигации',
       'Выберите сторону окна. Сверху и снизу панель становится горизонтальной. Привязка задаёт угол или центр. Стрелки рядом с пунктами меняют порядок, в том числе у закреплённых плейлистов. Скрытые пункты можно вернуть в этом же списке.'],
     ['layout', 'ymc-home-animation', 'Анимация «Моей волны»',
-      'Оставьте штатный рисунок или выберите дымку, ленты либо орбиты. В режиме «Авто» цветной фон даёт соседний тон, чёрный — серый, а белый берёт оттенок из обложки. Можно выбрать свой цвет, отрегулировать видимость и скорость. Прозрачная навигация убирает полосу поверх рисунка.'],
+      'Кастомная анимация перекрашивает привычное движение «Моей волны». В режиме «Авто» цветной фон даёт соседний тон, чёрный — серый, а белый берёт оттенок из обложки. Можно выбрать свой цвет, видимость и контраст. Прозрачная навигация убирает полосу поверх рисунка.'],
     ['layout', 'ymc-home-wave', 'Колесо и подсказки',
       'Колесо выбора волны можно скрыть или сделать полупрозрачным. ИИ-подсказки о треках можно выключить целиком или приглушить ползунком.'],
     ['layout', 'ymc-home-motion', 'Редактор анимаций',
       'Главный переключатель включает плавные переходы. Карточки можно слегка поднять и увеличить при наведении. Равномерное дыхание ауры и движение градиента включаются отдельно. Пульсация по музыке находится в карточке «Портрет артиста». Системное уменьшение движения отключает анимации.'],
     ['layout', 'ymc-home-portrait', 'Портрет артиста',
-      'Выберите мягкую ауру, обводку или ленту вокруг портрета. Для ленты можно изменить толщину, неровность и скорость. Цвет можно взять из темы, подобрать по фону или задать вручную. «Пульсировать в такт музыке» усиливает ауру на басовых ударах. Настройте силу, чувствительность и затухание. Силу можно поднять до 250%. Пульсация работает даже при скрытом эквалайзере.'],
+      'Выберите мягкую ауру, обводку или плотное свечение. У плотного свечения мягкие края, а пульс заметнее. Цвет можно взять из темы, подобрать по фону или задать вручную. «Пульсировать в такт музыке» усиливает ауру на басовых ударах. Настройте силу, чувствительность и затухание. Силу можно поднять до 250%. Пульсация работает даже при скрытом эквалайзере.'],
     ['layout', 'ymc-home-track', 'Обложка и строка трека',
       'Включите адаптивную обложку: с видимым портретом она скроется, без портрета займёт больше места между названием и управлением. Выберите размер. Прозрачность обложки и подложка строки трека настраиваются отдельно.'],
     ['layout', 'ymc-home-badges', 'Значки в правом нижнем углу',
@@ -5337,7 +5387,12 @@
       'Исправлен цвет паузы и улучшена читаемость светлых тем; ручные цвета разблокируются по группам.',
       'Обложка может скрываться при портрете и увеличиваться без него. Рассыпные узоры больше не строятся по сетке.'
     ], steps: ['ymc-home-sidebar', 'ymc-home-animation', 'ymc-home-portrait', 'ymc-home-track', 'ymc-home-buttons',
-      'ymc-theme-smart', 'ymc-theme-pattern'] }
+      'ymc-theme-smart', 'ymc-theme-pattern'] },
+    { version: '0.7.1', notes: [
+      'Штатная анимация «Моей волны» перекрашивается без изменения движения. Все кнопки получают цвета темы.',
+      'Плотная аура без контура, выровненный экран и исправленный размер крупной обложки.',
+      'Подписи под значками панели, меню по группам и закрытые ручные разделы умной темы.'
+    ], steps: ['ymc-home-animation', 'ymc-home-portrait', 'ymc-home-track', 'ymc-home-sidebar', 'ymc-home-buttons', 'ymc-theme-smart'] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -5846,7 +5901,7 @@
     syncAppBackground();
     syncSidebar(navbar, fullscreen);
     syncWaveMount(fullscreen);
-    syncRibbon(fullscreen ? null : portraitNode);
+    syncPortraitAura(fullscreen ? null : portraitNode);
     syncPatternMount(fullscreen);
     syncBeatPortrait(fullscreen);
     syncBottomBar(fullscreen);
@@ -5868,9 +5923,9 @@
       showDialog('', null);
       return;
     }
-    const coverMode = isStyled() && theme.mode === 'cover' && !(theme.addonEnabled && theme.addonPalette);
+    const coverMode = isStyled() && visualTheme().mode === 'cover' && !(theme.addonEnabled && theme.addonPalette);
     const smartMode = isStyled() && theme.smartTheme;
-    const waveCover = waveLayer.isConnected && waveNeedsCover(visualTheme());
+    const waveCover = Boolean(activeHero && recoloredWave(theme) && waveNeedsCover(visualTheme()));
     const track = coverMode || smartMode || waveCover || activeDialog === 'now' ? trackInfo(player, smartMode || waveCover) : null;
     if (waveCover || waveKey) {
       syncWavePalette(waveCover ? track : null, smartMode);
@@ -5899,9 +5954,12 @@
     appBackdrop = document.createElement('div');
     appBackdrop.dataset.ymcAppBackdrop = '';
     appBackdrop.setAttribute('aria-hidden', 'true');
-    waveLayer = document.createElement('div');
-    waveLayer.setAttribute('aria-hidden', 'true');
-    waveLayer.innerHTML = '<i></i><i></i><i></i>';
+    const waveFilter = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    waveFilter.setAttribute('aria-hidden', 'true');
+    waveFilter.style.cssText = 'position:absolute;width:0;height:0;pointer-events:none';
+    waveFilter.innerHTML = '<defs><filter id="ymc-native-wave-tint" color-interpolation-filters="sRGB"><feColorMatrix type="matrix"/></filter></defs>';
+    waveMatrix = waveFilter.querySelector('feColorMatrix');
+    document.body.prepend(waveFilter);
     patternLayer = document.createElement('div');
     patternLayer.dataset.ymcPattern = '';
     patternLayer.setAttribute('aria-hidden', 'true');
@@ -5916,6 +5974,12 @@
     document.body.append(host);
     setupEditorSections();
     setupEditorResize();
+
+    navToggle = document.createElement('button');
+    navToggle.type = 'button';
+    navToggle.setAttribute('data-ymc-nav-toggle', '');
+    navToggle.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 5h12M4 10h12M6 15h8"/></svg>';
+    navToggle.addEventListener('click', () => update({ sidebarCompact: !theme.sidebarCompact }));
 
     launcher = document.createElement('button');
     launcher.type = 'button';
@@ -6121,7 +6185,8 @@
 
     let fileRequest = 0;
     syncSettingsTools = settingsTools(openTab, async (keys, title) => {
-      if (!confirm(`Вернуть стандартные значения в блоке «${title}»?`)) return;
+      keys = keys.filter(key => !lockedManualFields.has(key));
+      if (!keys.length || !confirm(`Вернуть стандартные значения в блоке «${title}»?`)) return;
       fileRequest++;
       const { background } = snapshot();
       if (keys.includes('vibeMedia') && isChanged('vibeMedia') &&
@@ -6147,7 +6212,7 @@
     }
     fileInput('ymc-image', 'ymc-file', async ([file], isCurrent) => {
       const wallpaper = await imageToDataUrl(file);
-      if (!isCurrent()) return;
+      if (!isCurrent() || smartOwnsBackdrop(theme)) return;
       update({ wallpaper, mode: 'image' }, { sync: false });
       await rememberFile(file);
     });
@@ -6169,7 +6234,7 @@
       update({ likedImage: '', likedShape: theme.likedShape === 'image' ? 'native' : theme.likedShape }, { sync: false });
     });
     $('ymc-apply-palette').addEventListener('click', () => {
-      if (!suggestedPalette) return;
+      if (!suggestedPalette || $('ymc-apply-palette').disabled) return;
       const palette = makePaletteVariant(suggestedPalette, paletteVariant);
       update({ ...palette, portraitColor: palette.portraitAccent, sidebarGradient: theme.separateSurfaces, barCustom: true,
         spectrumGradient: theme.spectrumGradient === 'solid' ? 'vertical' : theme.spectrumGradient });
@@ -6431,7 +6496,7 @@
       html[data-ymc-active="yes"]:has([data-ymc-app-backdrop]) ${SELECTOR.layout} { background:transparent !important; }
       [data-ymc-app-backdrop] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-1; pointer-events:none; overflow:hidden; }
       [data-ymc-pattern] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-1; pointer-events:none; overflow:hidden; }
-      ${EFFECT_STYLES}
+      ${AURA_STYLE}
       ${NAV_STYLES}
       ${patternRules('[data-ymc-pattern]')}
       [data-ymc-page-spectrum] { position:fixed; inset:auto var(--ymc-reserved-width) 0 0; height:var(--ymc-spectrum-height); z-index:-1; pointer-events:none; }
