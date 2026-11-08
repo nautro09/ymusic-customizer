@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YMusic Customizer — локальная демонстрация</title>
+  <style>
+    :root { color-scheme:dark; --player-bar-height:5rem; }
+    * { box-sizing:border-box; }
+    body { min-height:100vh;margin:0;padding:14px;background:#17141c;color:#fff;font:16px/1.5 system-ui,sans-serif; }
+    .DefaultLayout_root__demo {min-height:calc(100vh - 28px);display:grid;grid-template:"navbar content" 1fr "navbar playerbar" auto / minmax(140px,220px) minmax(0,1fr);gap:12px;background:#211d27}
+    .NavbarDesktop_root__demo {grid-area:navbar;display:flex;flex-direction:column;background:#2a2532;border-radius:18px;padding:18px}
+    .NavbarDesktop_root__demo [data-ymc-launcher] {margin-top:auto}
+    .NavbarDesktopUserWidget_userProfileContainer__demo {padding:12px 7px 0}
+    .NavbarDesktop_root__demo p {padding:7px;border-radius:7px}
+    .NavbarDesktop_root__demo p:first-of-type {background:#ffffff15}
+    .Content_root__demo {grid-area:content;padding:20px;background:#211d27}
+    .eyebrow {font-size:12px;font-weight:650;letter-spacing:.08em}
+    h1 {font-size:2rem;margin:8px 0}
+    .cards {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:24px}
+    .AlbumCard_root__demo {padding:9px;background:#2d2636;border-radius:12px}
+    .cover {aspect-ratio:1;border-radius:8px;margin-bottom:8px;background:linear-gradient(135deg,#a46bd7,#342b49)}
+    .AlbumCard_root__demo:nth-child(2) .cover {background:linear-gradient(135deg,#71a2b4,#172b43)}
+    .AlbumCard_root__demo:nth-child(3) .cover {background:linear-gradient(135deg,#d998a6,#624c68)}
+    .AlbumCard_root__demo:nth-child(4) .cover {background:linear-gradient(135deg,#669f7d,#153e3c)}
+    .PlayerBarDesktop_root__demo {grid-area:playerbar;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:9px 12px;min-height:var(--player-bar-height);background:#302a37;border-radius:14px}
+    .PlayerBarDesktop_root__demo input {grid-column:1/-1;width:100%;accent-color:var(--ym-controls-color-primary-default-enabled,#ffcc00)}
+    .PlayerBarDesktop_controls__demo {display:flex;flex-wrap:wrap;gap:4px;}
+    button {font:inherit;cursor:pointer}
+    button[data-test-id] {border:0;border-radius:8px;padding:5px 9px;background:#ffffff15;color:inherit;}
+    button[data-test-id="PLAY_BUTTON"],button[data-test-id="PAUSE_BUTTON"] {background:var(--ym-controls-color-primary-default-enabled,#ffcc00);color:#181019;}
+    button[aria-pressed=true] {color:#ffacf0;}
+    .Meta_root__demo small {display:block;opacity:.72}
+    #test-audio {border-radius:8px;border:1px solid #b58adc;padding:6px 9px;background:#ffffff17;color:inherit}
+    #demo-status {min-height:1.5em}
+    @media(max-width:690px) {
+      .DefaultLayout_root__demo {grid-template:"content" 1fr "playerbar" auto / minmax(0,1fr)}
+      .NavbarDesktop_root__demo {display:none}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .PlayerBarDesktop_root__demo {grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body class="ym-dark-theme">
+  <div class="DefaultLayout_root__demo">
+    <nav class="NavbarDesktop_root__demo"><strong>Музыка · макет</strong><p>Главная</p><p>Коллекция</p><p>Плейлисты</p>
+      <div class="NavbarDesktopUserWidget_userProfileContainer__demo">Профиль</div>
+    </nav>
+    <main class="Content_root__demo">
+      <small class="eyebrow">ЛОКАЛЬНАЯ ДЕМОНСТРАЦИЯ</small>
+      <h1>Моя музыка</h1>
+      <p>Макет для проверки оформления и управления. Для проверки визуализатора запустите синтетический тестовый сигнал, затем откройте плеер.</p>
+      <button id="test-audio">Запустить тестовый сигнал</button>
+      <p id="demo-status" role="status"></p>
+      <div class="cards">
+        <div class="AlbumCard_root__demo"><div class="cover"></div><b>Неоновая ночь</b></div>
+        <div class="AlbumCard_root__demo"><div class="cover"></div><b>Синий горизонт</b></div>
+        <div class="AlbumCard_root__demo"><div class="cover"></div><b>Тёплый свет</b></div>
+        <div class="AlbumCard_root__demo"><div class="cover"></div><b>Новый день</b></div>
+      </div>
+    </main>
+    <section class="PlayerBarDesktop_root__demo" aria-label="Штатный плеер макета">
+      <div class="Meta_root__demo"><b class="Meta_title__demo"></b><small class="Meta_artists__demo">Демонстрация</small></div>
+      <div class="PlayerBarDesktop_controls__demo">
+        <button data-test-id="PREV_TRACK_BUTTON" aria-label="Назад">⏮</button>
+        <button data-test-id="PLAY_BUTTON" id="demo-play" aria-label="Играть">▶</button>
+        <button data-test-id="NEXT_TRACK_BUTTON" aria-label="Вперёд">⏭</button>
+        <button data-test-id="LIKE_BUTTON" aria-label="Нравится" aria-pressed="false">♡</button>
+        <button data-test-id="PLAYERBAR_DESKTOP_PLAY_QUEUE_BUTTON" aria-label="Очередь">☰</button>
+      </div>
+      <input type="range" class="PlayerBarDesktopWithBackgroundProgressBar_slider__demo" min="0" max="207" value="24" aria-label="Штатный прогресс">
+    </section>
+  </div>
+  <audio id="demo-audio" loop></audio>
+  <script>
+    const titles = ['Неоновая ночь', 'Синий горизонт', 'Тёплый свет', 'Новый день'];
+    const play = document.querySelector('#demo-play');
+    const audio = document.querySelector('#demo-audio');
+    const test = document.querySelector('#test-audio');
+    const status = document.querySelector('#demo-status');
+    const slider = document.querySelector('[type=range]');
+    let track = 0;
+    let playing = false;
+    let testUrl;
+    function render() {
+      document.querySelector('.Meta_title__demo').textContent = titles[track];
+      play.dataset.testId = playing ? 'PAUSE_BUTTON' : 'PLAY_BUTTON';
+      play.textContent = playing ? '❚❚' : '▶';
+      play.setAttribute('aria-label', playing ? 'Пауза' : 'Играть');
+    }
+    function select(delta) {
+      track = (track + titles.length + delta) % titles.length;
+      slider.value = 0;
+      document.querySelector('[data-test-id=LIKE_BUTTON]').setAttribute('aria-pressed', 'false');
+      render();
+    }
+    play.onclick = () => {
+      playing = !playing;
+      if (testUrl) {
+        if (playing) audio.play().catch(() => { status.textContent = 'Не удалось запустить тестовый сигнал.'; });
+        else audio.pause();
+      }
+      render();
+    };
+    document.querySelector('[data-test-id=PREV_TRACK_BUTTON]').onclick = () => select(-1);
+    document.querySelector('[data-test-id=NEXT_TRACK_BUTTON]').onclick = () => select(1);
+    document.querySelector('[data-test-id=PLAYERBAR_DESKTOP_PLAY_QUEUE_BUTTON]').onclick =
+      () => { status.textContent = 'Очередь макета · ' + titles.join(' · '); };
+    document.querySelector('[data-test-id=LIKE_BUTTON]').onclick = event => {
+      const button = event.currentTarget;
+      button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'));
+    };
+
+    function testSignal() {
+      const rate = 22050;
+      const length = 2 * rate;
+      const buffer = new ArrayBuffer(44 + 2 * length);
+      const view = new DataView(buffer);
+      const label = (offset, s) => [...s].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)));
+      label(0, 'RIFF'); view.setUint32(4, buffer.byteLength - 8, true); label(8, 'WAVE');
+      label(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+      view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true);
+      view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+      label(36, 'data'); view.setUint32(40, length * 2, true);
+      for (let i = 0; i < length; i++) {
+        const time = i / rate;
+        const note = Math.sin(2 * Math.PI * time * 220) + Math.sin(2 * Math.PI * time * 330);
+        view.setInt16(44 + i * 2, 1700 * note * Math.sin(Math.PI * time) ** 2, true);
+      }
+      return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+    }
+    test.onclick = async () => {
+      if (!testUrl) {
+        testUrl = testSignal();
+        audio.src = testUrl;
+      }
+      try {
+        if (audio.paused) await audio.play();
+        else audio.pause();
+      } catch {
+        status.textContent = 'Не удалось запустить тестовый сигнал.';
+      }
+    };
+    audio.onplay = audio.onpause = () => {
+      playing = !audio.paused;
+      test.textContent = playing ? 'Остановить тестовый сигнал' : 'Запустить тестовый сигнал';
+      render();
+    };
+    render();
+  </script>
+  <script src="mod/ymusic-customizer.js"></script>
+</body>
+</html>
