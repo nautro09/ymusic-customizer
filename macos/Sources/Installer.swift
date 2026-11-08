@@ -11,7 +11,7 @@ struct MusicInstall {
     static let officialID = "ru.yandex.desktop.music"
     static let customID = "local.ymusic.customizer.music"
     static let name = "Яндекс Музыка с Customizer"
-    static let release = "0.7.2-mac.1"
+    static let release = "0.7.3-mac.1"
     static let suggestedSource = URL(fileURLWithPath: "/Applications/Яндекс Музыка.app", isDirectory: true)
 
     let directory: URL

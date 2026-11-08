@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.7.2 for Windows and macOS. MIT.
+ * YMusic Customizer v0.7.3 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.7.2';
+  const version = '0.7.3';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -924,77 +924,166 @@
     else if (waveKey) syncWavePalette(null);
   }
 
-  const NAV_ENTRY = '[data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[class*="PinItem_root__"],[class*="NavbarDesktop_logoWrapper__"],[class*="NavbarDesktop_disabledNavigationItem__"]';
+  const NAV_ENTRY = '[data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[data-test-id="PIN_ITEM"],[class*="PinItem_root__"],[class*="NavbarDesktop_logoWrapper__"],[class*="NavbarDesktop_disabledNavigationItem__"]';
+  const NAV_SLOT = '[class*="DefaultLayout_navbar__"]';
   const NAV_STYLES = `
-    [data-ymc-nav-edited] { display:flex !important; reading-flow:flex-visual; gap:var(--ymc-nav-gap,5px); overflow:auto; scrollbar-width:none; }
-    [data-ymc-nav-edited]::-webkit-scrollbar { display:none; }
-    [data-ymc-nav-edited] [data-ymc-nav-group] { display:contents !important; }
-    [data-ymc-nav-edited] [data-ymc-nav-group]::before,[data-ymc-nav-edited] [data-ymc-nav-group]::after { content:none !important; }
-    [data-ymc-nav-edited] [data-ymc-nav-item] { order:var(--ymc-nav-order); flex:none; max-width:100%; }
-    [data-ymc-nav-edited] [data-ymc-nav-hide] { display:none !important; }
-    [data-ymc-nav-edited] > :is([data-ymc-launcher],[class*="NavbarDesktopUserWidget_"]) { order:1000; flex:none; }
-    [data-ymc-nav-edited] > [data-ymc-launcher] { margin-block-start:auto; }
-    [data-ymc-nav-dock] { position:fixed !important; z-index:12; box-sizing:border-box; padding:6px;
+    [data-ymc-nav-hide] { display:none !important; }
+    [data-ymc-native-nav-order] { order:var(--ymc-nav-order) !important; }
+
+    [data-ymc-nav-dock] {
       --ymc-nav-top:max(32px,var(--ymc-nav-inset)); --ymc-nav-bottom:var(--ymc-nav-inset);
-      max-height:calc(100dvh - var(--ymc-nav-top) - var(--ymc-nav-bottom)); width:var(--ymc-nav-width) !important;
-      height:max-content !important; border-radius:var(--ym-radius-size-m,16px); }
-    [data-ymc-nav-dock="left"] { left:var(--ymc-nav-inset); }
-    [data-ymc-nav-dock="right"] { right:calc(var(--ymc-nav-inset) + var(--ymc-reserved-width)); }
-    [data-ymc-nav-dock]:is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="start"] { top:var(--ymc-nav-top); }
-    [data-ymc-nav-dock]:is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="center"] { top:calc(50% + 12px); translate:0 -50%; }
-    [data-ymc-nav-dock]:is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="end"] { bottom:var(--ymc-nav-bottom); }
-    [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) {
-      flex-direction:row !important; flex-wrap:nowrap; align-items:center; justify-content:safe center;
+      --ymc-cell-width:88px; --ymc-cell-height:64px; --ymc-icon-box:30px;
+      position:fixed !important; z-index:12; box-sizing:border-box !important; margin:0 !important;
+      display:grid !important; gap:var(--ymc-nav-gap) !important; reading-flow:grid-rows;
+      padding:6px !important; overflow:auto !important; scrollbar-width:none; overscroll-behavior:contain;
+      border-radius:var(--ym-radius-size-m,16px); backdrop-filter:none !important;
+    }
+    [data-ymc-nav-dock]::-webkit-scrollbar { display:none; }
+    [data-ymc-nav-dock][data-ymc-nav-compact] { --ymc-cell-width:44px; --ymc-cell-height:44px; }
+    [data-ymc-nav-dock] [data-ymc-nav-path] { display:contents !important; }
+    [data-ymc-nav-dock] [data-ymc-nav-path]::before, [data-ymc-nav-dock] [data-ymc-nav-path]::after { content:none !important; }
+    /* The native spacers and headings are sized for the left sidebar. Leave them in its DOM. */
+    [data-ymc-nav-dock] > :not([data-ymc-nav-cell],[data-ymc-nav-path]),
+    [data-ymc-nav-dock] [data-ymc-nav-path] > :not([data-ymc-nav-cell],[data-ymc-nav-path]) { display:none !important; }
+
+    :is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"]) {
+      inset-block:var(--ymc-nav-top) var(--ymc-nav-bottom);
+      inline-size:var(--ymc-nav-width) !important; min-inline-size:0 !important; max-inline-size:none !important;
+      block-size:max-content !important; min-block-size:0 !important;
+      max-block-size:calc(100dvh - var(--ymc-nav-top) - var(--ymc-nav-bottom)) !important;
+      margin-block:auto !important; overflow-x:hidden !important;
+      grid-template:none / minmax(0,1fr) !important; grid-auto-flow:row !important; grid-auto-rows:var(--ymc-cell-height) !important;
+    }
+    [data-ymc-nav-dock="left"] { left:var(--ymc-nav-inset); right:auto; }
+    [data-ymc-nav-dock="right"] { right:calc(var(--ymc-nav-inset) + var(--ymc-reserved-width)); left:auto; }
+    :is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="start"] { margin-block-start:0 !important; }
+    :is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-align="end"] { margin-block-end:0 !important; }
+
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) {
+      --ymc-row-width:calc(100dvw - var(--ymc-reserved-width) - 2 * var(--ymc-nav-inset) - 46px);
+      --ymc-cell-width:clamp(64px,calc((var(--ymc-row-width) - var(--ymc-nav-brand-width)) / var(--ymc-nav-item-count) - var(--ymc-nav-gap)),88px);
       inset-inline:var(--ymc-nav-inset) calc(var(--ymc-nav-inset) + var(--ymc-reserved-width));
-      width:auto !important; padding-inline-end:40px;
-      min-height:var(--ymc-nav-size); max-height:32dvh; overflow-x:auto; overflow-y:hidden;
+      inline-size:auto !important; min-inline-size:0 !important; max-inline-size:none !important;
+      block-size:var(--ymc-nav-depth) !important; min-block-size:0 !important; max-block-size:none !important;
+      padding-inline-end:40px !important; scroll-padding-inline:6px 40px; overflow-y:hidden !important;
+      grid-template:var(--ymc-cell-height) / none !important; grid-auto-flow:column !important; grid-auto-columns:max-content !important;
+      align-content:center !important; justify-content:safe center !important;
     }
-    [data-ymc-nav-dock] [class*="NavbarDesktop_collapseButton__"] { display:none !important; }
-    [data-ymc-nav-toggle] {
-      display:grid; place-items:center; flex:none; min-width:32px; min-height:32px; padding:0;
-      border:0; border-radius:8px; background:transparent; color:inherit; cursor:pointer; order:999;
+    [data-ymc-nav-dock="top"] { top:var(--ymc-nav-top); bottom:auto; }
+    [data-ymc-nav-dock="bottom"] { bottom:var(--ymc-nav-bottom); top:auto; }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="start"] { justify-content:safe start !important; }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="end"] { justify-content:safe end !important; }
+
+    [data-ymc-nav-dock] [data-ymc-nav-cell] {
+      order:var(--ymc-nav-order) !important; grid-area:auto !important; place-self:stretch !important;
+      display:grid !important; grid-template:minmax(0,1fr) / minmax(0,1fr); position:relative !important;
+      box-sizing:border-box !important; inline-size:100% !important; block-size:var(--ymc-cell-height) !important;
+      min-inline-size:0 !important; max-inline-size:none !important; min-block-size:0 !important; max-block-size:none !important;
+      padding:0 !important; margin:0 !important; border-radius:10px; overflow:visible !important;
     }
-    [data-ymc-nav-toggle]:is(:hover,:focus-visible) { background:color-mix(in srgb,currentColor 13%,transparent); }
-    [data-ymc-nav-toggle] svg { width:16px; height:16px; }
-    [data-ymc-nav-dock][data-ymc-nav-edited]:not([data-ymc-nav-compact]) :is([data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[data-ymc-launcher]) {
-      display:flex !important; flex-direction:column !important; justify-content:center; align-items:center;
-      gap:3px !important; padding:4px 7px !important; width:auto !important; min-width:42px;
+    [data-ymc-nav-dock] [data-ymc-nav-cell][data-ymc-nav-hide] { display:none !important; }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) [data-ymc-nav-cell] { inline-size:var(--ymc-cell-width) !important; }
+    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]):not([data-ymc-nav-compact]) [data-ymc-nav-cell="brand"] { inline-size:118px !important; }
+
+    [data-ymc-nav-dock] [data-ymc-nav-action] {
+      display:grid !important; grid-template:var(--ymc-icon-box) minmax(0,1fr) / minmax(0,1fr) !important;
+      justify-items:center !important; align-items:center !important; gap:0 !important;
+      box-sizing:border-box !important; padding:3px 4px !important; margin:0 !important;
+      min-inline-size:0 !important; max-inline-size:none !important;
+      min-block-size:0 !important; overflow:visible !important; font-size:0 !important; line-height:0 !important;
+      text-align:center !important; border-radius:10px !important;
     }
-    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) :is([data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[data-ymc-launcher]) > span:last-child {
-      position:static !important; opacity:1 !important; visibility:visible !important; transform:none !important;
-      animation:none !important; display:block !important; font-size:11px; max-width:80px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    [data-ymc-nav-dock] [data-ymc-nav-action]:not([data-ymc-nav-cell]) { inline-size:100% !important; block-size:100% !important; }
+    [data-ymc-nav-dock][data-ymc-nav-compact] [data-ymc-nav-action] { grid-template:minmax(0,1fr) / minmax(0,1fr) !important; }
+    [data-ymc-nav-dock] [data-ymc-nav-symbol] {
+      grid-row:1; grid-column:1; display:grid !important; place-items:center; padding:0 !important; margin:0 !important;
+      inline-size:var(--ymc-icon-box) !important; block-size:var(--ymc-icon-box) !important;
+      min-inline-size:0 !important; max-inline-size:none !important; min-block-size:0 !important; max-block-size:none !important;
     }
-    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) [data-ymc-pin-caption] {
-      display:flex !important; flex-direction:column !important; align-items:center; gap:3px;
+    [data-ymc-nav-dock] [data-ymc-nav-symbol] svg,
+    [data-ymc-nav-dock] svg[data-ymc-nav-symbol] { inline-size:22px !important; block-size:22px !important; }
+    [data-ymc-nav-dock] [data-ymc-nav-native-label] { display:none !important; }
+    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) [data-ymc-nav-caption]::after {
+      content:attr(data-ymc-nav-caption); grid-row:2; grid-column:1; align-self:start;
+      max-inline-size:100%; max-block-size:26px; margin-block-start:1px; overflow:hidden;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      font:600 11px/13px var(--ym-font-text,system-ui,sans-serif);
+      color:inherit; white-space:normal; overflow-wrap:anywhere; text-align:center; pointer-events:none;
     }
-    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) [data-ymc-pin-caption]::after {
-      content:attr(data-ymc-pin-caption); display:block; font-size:11px; max-width:80px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    [data-ymc-nav-dock] [data-ymc-nav-cell="pin"] [class*="Pin_contextMenu__"] {
+      position:absolute !important; inset:0 0 auto auto !important; z-index:2; padding:0 !important; margin:0 !important;
+      inline-size:20px !important; block-size:20px !important; opacity:0; pointer-events:none;
     }
-    [data-ymc-nav-dock] [data-ymc-pin-caption] :is([class*="Pin_meta__"],[class*="Meta_"]) { display:none !important; }
-    [data-ymc-nav-dock="top"] { top:var(--ymc-nav-top); }
-    [data-ymc-nav-dock="bottom"] { bottom:var(--ymc-nav-bottom); }
-    [data-ymc-nav-dock]:is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) > [data-ymc-launcher] { margin:0; }
-    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="start"] { justify-content:safe start; }
-    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-align="end"] { justify-content:safe end; }
-    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) > [class*="NavbarDesktopUserWidget_"] {
-      width:auto !important; height:auto !important; padding:4px 6px !important; margin:0 !important;
+    [data-ymc-nav-dock] [data-ymc-nav-cell="pin"]:is(:hover,:focus-within) [class*="Pin_contextMenu__"] {
+      opacity:1; pointer-events:auto;
     }
-    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"])[data-ymc-nav-compact] :is([class*="NavbarDesktopUserWidget_userId"],[class*="NavbarDesktopUserWidget_userMeta"]) {
-      display:none !important;
+    [data-ymc-nav-dock] [data-ymc-nav-cell="pin"] [class*="Pin_contextMenu__"] > div {
+      inline-size:100%; block-size:100%;
     }
-    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]):not([data-ymc-nav-compact]) :is([class*="NavbarDesktopUserWidget_userProfileContainer__"],[class*="NavbarDesktopUserWidget_userProfile__"]) {
-      display:flex !important; flex-direction:column !important; align-items:center; gap:3px;
+    [data-ymc-nav-dock] [data-ymc-nav-cell="pin"] [class*="Pin_contextMenu__"] button {
+      display:grid !important; place-items:center; box-sizing:border-box;
+      inline-size:100% !important; block-size:100% !important;
+      min-inline-size:0 !important; min-block-size:0 !important; padding:0 !important;
     }
-    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) [class*="NavbarDesktopUserWidget_userProfile__"] { margin:0 !important; }
-    :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) [class*="NavbarDesktop_logoWrapper__"] { max-width:145px; }
-    [data-ymc-nav-dock] [data-ymc-nav-item] { margin:0 !important; }
-    [data-ymc-nav-dock] [data-ymc-nav-item] :is(a,button) { max-width:100%; }
-    [data-ymc-nav-compact] :is([class*="NavigationItem_title"],[class*="NavigationItem_description"],[class*="NavbarDesktop_title"],[class*="PinItem_title"],[class*="PinItem_description"],[class*="PinItem_text"],[class*="NavbarDesktopUserWidget_userInfo"],[data-ymc-launcher] span) { display:none !important; }
-    [data-ymc-nav-compact] [data-test-id^="NAVBAR_NAVIGATION_ITEM_"] > span:last-child { display:none !important; }
-    [data-ymc-nav-compact] :is([data-ymc-nav-item], [data-ymc-nav-item]>a, [data-ymc-launcher]) {
-      inline-size:auto !important; min-inline-size:38px; justify-content:center; padding-inline:6px !important; }
+    [data-ymc-nav-dock] [data-ymc-nav-cell="pin"] [class*="Pin_contextMenu__"] svg {
+      inline-size:13px !important; block-size:13px !important;
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-cell="pin"] [data-ymc-nav-action] { color:inherit; }
+    [data-ymc-nav-dock] [data-ymc-nav-symbol] [class*="PinItem_cover__"] {
+      inline-size:100% !important; block-size:100% !important;
+    }
+
+    [data-ymc-nav-dock] [data-ymc-nav-cell="brand"] [class*="NavbarDesktop_collapseButton__"] { display:none !important; }
+    [data-ymc-nav-dock] [data-ymc-nav-brand-link] {
+      display:grid !important; place-items:center !important; inline-size:100% !important; min-inline-size:0 !important;
+      padding:0 !important; margin:0 !important; overflow:visible !important;
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-brand-link] [class*="NavbarDesktop_logo__"] {
+      inline-size:auto !important; padding:0 !important;
+      --icon-size:30px !important; --icon-height:30px !important; --collapsed-icon-size:30px !important;
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-brand-part] {
+      display:grid !important; place-items:center; place-self:center; position:relative !important; inset:auto !important;
+      block-size:30px !important; overflow:visible !important;
+      opacity:1 !important; visibility:visible !important; animation:none !important; transform:none !important;
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-brand-part="full"] { inline-size:calc(30px * var(--icon-ratio,3.5625)) !important; }
+    [data-ymc-nav-dock] [data-ymc-nav-brand-part="mark"] { inline-size:30px !important; }
+    [data-ymc-nav-dock] [data-ymc-nav-brand-part] svg { display:block; inline-size:100% !important; block-size:100% !important; }
+    [data-ymc-nav-dock][data-ymc-nav-compact] [data-ymc-nav-brand-part="full"],
+    [data-ymc-nav-dock]:not([data-ymc-nav-compact]) [data-ymc-nav-brand-part="mark"] { display:none !important; }
+
+    [data-ymc-nav-dock] [data-ymc-nav-cell="profile"] :is([class*="UserProfile_root__"],[class*="NavbarDesktopUserWidget_userProfileContainer__"]) {
+      display:grid !important; grid-template:var(--ymc-icon-box) minmax(0,1fr) / minmax(0,1fr) !important;
+      justify-items:center; align-items:center; gap:0 !important; padding:3px 4px !important; margin:0 !important;
+      inline-size:100% !important; block-size:100% !important; box-sizing:border-box !important;
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-cell="profile"]:has([class*="UserProfile_root__"]) [class*="NavbarDesktopUserWidget_userProfileContainer__"],
+    [data-ymc-nav-dock] [data-ymc-nav-cell="profile"][class*="NavbarDesktopUserWidget_userProfileContainer__"]:has([class*="UserProfile_root__"]) {
+      grid-template:minmax(0,1fr) / minmax(0,1fr) !important; padding:0 !important;
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-cell="profile"] [class*="UserProfile_meta__"] {
+      display:grid !important; justify-items:center; align-self:start; gap:1px !important; inline-size:100%; min-inline-size:0;
+      opacity:1 !important; visibility:visible !important; animation:none !important;
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-cell="profile"] [class*="UserProfile_userName__"] { max-inline-size:100%; font-size:11px !important; line-height:12px !important; }
+    [data-ymc-nav-dock] [data-ymc-nav-cell="profile"] [class*="UserProfile_plusLink__"] { display:block; line-height:0; }
+    [data-ymc-nav-dock] [data-ymc-nav-cell="profile"] [data-test-id="USER_PROFILE_PLUS_BADGE"] { zoom:.78; }
+    [data-ymc-nav-dock] [data-ymc-nav-cell="profile"] [class*="UserProfile_userId__"] { --user-id-size:28px !important; }
+    [data-ymc-nav-dock][data-ymc-nav-compact] [data-ymc-nav-cell="profile"] [class*="UserProfile_root__"] { grid-template:minmax(0,1fr) / minmax(0,1fr) !important; }
+    [data-ymc-nav-dock][data-ymc-nav-compact] [data-ymc-nav-cell="profile"] [class*="UserProfile_meta__"] { display:none !important; }
+
+    [data-ymc-nav-dock] [data-ymc-nav-toggle] {
+      place-items:center !important; border:0; background:transparent; color:inherit; cursor:pointer;
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-action]:is(:hover,:focus-visible), [data-ymc-nav-dock] [data-ymc-nav-toggle]:is(:hover,:focus-visible) {
+      background-color:var(--ym-controls-color-secondary-default-hovered,#ffffff12);
+    }
+    [data-ymc-nav-dock] [data-ymc-nav-action]:focus-visible,
+    [data-ymc-nav-dock] [data-ymc-nav-toggle]:focus-visible,
+    [data-ymc-nav-dock] [data-ymc-nav-brand-link]:focus-visible { outline:2px solid currentColor; outline-offset:-2px; }
+    [data-ymc-nav-dock] [data-ymc-nav-toggle] svg { width:18px; height:18px; }
+
     [data-ymc-nav-slot] { width:0 !important; min-width:0 !important; margin:0 !important; }
     [data-ymc-nav-layout] { box-sizing:border-box; }
     [data-ymc-nav-layout]:has([data-ymc-nav-slot]) { grid-template-columns:0 minmax(0,1fr) !important; }
@@ -1003,15 +1092,15 @@
     }
     [data-ymc-nav-layout="left"] { padding-inline-start:var(--ymc-nav-reserve) !important; }
     [data-ymc-nav-layout="right"] { padding-inline-end:var(--ymc-nav-reserve) !important; }
-    [data-ymc-nav-layout="top"] { padding-block-start:calc(32px + var(--ymc-nav-reserve)) !important; }
+    [data-ymc-nav-layout="top"] { padding-block-start:calc(var(--ymc-nav-safe-top,32px) + var(--ymc-nav-reserve)) !important; }
     [data-ymc-nav-layout="bottom"] { padding-block-end:var(--ymc-nav-reserve) !important; }
 
     [data-ymc-nav-dock], [data-ymc-nav-collapsed] { transition:opacity .18s ease,transform .18s ease,visibility .18s; }
     [data-ymc-nav-collapsed] { visibility:hidden !important; opacity:0 !important; pointer-events:none !important; }
-    [data-ymc-nav-collapsed="left"] { transform:translateX(-100%) !important; }
-    [data-ymc-nav-collapsed="right"] { transform:translateX(100%) !important; }
-    [data-ymc-nav-collapsed="top"] { transform:translateY(calc(-100% - 36px)) !important; }
-    [data-ymc-nav-collapsed="bottom"] { transform:translateY(100%) !important; }
+    [data-ymc-nav-collapsed="left"] { transform:translateX(calc(-100% - var(--ymc-nav-inset,0px))) !important; }
+    [data-ymc-nav-collapsed="right"] { transform:translateX(calc(100% + var(--ymc-nav-inset,0px))) !important; }
+    [data-ymc-nav-collapsed="top"] { transform:translateY(calc(-100% - var(--ymc-nav-top,32px))) !important; }
+    [data-ymc-nav-collapsed="bottom"] { transform:translateY(calc(100% + var(--ymc-nav-inset,0px))) !important; }
     [data-ymc-nav-edge] {
       position:fixed; z-index:13; display:grid; place-items:center; width:28px; height:28px; padding:0;
       border:1px solid color-mix(in srgb,currentColor 16%,transparent); border-radius:8px;
@@ -1022,18 +1111,19 @@
     [data-ymc-nav-edge]:hover, [data-ymc-nav-edge]:focus-visible { opacity:1; }
     [data-ymc-nav-edge]:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
     [data-ymc-nav-edge] svg { width:14px; height:14px; rotate:var(--ymc-edge-rotation,0deg); }
-    [data-ymc-nav-edge="left"] { left:var(--ymc-edge-offset); top:calc(50% - 14px); --ymc-edge-rotation:180deg; }
-    [data-ymc-nav-edge="right"] { right:calc(var(--ymc-reserved-width) + var(--ymc-edge-offset)); top:calc(50% - 14px); }
-    [data-ymc-nav-edge="top"] { top:calc(max(32px,var(--ymc-edge-inset)) + 6px); --ymc-edge-rotation:-90deg; }
-    [data-ymc-nav-edge="bottom"] { bottom:calc(var(--ymc-edge-inset) + 6px); --ymc-edge-rotation:90deg; }
-    :is([data-ymc-nav-edge="top"],[data-ymc-nav-edge="bottom"]) { right:calc(var(--ymc-reserved-width) + var(--ymc-edge-inset) + 6px); }
+    [data-ymc-nav-edge="left"] { left:var(--ymc-edge-offset,4px); top:var(--ymc-edge-center,calc(50% - 14px)); --ymc-edge-rotation:180deg; }
+    [data-ymc-nav-edge="right"] { right:calc(var(--ymc-reserved-width) + var(--ymc-edge-offset,4px)); top:var(--ymc-edge-center,calc(50% - 14px)); }
+    [data-ymc-nav-edge="top"] { top:var(--ymc-edge-offset,32px); --ymc-edge-rotation:-90deg; }
+    [data-ymc-nav-edge="bottom"] { bottom:var(--ymc-edge-offset,4px); --ymc-edge-rotation:90deg; }
+    :is([data-ymc-nav-edge="top"],[data-ymc-nav-edge="bottom"]) { right:calc(var(--ymc-reserved-width) + var(--ymc-edge-inset,0px) + 6px); }
     [data-ymc-nav-edge][aria-expanded="false"] svg { rotate:calc(var(--ymc-edge-rotation,0deg) + 180deg); }
     @media (prefers-reduced-motion:reduce) {
       [data-ymc-nav-dock], [data-ymc-nav-collapsed] { transition:none; }
     }
   `;
 
-  let navRoot, navLayout, navSlot, navObserver, navToggle, navEdgeToggle, navEntries = [], navMarked = new Set(), navMenuKey = '';
+  let navRoot, navLayout, navSlot, navObserver, navToggle, navEdgeToggle;
+  let navEntries = [], navMarks = new Map(), navMenuKey = '', navView = '';
   function navKey(prefix, value) {
     if (!value) return prefix + ':';
     let hash = 2166136261;
@@ -1046,18 +1136,20 @@
     const entries = [];
     for (const node of nodes) {
       if (entries.some(item => item.node.contains(node))) continue;
-      const pinned = node.matches('[class*="PinItem_root__"]');
+      const pinned = node.matches('[data-test-id="PIN_ITEM"],[class*="PinItem_root__"]');
+      const brand = node.matches('[class*="NavbarDesktop_logoWrapper__"]');
       const control = pinned ? node.querySelector('[class*="Pin_link__"]') || node :
-        node.matches('a,button') ? node : node.querySelector('a[href],button,[data-test-id]');
+        node.matches('a,button') ? node : node.querySelector('a[href],button') || node;
       const pinTitle = pinned ? node.querySelector('[class*="Pin_title__"]')?.textContent.trim() : '';
-      const label = (pinTitle || control?.getAttribute('aria-label') || node.getAttribute('aria-label') ||
-        node.getAttribute('title') || node.textContent.trim() || control?.getAttribute('title') || '').slice(0, 100);
+      const label = (brand ? 'Логотип Яндекс Музыки' : pinTitle || control?.getAttribute('aria-label') ||
+        node.getAttribute('aria-label') || node.getAttribute('title') || node.textContent.trim() ||
+        control?.getAttribute('title') || '').slice(0, 100);
       const test = node.dataset.testId;
       const href = control?.getAttribute('href');
-      const logo = node.matches('[class*="NavbarDesktop_logoWrapper__"]');
-      const key = logo ? 'logo' : pinned ? navKey('pin', href || label) : navKey('link', test || href || label);
+      const key = brand ? 'logo' : pinned ? navKey('pin', href || label) : navKey('link', test || href || label);
       if (key.endsWith(':') || entries.some(item => item.key === key)) continue;
-      entries.push({ node, control, pinned, key, label: label || (pinned ? 'Закреплённая карточка' : test?.split('ITEM_').at(-1) || 'Логотип') });
+      const kind = brand ? 'brand' : pinned ? 'pin' : 'route';
+      entries.push({ node, control, kind, key, label: label || (pinned ? 'Закреплённая карточка' : test?.split('ITEM_').at(-1) || 'Раздел') });
     }
     return entries;
   }
@@ -1073,7 +1165,7 @@
     const list = $('ymc-sidebar-items');
     const rows = orderedNav(theme);
     const hidden = new Set(navIds(theme.sidebarHidden));
-    const key = JSON.stringify(rows.map(({ key, label }) => [key, label, hidden.has(key)]));
+    const key = JSON.stringify([theme.sidebarDock, rows.map(({ key, label }) => [key, label, hidden.has(key)])]);
     if (key === navMenuKey) return;
     navMenuKey = key;
     const focused = shadow.activeElement;
@@ -1102,9 +1194,125 @@
       fragment.append(row);
     }
     list.replaceChildren(fragment);
-    setText($('ymc-sidebar-status'), rows.length ? 'Профиль и кнопка Customizer остаются доступны.' : 'Пункты появятся, когда клиент загрузит панель.');
+    const status = theme.sidebarDock === 'native' ? 'В штатном режиме разделы и закреплённое сохраняют свои группы.' :
+      'Профиль и кнопка Customizer остаются доступны.';
+    setText($('ymc-sidebar-status'), rows.length ? status : 'Пункты появятся, когда клиент загрузит панель.');
     if (refocus) [...list.children].find(el => el.dataset.navKey === refocus)
       ?.querySelector('[data-nav-action="' + action + '"]:not(:disabled)')?.focus({ preventScroll: true });
+  }
+
+  function markNav(next, node, name, value = '') {
+    if (!node) return;
+    let properties = next.get(node);
+    if (!properties) next.set(node, properties = new Map());
+    properties.set(name, String(value));
+  }
+
+  function syncNavMarks(next) {
+    for (const [node, properties] of navMarks) {
+      for (const [name, oldValue] of properties) {
+        if (next.get(node)?.has(name)) continue;
+        if (name.startsWith('--')) node.style.removeProperty(name);
+        else if (node.getAttribute(name) === oldValue) node.removeAttribute(name);
+      }
+    }
+    for (const [node, properties] of next) {
+      for (const [name, value] of properties) {
+        if (name.startsWith('--')) {
+          if (node.style.getPropertyValue(name) !== value) node.style.setProperty(name, value);
+        } else if (node.getAttribute(name) !== value) node.setAttribute(name, value);
+      }
+    }
+    navMarks = next;
+  }
+
+  function navCell(nav, entry) {
+    if (entry.kind !== 'route') return entry.node;
+    const row = entry.node.closest('li');
+    return row && nav.contains(row) ? row : entry.node;
+  }
+
+  function planDockCell(next, nav, cell, kind, order) {
+    if (!cell) return;
+    markNav(next, cell, 'data-ymc-nav-cell', kind);
+    markNav(next, cell, '--ymc-nav-order', order);
+    for (let parent = cell.parentElement; parent && parent !== nav; parent = parent.parentElement) {
+      markNav(next, parent, 'data-ymc-nav-path');
+    }
+  }
+
+  function planDockBrand(next, link) {
+    if (!link) return;
+    markNav(next, link, 'data-ymc-nav-brand-link');
+    const full = link.querySelector('svg:has(use[*|href*="#musicLogoLeft"],use[*|href*="#musicLogoRight"])');
+    const mark = link.querySelector('svg:has(use[*|href$="#musicLogo"])');
+    if (!full || !mark) return;
+    for (const [part, name] of [[full, 'full'], [mark, 'mark']]) {
+      // Yandex layers a full wordmark and a compact mark in the same native logo.
+      const wrapper = part.parentElement;
+      markNav(next, wrapper !== link && wrapper.children.length === 1 ? wrapper : part, 'data-ymc-nav-brand-part', name);
+    }
+  }
+
+  function planDockAction(next, action, kind, label) {
+    if (!action) return;
+    const children = [...action.children];
+    const symbol = kind === 'pin' ? action.querySelector('[class*="Pin_cover__"],[data-test-id="PIN_COVER"]') ||
+      children.find(child => child.matches('img')) :
+      children.find(child => child.matches('svg,img') || child.querySelector('svg,img'));
+    markNav(next, action, 'data-ymc-nav-action');
+    markNav(next, action, 'data-ymc-nav-caption', label);
+    markNav(next, symbol, 'data-ymc-nav-symbol');
+    const labels = kind === 'pin' ? [...action.querySelectorAll('[class*="Pin_meta__"]')] :
+      children.filter(child => child !== symbol && child.textContent.trim());
+    for (const node of labels) markNav(next, node, 'data-ymc-nav-native-label');
+    for (const name of ['aria-label', 'title']) {
+      const existing = action.getAttribute(name);
+      if (!existing || navMarks.get(action)?.get(name) === existing) markNav(next, action, name, label);
+    }
+  }
+
+  function decorateNav(nav, profile, move, edit) {
+    const next = new Map();
+    if (edit) {
+      const hidden = new Set(navIds(theme.sidebarHidden));
+      const entries = orderedNav(theme);
+      for (const [index, entry] of entries.entries()) {
+        const cell = navCell(nav, entry);
+        if (hidden.has(entry.key)) markNav(next, cell, 'data-ymc-nav-hide');
+        if (move) {
+          planDockCell(next, nav, cell, entry.kind, index);
+          if (entry.kind === 'brand') planDockBrand(next, entry.control);
+          else planDockAction(next, entry.control, entry.kind, entry.label);
+        } else if (theme.sidebarOrder) {
+          // Keep the native route and pinned groups. CSS order works within each group.
+          markNav(next, cell, 'data-ymc-native-nav-order');
+          markNav(next, cell, '--ymc-nav-order', index);
+        }
+      }
+      if (move) {
+        const shown = entries.filter(entry => !hidden.has(entry.key));
+        const brand = shown.some(entry => entry.kind === 'brand');
+        const columns = shown.length - Number(brand) + 2 + Number(Boolean(profile));
+        const { sidebarSize, sidebarCompact, sidebarGap, sidebarInset } = theme;
+        const width = sidebarCompact ? Math.max(50, sidebarSize) : Math.max(142, sidebarSize + 76);
+        const depth = Math.max(sidebarCompact ? 56 : 76, sidebarSize);
+        markNav(next, nav, '--ymc-nav-inset', sidebarInset + 'px');
+        markNav(next, nav, '--ymc-nav-width', width + 'px');
+        markNav(next, nav, '--ymc-nav-depth', depth + 'px');
+        markNav(next, nav, '--ymc-nav-gap', sidebarGap + 'px');
+        markNav(next, nav, '--ymc-nav-brand-width', brand ? '118px' : '0px');
+        markNav(next, nav, '--ymc-nav-item-count', columns);
+        planDockCell(next, nav, launcher, 'customizer', entries.length);
+        planDockAction(next, launcher, 'route', 'Customizer');
+        planDockCell(next, nav, navToggle, 'labels', entries.length + 1);
+        markNav(next, navToggle, 'data-ymc-nav-action');
+        markNav(next, navToggle, 'data-ymc-nav-caption', 'Подписи');
+        markNav(next, navToggle.firstElementChild, 'data-ymc-nav-symbol');
+        planDockCell(next, nav, profile, 'profile', entries.length + 2);
+      }
+    }
+    syncNavMarks(next);
   }
 
   const horizontalDock = dock => dock === 'top' || dock === 'bottom';
@@ -1122,20 +1330,27 @@
       wasNavInert = nav.inert;
       nav.inert = true;
     }
-    nav.dataset.ymcNavCollapsed = edge;
+    if (nav.dataset.ymcNavCollapsed !== edge) nav.dataset.ymcNavCollapsed = edge;
   }
 
   function syncDockGeometry() {
-    if (!navRoot || !navEdgeToggle.isConnected) return;
+    if (!navRoot || !navEdgeToggle?.isConnected) return;
     const dock = navRoot.dataset.ymcNavDock;
     const rect = navRoot.getBoundingClientRect();
     const collapsed = navRoot.hasAttribute('data-ymc-nav-collapsed');
-    if (navLayout && horizontalDock(dock)) {
-      navLayout.style.setProperty('--ymc-nav-reserve', collapsed ? '0px' : Math.ceil(rect.height + theme.sidebarInset) + 'px');
-    }
-    if (!horizontalDock(dock)) {
-      const offset = dock ? rect.width + theme.sidebarInset + 4 : rect.right + 4;
+    const { sidebarInset } = theme;
+    if (horizontalDock(dock)) {
+      const safeTop = Math.max(32, sidebarInset);
+      navLayout?.style.setProperty('--ymc-nav-safe-top', safeTop + 'px');
+      navLayout?.style.setProperty('--ymc-nav-reserve', collapsed ? '0px' : Math.ceil(rect.height + 6) + 'px');
+      const inset = dock === 'top' ? safeTop : sidebarInset;
+      navEdgeToggle.style.setProperty('--ymc-edge-offset', Math.round(inset + (collapsed ? 0 : (rect.height - 28) / 2)) + 'px');
+    } else {
+      if (dock) navLayout?.style.setProperty('--ymc-nav-reserve', collapsed ? '0px' : Math.ceil(rect.width + sidebarInset * 2) + 'px');
+      const offset = dock ? rect.width + sidebarInset + 4 : rect.right + 4;
       navEdgeToggle.style.setProperty('--ymc-edge-offset', (collapsed ? 4 : Math.ceil(offset)) + 'px');
+      const center = Math.min(innerHeight - 36, Math.max(36, rect.top + rect.height / 2 - 14));
+      navEdgeToggle.style.setProperty('--ymc-edge-center', Math.round(center) + 'px');
     }
   }
 
@@ -1147,34 +1362,50 @@
     dock.scrollLeft += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? dock.clientWidth : 1);
   }
 
+  function desktopNavbar() {
+    const nodes = [...document.querySelectorAll(SELECTOR.navbar)];
+    return nodes.find(node => node.getClientRects().length) || nodes[0];
+  }
+
   function syncSidebar(nav, fullscreen) {
-    const available = Boolean(isStyled() && !fullscreen && nav?.getClientRects().length);
+    const profile = nav?.querySelector(SELECTOR.profile);
+    const available = Boolean(isStyled() && !fullscreen && nav && (theme.sidebarDock !== 'native' || nav.getClientRects().length));
     const move = available && theme.sidebarDock !== 'native';
     const collapsed = available && theme.sidebarCollapsed;
     const edit = available && Boolean(move || theme.sidebarOrder || theme.sidebarHidden);
-    const edge = theme.sidebarDock === 'native' ? 'left' : theme.sidebarDock;
+    const edge = move ? theme.sidebarDock : 'left';
     const layout = move || collapsed ? nav.closest(SELECTOR.layout) : null;
-    const slot = move || collapsed ? nav.closest('[class*="DefaultLayout_navbar__"]') : null;
+    const slot = move || collapsed ? nav.closest(NAV_SLOT) : null;
     if (navRoot !== nav) {
-      navRoot?.removeAttribute('data-ymc-nav-edited');
       navRoot?.removeAttribute('data-ymc-nav-dock');
       navRoot?.removeAttribute('data-ymc-nav-align');
       navRoot?.removeAttribute('data-ymc-nav-compact');
-      navObserver?.disconnect();
       navRoot?.removeEventListener('wheel', scrollDock);
+      navObserver?.disconnect();
       navRoot = nav;
+      navView = '';
       if (navRoot) {
         navObserver ||= new ResizeObserver(syncDockGeometry);
         navObserver.observe(navRoot);
         navRoot.addEventListener('wheel', scrollDock, { passive: false });
       }
     }
-    if (navLayout !== layout) navLayout?.removeAttribute('data-ymc-nav-layout');
+    if (navLayout !== layout) {
+      navLayout?.removeAttribute('data-ymc-nav-layout');
+      navLayout?.style.removeProperty('--ymc-nav-reserve');
+      navLayout?.style.removeProperty('--ymc-nav-safe-top');
+    }
     if (navSlot !== slot) navSlot?.removeAttribute('data-ymc-nav-slot');
     navLayout = layout;
     navSlot = slot;
-    slot?.toggleAttribute('data-ymc-nav-slot', true);
+    if (slot && !slot.hasAttribute('data-ymc-nav-slot')) slot.setAttribute('data-ymc-nav-slot', '');
     setNavCollapsed(collapsed ? nav : null, edge);
+
+    if (launcher.hidden !== fullscreen) launcher.hidden = fullscreen;
+    if (move && launcher.parentElement !== nav) nav.append(launcher);
+    else if (!move && profile && launcher.nextElementSibling !== profile) profile.before(launcher);
+    else if (!move && !profile) launcher.remove();
+
     if (available) {
       if (!navEdgeToggle.isConnected) document.body.append(navEdgeToggle);
       navEdgeToggle.dataset.ymcNavEdge = edge;
@@ -1184,56 +1415,32 @@
       navEdgeToggle.style.setProperty('--ymc-edge-inset', (collapsed ? 0 : theme.sidebarInset) + 'px');
       if (layout) layout.dataset.ymcNavLayout = move ? edge : 'native-collapsed';
     } else navEdgeToggle.remove();
-    nav?.toggleAttribute('data-ymc-nav-edited', Boolean(edit));
-    nav?.toggleAttribute('data-ymc-nav-compact', Boolean(move && theme.sidebarCompact));
+
     if (move) {
       nav.dataset.ymcNavDock = theme.sidebarDock;
       nav.dataset.ymcNavAlign = theme.sidebarAlign;
+      nav.toggleAttribute('data-ymc-nav-compact', theme.sidebarCompact);
       if (navToggle.parentElement !== nav) nav.append(navToggle);
       navToggle.setAttribute('aria-expanded', String(!theme.sidebarCompact));
       navToggle.title = theme.sidebarCompact ? 'Показать подписи' : 'Скрыть подписи';
       navToggle.setAttribute('aria-label', navToggle.title);
-      const side = ['left', 'right'].includes(theme.sidebarDock);
-      const width = theme.sidebarCompact ? theme.sidebarSize : theme.sidebarSize + 104;
-      nav.style.setProperty('--ymc-nav-inset', theme.sidebarInset + 'px');
-      nav.style.setProperty('--ymc-nav-size', theme.sidebarSize + 'px');
-      nav.style.setProperty('--ymc-nav-width', width + 'px');
-      if (side) layout?.style.setProperty('--ymc-nav-reserve', (collapsed ? 0 : width + theme.sidebarInset * 2) + 'px');
     } else {
       navToggle.remove();
       nav?.removeAttribute('data-ymc-nav-dock');
       nav?.removeAttribute('data-ymc-nav-align');
+      nav?.removeAttribute('data-ymc-nav-compact');
     }
-    if (edit) nav.style.setProperty('--ymc-nav-gap', theme.sidebarGap + 'px');
-    if (nav && (edit || editorTab === 'layout' && activeDialog === 'editor')) navEntries = discoverNav(nav);
-    else navEntries = [];
-    const next = new Set();
-    if (edit) {
-      const hidden = new Set(navIds(theme.sidebarHidden));
-      for (const [index, { node, control, pinned, key, label }] of orderedNav(theme).entries()) {
-        if (move && control && !control.hasAttribute('aria-label')) control.setAttribute('aria-label', label);
-        if (move && pinned && control) {
-          next.add(control);
-          control.setAttribute('data-ymc-pin-caption', label);
-        }
-        next.add(node);
-        node.toggleAttribute('data-ymc-nav-item', true);
-        node.toggleAttribute('data-ymc-nav-hide', hidden.has(key));
-        node.style.setProperty('--ymc-nav-order', index);
-        for (let parent = node.parentElement; parent && parent !== nav; parent = parent.parentElement) {
-          next.add(parent);
-          parent.toggleAttribute('data-ymc-nav-group', true);
-        }
+
+    navEntries = nav && (edit || editorTab === 'layout' && activeDialog === 'editor') ? discoverNav(nav) : [];
+    decorateNav(nav, profile, move, edit);
+    const view = move ? [theme.sidebarDock, theme.sidebarAlign, theme.sidebarCompact].join('/') : '';
+    if (view !== navView) {
+      navView = view;
+      if (nav) {
+        nav.scrollLeft = 0;
+        nav.scrollTop = 0;
       }
     }
-    for (const node of navMarked) if (!next.has(node)) {
-      node.removeAttribute('data-ymc-nav-item');
-      node.removeAttribute('data-ymc-nav-hide');
-      node.removeAttribute('data-ymc-nav-group');
-      node.removeAttribute('data-ymc-pin-caption');
-      node.style.removeProperty('--ymc-nav-order');
-    }
-    navMarked = next;
     syncDockGeometry();
     renderNavMenu();
   }
@@ -4262,7 +4469,7 @@
               ${check('sidebarCompact', 'Только значки, без подписей')}${range('sidebarSize', 'Размер панели')}
               ${range('sidebarGap', 'Расстояние между пунктами')}${range('sidebarInset', 'Отступ от края')}`)}
             ${check('sidebarCollapsed', 'Свернуть панель целиком')}
-            <p class="muted">Кнопка у края сворачивает панель целиком и возвращает её на прежнее место. Стрелки меняют порядок. Так можно поднять закреплённый плейлист выше обычных разделов.</p>
+            <p class="muted">Кнопка у края сворачивает всю панель. Стрелками можно менять порядок пунктов. В переносимой панели можно смешивать разделы и закреплённое.</p>
             <p id="ymc-sidebar-status" class="muted" aria-live="polite"></p>
             <ul id="ymc-sidebar-items" class="sidebar-items" aria-label="Пункты панели"></ul>
             <button class="btn" id="ymc-sidebar-reset" type="button">Вернуть штатную панель</button>
@@ -5449,7 +5656,7 @@
     ['layout', 'ymc-home-visibility', 'Видимость кнопок',
       'Скройте весь ряд или отдельные кнопки воспроизведения, переключения, лайка, дизлайка, громкости и меню. Снимите нужную галочку, чтобы вернуть элемент. Нижний плеер настраивается отдельно.'],
     ['layout', 'ymc-home-sidebar', 'Панель навигации',
-      'Выберите сторону окна. Сверху и снизу панель становится горизонтальной. Привязка задаёт угол или центр. Кнопка у края скрывает и возвращает всю панель. Стрелки рядом с пунктами меняют порядок, в том числе у закреплённых плейлистов. Скрытые пункты можно вернуть в этом же списке.'],
+      'Выберите «Как в Яндекс Музыке», чтобы вернуть исходную раскладку. Переносимую панель можно выровнять по краю или по центру. Сверху и снизу она в одну строку, а в узком окне прокручивается колесом. Значок внутри панели переключает подписи. Стрелки в списке меняют порядок, а кнопка у края окна сворачивает и возвращает всю панель.'],
     ['layout', 'ymc-home-animation', 'Анимация «Моей волны»',
       'Кастомная анимация перекрашивает привычное движение «Моей волны». В режиме «Авто» цветной фон даёт соседний тон, чёрный — серый, а белый берёт оттенок из обложки. Можно выбрать свой цвет, видимость и контраст. Прозрачная навигация убирает полосу поверх рисунка.'],
     ['layout', 'ymc-home-wave', 'Колесо и подсказки',
@@ -5513,7 +5720,11 @@
     { version: '0.7.2', notes: [
       '«Моя волна» сохраняет штатный размер имени и раскладку. Крупная обложка ограничена местом между именем и плеером.',
       'Горизонтальная навигация занимает доступную ширину. Кнопка у края сворачивает и возвращает всю панель.'
-    ], steps: ['ymc-home-track', 'ymc-home-sidebar'] }
+    ], steps: ['ymc-home-track', 'ymc-home-sidebar'] },
+    { version: '0.7.3', notes: [
+      'Штатная панель сохраняет раскладку Яндекс Музыки.',
+      'Сверху, снизу и по бокам значки центрируются. Подписи идут под значками, логотип и профиль помещаются целиком.'
+    ], steps: ['ymc-home-sidebar'] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -6014,13 +6225,8 @@
   function syncNativeMounts() {
     const fullscreen = Boolean(document.fullscreenElement) ||
       [...document.querySelectorAll(SELECTOR.fullscreen)].some(el => el.getClientRects().length && !el.closest('[aria-hidden="true"]'));
-    const navbar = document.querySelector(SELECTOR.navbar);
-    const profile = navbar?.querySelector(SELECTOR.profile);
-    if (launcher.hidden !== fullscreen) launcher.hidden = fullscreen;
-    if (profile && launcher.nextElementSibling !== profile) profile.before(launcher);
-    if (!profile) launcher.remove();
     syncAppBackground();
-    syncSidebar(navbar, fullscreen);
+    syncSidebar(desktopNavbar(), fullscreen);
     syncWaveMount(fullscreen);
     syncPortraitAura(fullscreen ? null : portraitNode);
     syncPatternMount(fullscreen);
@@ -6192,7 +6398,7 @@
       if (name === 'player') refreshDiscord();
       if (name === 'layout') {
         syncPortraitPreview(portraitBackgroundColor(), previewVisual('portrait'));
-        syncSidebar(document.querySelector(SELECTOR.navbar), Boolean(document.fullscreenElement));
+        syncSidebar(desktopNavbar(), Boolean(document.fullscreenElement));
       }
       syncSpectrumAnimation();
     }

@@ -13,7 +13,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.7.3';
+          const version = localStorage.getItem('test:next-version') ?? '0.7.4';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -26,7 +26,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const ui = page.locator('#ymusic-customizer-root');
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.3/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.4/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -34,7 +34,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.7.3'));
+      .querySelector('#ymc-update-label').textContent.includes('0.7.4'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -43,15 +43,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.7.4');
+    await nextRelease('0.7.5');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.4');
-    await nextRelease('0.7.5');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.5');
+    await nextRelease('0.7.6');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -190,10 +190,23 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       slot.style.gridArea = 'navbar';
       nav.before(slot);
       slot.append(nav);
-      nav.insertAdjacentHTML('afterbegin', '<div class="NavbarDesktop_scrollableContainer__fixture"><nav><ul>' +
-        '<li><a href="#search" data-test-id="NAVBAR_NAVIGATION_ITEM_SEARCH" aria-label="Поиск"><svg width="16" height="16"></svg><span>Поиск</span></a></li>' +
-        '<li><a href="#home" data-test-id="NAVBAR_NAVIGATION_ITEM_HOME" aria-label="Главная">Главная</a></li>' +
-        '</ul></nav><div><a class="PinItem_root__fixture" href="#pin" aria-label="Мой плейлист">Мой плейлист</a></div></div>');
+      const routes = [
+        ['SEARCH', 'Поиск'], ['HOME', 'Моя волна'], ['FOR_YOU_AND_TRENDS', 'Для вас и Тренды'],
+        ['CONCERTS', 'Концерты'], ['NON_MUSIC', 'Книги и подкасты'], ['COLLECTION', 'Коллекция']
+      ].map(([id, label]) => `<li><a href="#${id}" data-test-id="NAVBAR_NAVIGATION_ITEM_${id}" aria-label="${label}">
+        <div><svg width="16" height="16"></svg></div><div><span>${label}</span></div></a></li>`).join('');
+      nav.insertAdjacentHTML('afterbegin', `
+        <div class="NavbarDesktop_logoWrapper__fixture"><a href="#logo"><div class="NavbarDesktop_logo__fixture">
+          <span><svg width="107" height="30"><use href="#musicLogoLeftRu"/></svg></span>
+          <span hidden style="display:block"><svg width="30" height="30"><use href="#musicLogo"/></svg></span>
+        </div></a></div>
+        <div class="NavbarDesktop_scrollableContainer__fixture"><div><nav><ul>${routes}</ul></nav>
+          <div><h3>Закреплено</h3><div class="PinItem_root__fixture" style="width:100%">
+            <a href="#pin" class="Pin_link__fixture"><div class="Pin_cover__fixture"></div>
+              <div class="Pin_meta__fixture"><span class="Pin_title__fixture">Мой плейлист</span></div></a>
+            <div class="Pin_contextMenu__fixture"><div><button aria-label="Меню"><svg width="36" height="36"></svg></button></div></div>
+          </div></div>
+        </div></div>`);
       const root = document.querySelector('#vibe-fixture');
       const cover = root.querySelector('#fixture-track-cover');
       const artist = root.querySelector('[data-test-id=VIBE_DYNAMIC_ARTISTS] a');
@@ -219,6 +232,9 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       root.style.cssText = 'container-type:size;height:580px;position:relative';
       const profile = nav.querySelector('[class*="NavbarDesktopUserWidget_userProfileContainer__"]');
       profile.style.cssText = 'display:flex;width:100%;flex-shrink:0';
+      profile.innerHTML = '<div class="UserProfile_root__fixture">' +
+        '<button class="UserProfile_avatarContainer__fixture" aria-label="Профиль" style="width:28px;height:28px"></button>' +
+        '<div class="UserProfile_meta__fixture"><span class="UserProfile_userName__fixture">Профиль</span></div></div>';
       root.insertAdjacentHTML('afterbegin',
         '<div class="VibePage_vibeAnimation__fixture" style="opacity:1">Анимация</div>' +
         '<div class="VibePlayerControls_root__fixture">' +
@@ -234,35 +250,83 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await navRoot.evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)');
     await ui.locator('#ymc-home-sidebar .section-toggle').click();
     const docks = ui.locator('[data-prop=sidebarDock]');
-    await docks.selectOption('top');
-    await page.waitForFunction(() => document.querySelector('[data-ymc-nav-dock="top"]') &&
-      getComputedStyle(document.querySelector('[data-ymc-nav-dock="top"]')).flexDirection === 'row');
-    const rows = ui.locator('#ymc-sidebar-items li');
-    assert.equal(await rows.count(), 3);
     const search = page.locator('[data-test-id=NAVBAR_NAVIGATION_ITEM_SEARCH]');
+    const nativeSize = await search.boundingBox();
+    await docks.selectOption('top');
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-ymc-nav-dock="top"]')).gridAutoFlow === 'column');
+    const rows = ui.locator('#ymc-sidebar-items li');
+    assert.equal(await rows.count(), 8);
     const dockToggle = navRoot.locator('[data-ymc-nav-toggle]');
-    await dockToggle.click();
+    await dockToggle.evaluate(el => el.click());
     assert.equal(await dockToggle.getAttribute('aria-expanded'), 'true');
     assert.equal(await ui.locator('#p-sidebarCompact').isChecked(), false);
     assert.equal(await navRoot.evaluate(el => getComputedStyle(el).scrollbarWidth), 'none');
-    const searchIcon = await search.locator('svg').boundingBox();
-    assert.ok((await search.locator('span').boundingBox()).y > searchIcon.y);
+    assert.equal(await search.evaluate(el => getComputedStyle(el, '::after').content), '"Поиск"');
     const topBar = await navRoot.boundingBox();
-    const profile = await navRoot.locator('[class*="NavbarDesktopUserWidget_userProfileContainer__"]').boundingBox();
-    assert.ok(profile.y < searchIcon.y + searchIcon.height + 25 && profile.y + profile.height <= topBar.y + topBar.height);
     const editorLeft = (await ui.locator('#ymc-editor').boundingBox()).x;
     assert.ok(topBar.width > editorLeft - 45, { topBar, editorLeft });
+
+    await ui.locator('#ymc-close').click();
+    const edgeToggle = page.locator('[data-ymc-nav-edge]');
+    const layout = page.locator('.DefaultLayout_root__demo');
+    const pin = navRoot.locator('.PinItem_root__fixture');
+    const assertDock = async (side, compact, align = 'center') => {
+      await page.evaluate(settings => YMusicCustomizer.update(settings), { sidebarDock: side, sidebarCompact: compact, sidebarAlign: align });
+      const horizontal = side === 'top' || side === 'bottom';
+      const geometry = await navRoot.evaluate(el => {
+        const size = node => node.getBoundingClientRect().toJSON();
+        const symbol = el.querySelector('[data-ymc-nav-symbol] svg');
+        const pin = el.querySelector('[data-ymc-nav-cell="pin"]');
+        const avatar = el.querySelector('.UserProfile_avatarContainer__fixture');
+        return {
+          panel: size(el), cells: [...el.querySelectorAll('[data-ymc-nav-cell]')].map(size),
+          icon: size(symbol), pin: size(pin.querySelector('[data-ymc-nav-symbol]')), avatar: size(avatar),
+          scroll: [el.scrollWidth - el.clientWidth, el.scrollHeight - el.clientHeight]
+        };
+      });
+      const { panel, cells, icon, pin, avatar, scroll } = geometry;
+      assert.ok(scroll[0] <= 1 && scroll[1] <= 1, JSON.stringify({ side, compact, scroll }));
+      assert.ok(cells.every(cell => cell.x >= panel.x && cell.right <= panel.right &&
+        cell.y >= panel.y && cell.bottom <= panel.bottom), JSON.stringify({ side, compact, panel, cells }));
+      const center = box => horizontal ? box.y + box.height / 2 : box.x + box.width / 2;
+      for (const box of [pin, avatar]) assert.ok(Math.abs(center(box) - center(icon)) <= 1, JSON.stringify({ side, compact, icon, box }));
+      const logo = navRoot.locator('[data-ymc-nav-brand-part="' + (compact ? 'mark' : 'full') + '"] svg');
+      const logoBox = await logo.boundingBox();
+      const brandCell = await navRoot.locator('[data-ymc-nav-cell="brand"]').boundingBox();
+      assert.equal(Math.round(logoBox.width), compact ? 30 : 107);
+      assert.equal(logoBox.height, 30);
+      assert.ok(Math.abs(logoBox.x + logoBox.width / 2 - brandCell.x - brandCell.width / 2) <= 1);
+      assert.equal(await search.evaluate(el => getComputedStyle(el, '::after').content), compact ? 'none' : '"Поиск"');
+      return horizontal ? cells[0].x : panel.y;
+    };
+    for (const side of ['top', 'bottom', 'left', 'right']) {
+      const start = await assertDock(side, false, 'start');
+      const center = await assertDock(side, false);
+      const end = await assertDock(side, false, 'end');
+      assert.ok(start < center && center < end, JSON.stringify({ side, start, center, end }));
+      await assertDock(side, true);
+    }
+    await page.setViewportSize({ width: 960, height: 850 });
+    await assertDock('top', false);
+    await page.setViewportSize({ width: 760, height: 850 });
+    await page.evaluate(() => YMusicCustomizer.update({ sidebarDock: 'top', sidebarCompact: false }));
+    await navRoot.hover({ position: { x: 70, y: 24 } });
+    await page.mouse.wheel(0, 680);
+    await page.waitForFunction(() => document.querySelector('[data-ymc-nav-dock]').scrollLeft > 0);
+    assert.ok((await navRoot.locator('.UserProfile_avatarContainer__fixture').boundingBox()).x < 760);
+    await page.setViewportSize({ width: 1260, height: 850 });
+    await page.evaluate(() => YMusicCustomizer.open());
+    await docks.selectOption('top');
     await ui.locator('#p-sidebarCompact').check();
     assert.ok(await search.locator('span').isHidden());
     await rows.filter({ hasText: 'Поиск' }).getByRole('button', { name: 'Скрыть: Поиск' }).click();
     assert.equal(await search.isHidden(), true);
-    await rows.filter({ hasText: 'Мой плейлист' }).getByRole('button', { name: 'Переместить выше: Мой плейлист' }).click();
-    await rows.filter({ hasText: 'Мой плейлист' }).getByRole('button', { name: 'Переместить выше: Мой плейлист' }).click();
+    for (let i = 0; i < 7; i++) {
+      await rows.filter({ hasText: 'Мой плейлист' }).getByRole('button', { name: 'Переместить выше: Мой плейлист' }).click();
+    }
     assert.match(await rows.first().textContent(), /Мой плейлист/);
-    assert.ok((await page.locator('.PinItem_root__fixture').boundingBox()).x <
+    assert.ok((await pin.boundingBox()).x <
       (await page.locator('[data-test-id=NAVBAR_NAVIGATION_ITEM_HOME]').boundingBox()).x);
-    const edgeToggle = page.locator('[data-ymc-nav-edge]');
-    const layout = page.locator('.DefaultLayout_root__demo');
     for (const side of ['top', 'bottom', 'left', 'right']) {
       await docks.selectOption(side);
       assert.equal(await edgeToggle.getAttribute('data-ymc-nav-edge'), side);
@@ -279,6 +343,8 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await ui.locator('#ymc-sidebar-reset').click();
     assert.equal(await search.isVisible(), true);
     assert.equal(await navRoot.getAttribute('data-ymc-nav-dock'), null);
+    assert.equal(await navRoot.locator('[data-ymc-nav-cell],[data-ymc-nav-native-label]').count(), 0);
+    assert.deepEqual(await search.boundingBox(), nativeSize);
 
     await ui.locator('#ymc-home-track .section-toggle').click();
     const adaptive = ui.locator('#p-vibeAdaptiveCover');
