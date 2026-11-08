@@ -17,6 +17,11 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
+        checkUpdate: async () => ({ available: true, version: '0.5.7', notes: 'Новая версия для проверки' }),
+        installUpdate: async () => {
+          window.ymcInstallRequested = true;
+          return { error: 'Тестовая установка остановлена.' };
+        },
         getState: async () => ({ config, discord: config.discordRpc ? 'connected' : 'off' }),
         setConfig: async patch => {
           window.lastDiscordPatch = patch;
@@ -49,6 +54,14 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.5.7').waitFor();
+    assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
+    await ui.locator('#ymc-update-summary').click();
+    assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
+    await ui.locator('#ymc-update-install').click();
+    await ui.locator('#ymc-update-status').getByText('Тестовая установка остановлена.').waitFor();
+    assert.equal(await page.evaluate(() => window.ymcInstallRequested), true);
+    await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-theme-smart .section-toggle').getAttribute('aria-expanded'), 'false');
     assert.equal(await ui.locator('#ymc-theme-spectrum .section-toggle').getAttribute('aria-expanded'), 'false');
     await ui.locator('#p-barSpectrum').check();
