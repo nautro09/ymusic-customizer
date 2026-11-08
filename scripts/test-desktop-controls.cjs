@@ -13,7 +13,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.6.1';
+          const version = localStorage.getItem('test:next-version') ?? '0.7.1';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -26,7 +26,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const ui = page.locator('#ymusic-customizer-root');
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.6\.1/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.1/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -34,7 +34,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.6.1'));
+      .querySelector('#ymc-update-label').textContent.includes('0.7.1'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -43,15 +43,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.6.2');
+    await nextRelease('0.7.2');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.6.2');
-    await nextRelease('0.6.3');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.2');
+    await nextRelease('0.7.3');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -182,6 +182,114 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await ui.locator('#p-' + control).check();
       assert.equal(await target.isVisible(), true, control);
     }
+    // Exercise production-shaped markup, including hard-coded icon paint and layout clipping.
+    await page.evaluate(() => {
+      const nav = document.querySelector('.NavbarDesktop_root__demo');
+      const slot = document.createElement('div');
+      slot.className = 'DefaultLayout_navbar__fixture';
+      slot.style.gridArea = 'navbar';
+      nav.before(slot);
+      slot.append(nav);
+      nav.insertAdjacentHTML('afterbegin', '<div class="NavbarDesktop_scrollableContainer__fixture"><nav><ul>' +
+        '<li><a href="#search" data-test-id="NAVBAR_NAVIGATION_ITEM_SEARCH" aria-label="Поиск">Поиск</a></li>' +
+        '<li><a href="#home" data-test-id="NAVBAR_NAVIGATION_ITEM_HOME" aria-label="Главная">Главная</a></li>' +
+        '</ul></nav><div><a class="PinItem_root__fixture" href="#pin" aria-label="Мой плейлист">Мой плейлист</a></div></div>');
+      const root = document.querySelector('#vibe-fixture');
+      const cover = root.querySelector('#fixture-track-cover');
+      cover.classList.add('VibePage_albumCover__fixture');
+      root.style.cssText = 'container-type:size;height:440px';
+      root.insertAdjacentHTML('afterbegin',
+        '<div class="VibePage_vibeAnimation__fixture" style="opacity:1">Анимация</div>' +
+        '<div class="VibePlayerControls_root__fixture">' +
+        '<button class="VibePlayerControls_playButton__fixture VibePlayerControls_playButton_playing__fixture" aria-label="Пауза">' +
+        '<svg class="VibePlayerControls_playButtonIcon__fixture" width="18" height="18" style="color:#888;opacity:.5">' +
+        '<path fill="#888" d="M0 0H6V18H0zM12 0H18V18H12z"/></svg></button></div>');
+      const main = root.closest('main');
+      main.style.overflow = 'hidden';
+    });
+    const nativeWave = wave.locator('.VibePage_vibeAnimation__fixture');
+    const navRoot = page.locator('.NavbarDesktop_root__demo');
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('main')).overflow === 'visible');
+    assert.equal(await navRoot.evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)');
+    await ui.locator('#ymc-home-sidebar .section-toggle').click();
+    const docks = ui.locator('[data-prop=sidebarDock]');
+    await docks.selectOption('top');
+    await page.waitForFunction(() => document.querySelector('[data-ymc-nav-dock="top"]') &&
+      getComputedStyle(document.querySelector('[data-ymc-nav-dock="top"]')).flexDirection === 'row');
+    const rows = ui.locator('#ymc-sidebar-items li');
+    assert.equal(await rows.count(), 3);
+    const search = page.locator('[data-test-id=NAVBAR_NAVIGATION_ITEM_SEARCH]');
+    await rows.filter({ hasText: 'Поиск' }).getByRole('button', { name: 'Скрыть: Поиск' }).click();
+    assert.equal(await search.isHidden(), true);
+    await rows.filter({ hasText: 'Мой плейлист' }).getByRole('button', { name: 'Переместить выше: Мой плейлист' }).click();
+    await rows.filter({ hasText: 'Мой плейлист' }).getByRole('button', { name: 'Переместить выше: Мой плейлист' }).click();
+    assert.match(await rows.first().textContent(), /Мой плейлист/);
+    assert.ok((await page.locator('.PinItem_root__fixture').boundingBox()).x <
+      (await page.locator('[data-test-id=NAVBAR_NAVIGATION_ITEM_HOME]').boundingBox()).x);
+    await docks.selectOption('right');
+    assert.equal(await navRoot.getAttribute('data-ymc-nav-dock'), 'right');
+    await ui.locator('#ymc-sidebar-reset').click();
+    assert.equal(await search.isVisible(), true);
+    assert.equal(await navRoot.getAttribute('data-ymc-nav-dock'), null);
+
+    await ui.locator('#ymc-home-track .section-toggle').click();
+    const adaptive = ui.locator('#p-vibeAdaptiveCover');
+    const trackArt = wave.locator('#fixture-track-cover');
+    await adaptive.check();
+    assert.equal(await trackArt.isHidden(), true);
+    await portrait.evaluate(el => { el.removeAttribute('src'); });
+    await page.waitForFunction(() => {
+      const img = document.querySelector('#fixture-track-cover');
+      return getComputedStyle(img).visibility === 'visible' && img.getBoundingClientRect().width > 100;
+    });
+    await adaptive.uncheck();
+    await portrait.evaluate((el, src) => { el.src = src; }, await trackArt.getAttribute('src'));
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const testCover = async color => page.evaluate(color => {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 24;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 24, 24);
+      navigator.mediaSession.metadata = new MediaMetadata({ title: color, artwork: [{ src: canvas.toDataURL() }] });
+    }, color);
+    await ui.locator('#ymc-home-animation .section-toggle').click();
+    await ui.locator('[data-prop=waveStyle]').selectOption('mist');
+    const ownWave = page.locator('[data-ymc-wave-effect=mist]');
+    await testCover('#f02b22');
+    const update = partial => page.evaluate(partial => YMusicCustomizer.update(partial), partial);
+    const waveInk = () => ownWave.evaluate(el => el.style.getPropertyValue('--ymc-wave-ink'));
+    await update({ mode: 'solid', background: '#000000' });
+    assert.match(await waveInk(), /^#(..)\1\1$/i);
+    assert.equal(await nativeWave.isHidden(), true);
+    await update({ background: '#ffffff' });
+    await page.waitForFunction(() => {
+      const hex = document.querySelector('[data-ymc-wave-effect]').style.getPropertyValue('--ymc-wave-ink');
+      return parseInt(hex.slice(1,3),16) - parseInt(hex.slice(3,5),16) > 30;
+    });
+    assert.equal(await ownWave.locator('i').first().evaluate(el => getComputedStyle(el).animationName), 'none');
+    await ui.locator('[data-prop=waveStyle]').selectOption('native');
+    assert.equal(await nativeWave.isVisible(), true);
+    const pause = wave.locator('button[aria-label=Пауза]');
+    const icon = pause.locator('svg');
+    await update({ smartTheme: true, smartStrength: 100, smartPaletteStyle: 'light', smartTransition: 400, contrastGuard: true });
+    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.VibePage_vibeAnimation__fixture')).opacity) < .24);
+    const redPause = await icon.evaluate(el => getComputedStyle(el).color);
+    assert.notEqual(redPause, 'rgb(136, 136, 136)');
+    assert.equal(await icon.locator('path').evaluate(el => getComputedStyle(el).fill), redPause);
+    assert.equal(await icon.evaluate(el => getComputedStyle(el).opacity), '1');
+    await testCover('#205af2');
+    await page.waitForFunction(prior => getComputedStyle(document.querySelector('button[aria-label=Пауза] svg')).color !== prior, redPause);
+    assert.equal(await ui.locator('[data-prop=background]').isDisabled(), true);
+    await update({ smartBackground: false });
+    assert.equal(await ui.locator('[data-prop=background]').isEnabled(), true);
+    assert.equal(await ui.locator('[data-prop=text]').isDisabled(), true);
+    await update({ smartStrength: 50 });
+    assert.equal(await ui.locator('[data-prop=text]').isEnabled(), true, 'a partial blend still accepts manual colors');
+    await update({ smartTheme: false, background: '#100c1b', mode: 'gradient' });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+
     await ui.locator('#ymc-home-badges .section-toggle').click();
     await ui.locator('#p-showCornerAppVersion').uncheck();
     assert.equal(await version.isHidden(), true);
@@ -219,6 +327,14 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       return parseFloat(portrait.style.getPropertyValue('--ymc-beat-pulse')) >= 10;
     });
     assert.equal(await page.locator('[data-ymc-spectrum]').count(), 0, 'pulse uses audio without mounting a canvas');
+    await ui.locator('#p-portraitBeatStrength').fill('215');
+    await aura.selectOption('ribbon');
+    const ribbon = wave.locator('[data-ymc-portrait-ribbon] path').first();
+    const firstCurve = await ribbon.getAttribute('d');
+    assert.match(firstCurve, /^M.+Z$/);
+    await page.waitForFunction(path => document.querySelector('[data-ymc-portrait-ribbon] path').getAttribute('d') !== path, firstCurve);
+    await aura.selectOption('glow');
+
     await page.locator('#demo-audio').evaluate(el => el.pause());
     await page.waitForFunction(() => !document.querySelector('#vibe-fixture [data-test-id=VIBE_ARTIST_COVER] img')
       .style.getPropertyValue('--ymc-beat-pulse'));
@@ -291,7 +407,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await ui.locator('#ymc-preview-toolbar').isHidden(), true);
     assert.equal(await saved(), beforePlaylist);
     assert.deepEqual(errors, []);
-    console.log('PASS ' + platform + ': update toast, resize, all pattern masks, native visibility and audio-driven portrait');
+    console.log('PASS ' + platform + ': update toast, resize, navigation, wave, light contrast, adaptive cover, patterns and audio-reactive aura');
   } finally {
     await page.close();
   }

@@ -17,7 +17,7 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
-        checkUpdate: async () => ({ available: true, version: '0.6.1', notes: 'Новая версия для проверки' }),
+        checkUpdate: async () => ({ available: true, version: '0.7.1', notes: 'Новая версия для проверки' }),
         installUpdate: async () => {
           window.ymcInstallRequested = true;
           return { error: 'Тестовая установка остановлена.' };
@@ -31,6 +31,7 @@ async function run() {
         ...(platform === 'Win32' ? {} : { reportTrack: track => { window.lastDiscordTrack = track; } })
       };
       if (!localStorage.getItem('ymc:theme:v1')) {
+        localStorage.setItem('ymc:last-version', '0.7.0');
         localStorage.setItem('ymc:theme:v1', JSON.stringify({ version: 1, name: 'Старая тема', round: 9, customCss: 'body{--legacy:1}' }));
       }
     }, process.env.YMC_TEST_PLATFORM);
@@ -54,7 +55,7 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
-    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.6.1').waitFor();
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.7.1').waitFor();
     assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
     await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
@@ -651,18 +652,11 @@ async function run() {
     assert.equal(await offer.isVisible(), true);
     await ui.locator('#ymc-guide-start').click();
     assert.equal(await ui.locator('.tabs [data-tab]').count(), 5);
-    for (let step = 1; step <= 9; step++) {
-      assert.match(await progress.textContent(), new RegExp('Шаг ' + step + ' из 9$'));
-      await next.click();
-    }
-    assert.equal(await offer.isHidden(), true);
-    await ui.locator('#ymc-guide-open').click();
-    await ui.locator('#ymc-guide-all').click();
     const categories = new Set();
     const guideTitles = new Set();
-    for (let step = 1; step <= 33; step++) {
+    for (let step = 1; step <= 35; step++) {
       const label = await progress.textContent();
-      assert.match(label, new RegExp('Шаг ' + step + ' из 33$'));
+      assert.match(label, new RegExp('Шаг ' + step + ' из 35$'));
       categories.add(label.split(' · ')[0]);
       guideTitles.add(await ui.locator('#ymc-guide-title').textContent());
       await next.click();
@@ -673,17 +667,32 @@ async function run() {
     }
     assert.equal(await guide.isHidden(), true);
     assert.equal(await offer.isHidden(), true);
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.6.0');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.7.0');
     await page.reload();
     await launcher.click();
     assert.equal(await offer.isHidden(), true);
-    await page.evaluate(() => localStorage.setItem('ymc:guide:seen', '0.5.5'));
+    await page.evaluate(() => {
+      localStorage.setItem('ymc:last-version', '0.5.6');
+      localStorage.setItem('ymc:guide:seen', '0.5.6');
+    });
     await page.reload();
+    await ui.locator('#ymc-whats-new').waitFor();
+    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0.5.6 до v0.7.0/);
+    assert.match(await ui.locator('#ymc-release-notes').textContent(), /v0.6.0/);
+    await ui.locator('#ymc-release-guide').click();
+    assert.match(await progress.textContent(), /Шаг 1 из 12/);
+    const updatedSections = new Set();
+    for (let step = 1; step <= 12; step++) {
+      updatedSections.add(await ui.locator('#ymc-guide-title').textContent());
+      await next.click();
+    }
+    for (const title of ['Анимация «Моей волны»', 'Панель навигации', 'Фон шапки плейлиста']) assert.ok(updatedSections.has(title), title);
+    assert.equal(updatedSections.has('Свой CSS'), false);
+    assert.equal(await offer.isHidden(), true);
+    await page.reload();
+    assert.equal(await ui.locator('#ymc-whats-new').isHidden(), true);
     await launcher.click();
-    assert.equal(await offer.isVisible(), true);
-    await ui.locator('#ymc-guide-dismiss').click();
     await openSettings();
-    assert.equal(await offer.isHidden(), true);
     await page.evaluate(() => {
       const player = document.querySelector('.PlayerBarDesktop_root__demo');
       const sonataState = { entityMeta: { title: 'вклубе', id: '42', albumId: '17' }, position: 27, duration: 99 };
@@ -980,7 +989,7 @@ async function run() {
       await ctx.close();
     });
     assert.deepEqual(errors, []);
-    console.log('PASS: spectrum recovery and drawn cover colors, cover gradients and auras, cover retry, stable stylesheet, 9 + 33 guide steps, existing controls');
+    console.log('PASS: spectrum recovery and drawn cover colors, cover gradients and auras, cover retry, stable stylesheet, 35 first-run and 12 upgrade guide steps, existing controls');
   } finally {
     await browser.close();
   }
