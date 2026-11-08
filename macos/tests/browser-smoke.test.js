@@ -17,7 +17,7 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
-        checkUpdate: async () => ({ available: true, version: '0.5.8', notes: 'Новая версия для проверки' }),
+        checkUpdate: async () => ({ available: true, version: '0.6.1', notes: 'Новая версия для проверки' }),
         installUpdate: async () => {
           window.ymcInstallRequested = true;
           return { error: 'Тестовая установка остановлена.' };
@@ -54,7 +54,7 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
-    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.5.8').waitFor();
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.6.1').waitFor();
     assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
     await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
@@ -74,7 +74,8 @@ async function run() {
     });
     for (const [profile, shape] of [['studio', 'bars'], ['neon', 'line'], ['pixels', 'segments'], ['dots', 'dots'], ['wave', 'wave']]) {
       await ui.locator('#ymc-spectrum-profile').selectOption(profile);
-      assert.equal((await theme()).spectrumStyle, shape);
+      assert.equal(await ui.locator('[data-prop=spectrumStyle]').inputValue(), shape);
+      assert.equal((await theme()).spectrumStyle, 'wave');
     }
     await ui.locator('#ymc-spectrum-show-preview').click();
     await ui.locator('#p-barSpectrum').uncheck();
@@ -672,7 +673,7 @@ async function run() {
     }
     assert.equal(await guide.isHidden(), true);
     assert.equal(await offer.isHidden(), true);
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.5.7');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.6.0');
     await page.reload();
     await launcher.click();
     assert.equal(await offer.isHidden(), true);

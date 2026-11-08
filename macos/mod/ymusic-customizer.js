@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.5.7 for Windows and macOS. MIT.
+ * YMusic Customizer v0.6.0 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.5.7';
+  const version = '0.6.0';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -1245,7 +1245,8 @@
         mediaStyle.setProperty('--ymc-media-opacity', String(styledTheme.mediaOpacity / 100));
       }
     }
-    syncPatternAppearance(styledTheme, colorOnly);
+    if (theme.patternEnabled) paintPattern(patternLayer, styledTheme, !colorOnly);
+    if (previewSession?.kind === 'pattern') paintPattern($('ymc-pattern-sample'), previewVisual('pattern'), !colorOnly, .56);
     if (!colorOnly) {
       setText($('ymc-status'), compareNative ? 'Показано штатное оформление' : !active ? 'Оформление выключено'
         : theme.addonEnabled && theme.addonPalette ? 'Оформление из CSS-темы' : 'Оформление включено');
@@ -1254,7 +1255,8 @@
       compare.setAttribute('aria-pressed', String(compareNative));
       setText(compare, compareNative ? 'Вернуть тему' : 'Оригинал');
     }
-    if (!colorOnly || activeDialog === 'editor' && editorTab === 'layout') syncPortraitPreview(portraitBackground, styledTheme);
+    if (!colorOnly || activeDialog === 'editor' && editorTab === 'layout') syncPortraitPreview(portraitBackground, previewVisual('portrait'));
+    if (previewSession?.kind === 'playlists') syncPlaylistPreview();
     if (spectrumSignal === 'idle') syncSpectrumAnimation(true);
   }
 
@@ -1318,7 +1320,7 @@
   }
 
   async function moveHistory(from, to, message) {
-    if (!from.length || historyBusy || vibeBusy || libraryBusy) return;
+    if (!from.length || historyBusy || vibeBusy || libraryBusy || previewSession) return;
     const current = snapshot();
     const next = from.at(-1);
     const restoreMedia = next.background !== current.background;
@@ -1928,49 +1930,58 @@
         mask-image:var(--ymc-pattern-mask); mask-size:var(--ymc-pattern-tile) var(--ymc-pattern-tile);
         mask-position:var(--ymc-pattern-x) var(--ymc-pattern-y); mask-repeat:repeat; }
       ${layer} .ymc-pattern-ink + .ymc-pattern-ink { background-color:var(--ymc-pattern-accent); }
+      @media (prefers-reduced-motion:no-preference) {
+        @keyframes ymc-pattern-travel {
+          to { mask-position:calc(var(--ymc-pattern-x) + var(--ymc-pattern-dx))
+                            calc(var(--ymc-pattern-y) + var(--ymc-pattern-dy)); }
+        }
+        @keyframes ymc-pattern-shimmer {
+          0%,100% { opacity:var(--ymc-pattern-alpha); }
+          50% { opacity:calc(var(--ymc-pattern-alpha) * .53); }
+        }
+        ${layer}:is([data-motion="drift"],[data-motion="both"]) .ymc-pattern-ink {
+          animation:ymc-pattern-travel var(--ymc-pattern-period) linear infinite;
+        }
+        ${layer}:is([data-motion="shimmer"],[data-motion="both"]) .ymc-pattern-inner {
+          animation:ymc-pattern-shimmer var(--ymc-pattern-period) ease-in-out infinite;
+        }
+        ${layer}[data-paused] :is(.ymc-pattern-ink,.ymc-pattern-inner) { animation-play-state:paused; }
+      }
     `;
   }
 
-  let patternLayer, patternKey;
+  let patternLayer;
+  const patternKeys = new WeakMap();
   const patternMarkup = '<div class="ymc-pattern-inner"><i class="ymc-pattern-ink"></i><i class="ymc-pattern-ink"></i></div>';
   const patternVisible = () => isStyled() && theme.patternEnabled && theme.patternOpacity > 0;
 
-  function syncPatternAppearance(t, colorOnly) {
-    if (!theme.patternEnabled) return;
-    const preview = $('ymc-pattern-sample');
+  function paintPattern(surface, t, geometry, scale = 1) {
     const color = t.patternPalette === 'custom' ? t.patternPrimary : mixHex(t.accent, t.text, .43);
     const accent = t.patternPalette === 'custom' ? t.patternSecondary : t.accent;
-    const tile = Math.round(PATTERN_TILE * t.patternSize / 100);
-    if (!colorOnly) {
+    const style = surface.style;
+    if (geometry) {
       const key = JSON.stringify([t.patternStyle, t.patternSeed, t.patternDensity, t.patternSymbols]);
-      if (key !== patternKey) {
-        patternKey = key;
+      if (key !== patternKeys.get(surface)) {
         const masks = patternArtwork(t);
-        for (const surface of [patternLayer, preview]) {
-          [...surface.querySelectorAll('.ymc-pattern-ink')].forEach((ink, i) =>
-            ink.style.setProperty('--ymc-pattern-mask', masks[i]));
-        }
+        surface.querySelectorAll('.ymc-pattern-ink').forEach((ink, i) =>
+          ink.style.setProperty('--ymc-pattern-mask', masks[i]));
+        patternKeys.set(surface, key);
       }
+      const tile = Math.round(PATTERN_TILE * t.patternSize * scale / 100);
       const [dx, dy] = PATTERN_DIRECTIONS[t.patternDirection];
-      patternLayer.dataset.motion = t.patternMotion;
-      patternLayer.style.setProperty('--ymc-pattern-dx', dx * tile + 'px');
-      patternLayer.style.setProperty('--ymc-pattern-dy', dy * tile + 'px');
-      patternLayer.style.setProperty('--ymc-pattern-period', t.patternPeriod + 's');
-      for (const surface of [patternLayer, preview]) {
-        const length = surface === preview ? Math.round(tile * .56) : tile;
-        surface.toggleAttribute('data-glow', t.patternGlow > 0);
-        surface.style.setProperty('--ymc-pattern-glow', t.patternGlow + 'px');
-        surface.style.setProperty('--ymc-pattern-tile', length + 'px');
-        surface.style.setProperty('--ymc-pattern-alpha', String(t.patternOpacity / 100));
-        surface.style.setProperty('--ymc-pattern-x', Math.round(length * t.patternX / 100) + 'px');
-        surface.style.setProperty('--ymc-pattern-y', Math.round(length * t.patternY / 100) + 'px');
-      }
+      surface.dataset.motion = t.patternMotion;
+      surface.toggleAttribute('data-glow', t.patternGlow > 0);
+      style.setProperty('--ymc-pattern-dx', dx * tile + 'px');
+      style.setProperty('--ymc-pattern-dy', dy * tile + 'px');
+      style.setProperty('--ymc-pattern-period', t.patternPeriod + 's');
+      style.setProperty('--ymc-pattern-glow', t.patternGlow + 'px');
+      style.setProperty('--ymc-pattern-tile', tile + 'px');
+      style.setProperty('--ymc-pattern-alpha', String(t.patternOpacity / 100));
+      style.setProperty('--ymc-pattern-x', Math.round(tile * t.patternX / 100) + 'px');
+      style.setProperty('--ymc-pattern-y', Math.round(tile * t.patternY / 100) + 'px');
     }
-    for (const surface of [patternLayer, preview]) {
-      const style = surface.style;
-      if (style.getPropertyValue('--ymc-pattern-color') !== color) style.setProperty('--ymc-pattern-color', color);
-      if (style.getPropertyValue('--ymc-pattern-accent') !== accent) style.setProperty('--ymc-pattern-accent', accent);
-    }
+    if (style.getPropertyValue('--ymc-pattern-color') !== color) style.setProperty('--ymc-pattern-color', color);
+    if (style.getPropertyValue('--ymc-pattern-accent') !== accent) style.setProperty('--ymc-pattern-accent', accent);
   }
 
   function syncPatternMount(fullscreen) {
@@ -2312,8 +2323,7 @@
     return theme.appMediaEnabled && vibeMedia ? suggestedPalette?.portraitAccent : portraitWallpaper.color;
   }
 
-  function smartBaseColors() {
-    const t = theme;
+  function smartBaseColors(t = theme) {
     const playlist = playlistColors({ ...t, contrastGuard: false });
     return {
       ...Object.fromEntries(COLORS.map(key => [key, t[key]])),
@@ -2336,9 +2346,9 @@
     };
   }
 
-  function smartTarget(sample) {
-    const target = smartBaseColors();
-    const palette = makePaletteVariant(sample, theme.smartPaletteStyle);
+  function smartTarget(sample, t = theme) {
+    const target = smartBaseColors(t);
+    const palette = makePaletteVariant(sample, t.smartPaletteStyle);
     const derived = {
       ...palette,
       accentHover: mixHex(palette.accent, '#FFFFFF', .15),
@@ -2356,7 +2366,7 @@
       navigationFill: palette.panel, navigationText: palette.text
     };
     for (const [toggle, { fields }] of Object.entries(SMART_GROUPS)) {
-      const strength = theme[toggle] ? theme.smartStrength * theme[toggle + 'Amount'] / 10_000 : 0;
+      const strength = t[toggle] ? t.smartStrength * t[toggle + 'Amount'] / 10_000 : 0;
       if (!strength) continue;
       const faithful = ['smartGradient', 'smartPortrait', 'smartSpectrum', 'smartAccent', 'smartHeart', 'smartButtons', 'smartText'].includes(toggle)
         || palette.sample.achromatic ||
@@ -2547,11 +2557,13 @@
   let spectrumInput, spectrumContext, spectrumFrame, spectrumCheckAt = 0;
   let spectrumPreferred, spectrumSource, spectrumRetryAt = 0, spectrumFailures = 0;
   let rejectedNative = new WeakSet();
-  let spectrumSignal = 'idle', overlaySpectrum = false, spectrumPreview = false;
+  let spectrumSignal = 'idle', overlaySpectrum = false;
   let lastSpectrumFrame = 0;
   const spectrumSurfaces = new WeakMap();
   const spectrumLevels = new Float32Array(120);
   const spectrumPeaks = new Float32Array(120);
+  const previewLevels = new Float32Array(120);
+  const previewPeaks = new Float32Array(120);
   const demoLevels = new Float32Array(120);
   let beatPortrait, beatSource, beatValue = 0;
   const beatState = { average: 0, recent: 0, impulse: 0, level: 0, cooldown: 0 };
@@ -2771,7 +2783,7 @@
     return bandMap;
   }
 
-  function updateSpectrumLevels(t, bins, sampleRate, dt) {
+  function updateSpectrumLevels(t, bins, sampleRate, dt, levels = spectrumLevels, peaks = spectrumPeaks) {
     const count = t.spectrumBands, response = t.spectrumResponse / 100;
     const attack = 1 - Math.exp(-dt / (12 + (1 - response) * 155));
     const release = 1 - Math.exp(-dt / (72 + (1 - response) * 350));
@@ -2788,10 +2800,10 @@
         const norm = Math.max(0, (energy + 83 + i / count * 9) / 62);
         target = 1 - Math.exp(-(norm ** curve) * gain);
       }
-      const previous = spectrumLevels[i];
+      const previous = levels[i];
       const level = previous + (target - previous) * (target > previous ? attack : release);
-      spectrumLevels[i] = level < .001 ? 0 : level;
-      spectrumPeaks[i] = Math.max(level, spectrumPeaks[i] - dt / (370 + (1 - response) * 480));
+      levels[i] = level < .001 ? 0 : level;
+      peaks[i] = Math.max(level, peaks[i] - dt / (370 + (1 - response) * 480));
     }
   }
 
@@ -2989,7 +3001,7 @@
     live: 'Эквалайзер реагирует на звук.'
   };
   let spectrumConnection = 'idle';
-  const previewActive = () => spectrumPreview && theme.barSpectrum && activeDialog === 'editor' &&
+  const previewActive = () => previewSession?.kind === 'spectrum' && activeDialog === 'editor' &&
     editorTab === 'theme' && !$('ymc-spectrum-preview').closest('.settings-content')?.inert;
   const backgroundSpectrumActive = () => Boolean(barCanvas?.isConnected);
 
@@ -3027,7 +3039,7 @@
     const t = visualTheme();
     const dt = Math.min(70, now - (lastSpectrumFrame || now - 16));
     lastSpectrumFrame = now;
-    const drawSpectrum = background || overlay || preview;
+    const drawSpectrum = background || overlay;
     if (drawSpectrum) updateSpectrumLevels(t, bins, input?.analyser?.context.sampleRate || 48000, dt);
     const fading = drawSpectrum && spectrumLevels.subarray(0, t.spectrumBands).some(level => level > .004);
     const beatFading = beat && paintBeat(t, input, bins, dt);
@@ -3038,16 +3050,20 @@
     }
     if (overlay) paintSpectrum($('ymc-spectrum'), t, spectrumLevels, spectrumPeaks, fading);
     if (preview) {
-      if (!bins) {
+      const sample = previewVisual('spectrum');
+      if (bins) updateSpectrumLevels(sample, bins, input.analyser.context.sampleRate, dt, previewLevels, previewPeaks);
+      else {
         const time = reducedMotion() ? 0 : now / 900;
-        for (let i = 0; i < t.spectrumBands; i++) {
-          const position = i / t.spectrumBands;
+        for (let i = 0; i < sample.spectrumBands; i++) {
+          const position = i / sample.spectrumBands;
           const envelope = .65 * Math.exp(-position * 2.4) + .20;
-          demoLevels[i] = envelope * (.56 + .22 * Math.cos(position * 25 + time) + .16 * Math.sin(position * 52 - time * 1.4));
+          const signal = envelope * (.56 + .22 * Math.cos(position * 25 + time) + .16 * Math.sin(position * 52 - time * 1.4));
+          demoLevels[i] = Math.min(1, signal * sample.spectrumGain / 125);
         }
       }
       const previewCanvas = $('ymc-spectrum-preview');
-      paintSpectrum(previewCanvas, t, bins ? spectrumLevels : demoLevels, bins ? spectrumPeaks : demoLevels, true);
+      previewCanvas.style.opacity = String(sample.spectrumOpacity / 100);
+      paintSpectrum(previewCanvas, sample, bins ? previewLevels : demoLevels, bins ? previewPeaks : demoLevels, true);
       setText($('ymc-spectrum-preview-label'), bins ? 'Сигнал текущего трека' : 'Макет без звука');
     }
     if (spectrumSignal !== 'idle' || fading || beatFading || preview && !reducedMotion()) {
@@ -3207,6 +3223,10 @@
     .muted,.notice,.error{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
     .error{color:#ffb4b4}.error:empty,.notice:empty{display:none}
     .pill{font-size:11px;color:var(--fg);background:var(--control);border-radius:99px;padding:4px 8px;display:inline-block}
+    .preview-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px;padding:6px 8px;border:1px solid var(--accent);
+      border-radius:9px;background:var(--control)}
+    .preview-toolbar p{flex:1 1 130px;margin:0}
+    .preview-toolbar .btn{padding:5px 8px;font-size:12px}
     .pattern-sample{position:relative;height:110px;isolation:isolate;overflow:hidden;margin:9px 0;border:1px solid var(--border);
       border-radius:10px;background:linear-gradient(145deg,var(--art-start),var(--art-end))}
     ${patternRules('.pattern-sample')}
@@ -3326,6 +3346,8 @@
   };
   const mainPane = pane => pane === 'files' ? 'library' : pane;
   const paneIntro = key => `<div class="pane-intro"><h2>${PANES[key][0]}</h2><p>${PANES[key][1]}</p></div>`;
+  const previewButton = (kind, sample, id = '') => `<button ${id ? `id="${id}"` : ''} class="btn" type="button"
+    data-appearance-preview="${kind}" aria-controls="${sample}" aria-pressed="false">Предпросмотр</button>`;
   const MARKUP = `
     <div id="ymc-editor" hidden>
       <div id="ymc-resize" role="separator" aria-orientation="vertical" aria-label="Ширина редактора" aria-controls="ymc-panel"
@@ -3346,6 +3368,11 @@
             <button id="ymc-compare" class="btn" aria-pressed="false" title="Сравнить свою тему со штатным оформлением">Оригинал</button>
           </div>
           <div id="ymc-settings-results" class="settings-results" hidden></div>
+          <div id="ymc-preview-toolbar" class="preview-toolbar" hidden>
+            <p id="ymc-preview-message" class="muted" role="status"></p>
+            <button id="ymc-preview-apply" class="btn primary" type="button">Применить</button>
+            <button id="ymc-preview-cancel" class="btn" type="button">Отмена</button>
+          </div>
           <nav id="ymc-shop-nav" class="shop-nav" aria-label="Магазин и CSS" hidden>
             <button class="btn" id="ymc-show-catalog">Магазин тем</button><button class="btn" data-tab="files">CSS и файлы</button>
           </nav>
@@ -3412,7 +3439,7 @@
             </select></label>
             ${range('smartStrength', 'Общая сила подстройки')}
             <p id="ymc-smart-status" class="muted" role="status"></p>
-            <div id="ymc-smart-preview" hidden>${Object.entries({
+            <div id="ymc-smart-preview" aria-label="Цвета, рассчитанные для активной умной темы" hidden>${Object.entries({
               background: 'Фон', gradientEnd: 'Градиент', text: 'Текст', vibePlayFill: 'Кнопки',
               portraitColor: 'Аура', spectrumMid: 'Эквалайзер'
             }).map(([role, label]) => `<span data-role="${role}">${label}<code></code></span>`).join('')}</div>
@@ -3427,6 +3454,8 @@
           </section>
           <section id="ymc-theme-pattern"><h3>Узоры на фоне</h3>
             ${check('patternEnabled', 'Показывать узор')}
+            <div class="buttons">${previewButton('pattern', 'ymc-pattern-sample')}</div>
+            <div id="ymc-pattern-sample" class="pattern-sample" aria-hidden="true" hidden>${patternMarkup}</div>
             ${whenAvailable('patternStyle', 'patternEnabled', `
               <div class="grid">
                 <label>Рисунок<select data-prop="patternStyle">${Object.entries(PATTERNS).map(([key, label]) =>
@@ -3434,7 +3463,6 @@
                 <label>Где показывать<select data-prop="patternScope"><option value="app">Во всём приложении</option><option value="wave">Только «Моя волна»</option></select></label>
               </div>
               ${whenAvailable('patternSymbols', 'patternStyle', `<label>Свои символы<input type="text" data-prop="patternSymbols" maxlength="32" placeholder="✦ ◇ ♪"></label>`)}
-              <div id="ymc-pattern-sample" class="pattern-sample" aria-hidden="true">${patternMarkup}</div>
               ${range('patternOpacity', 'Видимость узора')}${range('patternDensity', 'Плотность рисунка')}${range('patternSize', 'Масштаб рисунка')}
               <label>Цвета узора<select data-prop="patternPalette"><option value="theme">Из текущей темы</option><option value="custom">Два своих цвета</option></select></label>
               ${whenAvailable('patternPrimary', 'patternPalette', `<div class="grid">${swatch('patternPrimary', 'Основной цвет')}${swatch('patternSecondary', 'Цвет деталей')}</div>`)}
@@ -3505,6 +3533,9 @@
           </section>
           <section id="ymc-theme-spectrum"><h3>Эквалайзер</h3>
             ${check('barSpectrum', 'Показывать эквалайзер')}
+            <div class="buttons">${previewButton('spectrum', 'ymc-spectrum-sample', 'ymc-spectrum-show-preview')}</div>
+            <div id="ymc-spectrum-sample" class="spectrum-sample" hidden><canvas id="ymc-spectrum-preview" aria-hidden="true"></canvas>
+              <p id="ymc-spectrum-preview-label" class="muted">Макет без звука</p></div>
             ${whenAvailable('spectrumPlacement', 'barSpectrum', `
             <label>Готовый вид<select id="ymc-spectrum-profile" data-find="Готовый вид эквалайзера"><option value="">Свой вариант</option>
               ${Object.entries(SPECTRUM_PROFILES).map(([value, { label }]) => `<option value="${value}">${label}</option>`).join('')}
@@ -3514,10 +3545,7 @@
               <label>Форма<select data-prop="spectrumStyle"><option value="wave">Лента</option><option value="line">Контур</option><option value="bars">Столбцы</option><option value="segments">Сегменты</option><option value="dots">Точки</option></select></label>
             </div>
             ${range('spectrumOpacity', 'Яркость рисунка')}${range('spectrumGain', 'Чувствительность к звуку')}
-            <div class="buttons"><button class="btn" id="ymc-spectrum-show-preview" type="button" aria-pressed="false">Предпросмотр</button>
-              <button class="btn" id="ymc-spectrum-retry" type="button">Подключить звук</button></div>
-            <div id="ymc-spectrum-sample" class="spectrum-sample" hidden><canvas id="ymc-spectrum-preview" aria-hidden="true"></canvas>
-              <p id="ymc-spectrum-preview-label" class="muted">Макет без звука</p></div>
+            <div class="buttons"><button class="btn" id="ymc-spectrum-retry" type="button">Подключить звук</button></div>
             <p id="ymc-bar-status" class="muted" role="status"></p>
             <details class="settings-more" id="ymc-spectrum-colors"><summary>Цвета и слои</summary>
               <label>Заливка<select data-prop="spectrumGradient"><option value="solid">Один цвет</option><option value="vertical">Снизу вверх</option><option value="horizontal">Слева направо</option><option value="diagonal">По диагонали</option></select></label>
@@ -3588,7 +3616,8 @@
           </section>
           <section id="ymc-home-portrait"><h3>Портрет артиста</h3>
             <p class="muted">Эффект появляется, когда «Моя волна» показывает вырезанный портрет.</p>
-            <div class="portrait-preview">
+            <div class="buttons">${previewButton('portrait', 'ymc-portrait-sample')}</div>
+            <div id="ymc-portrait-sample" class="portrait-preview" hidden>
               <svg id="ymc-portrait-preview" viewBox="0 0 108 108" aria-hidden="true">
                 <path fill="#bdc6d7" d="M54 20c-11 0-19 9-19 21 0 9 4 16 10 20v7c-11 4-22 9-25 24h68c-3-15-14-20-25-24v-7c6-4 10-11 10-20 0-12-8-21-19-21Z"/>
                 <path fill="#7886a0" d="M20 92c2-11 10-17 21-22l13 11 13-11c11 5 19 11 21 22Z"/>
@@ -3681,15 +3710,16 @@
         </div>
         <div data-pane="playlists" hidden>
           ${paneIntro('playlists')}
-          <section id="ymc-playlists-gradient"><h3>Фон шапки плейлиста</h3>
-            <p class="muted">Действует и на странице «Мне нравится». Образец показывает цвет, затухание и кнопки.</p>
-            <div id="ymc-playlist-preview" class="playlist-preview" aria-hidden="true">
+          <div class="buttons">${previewButton('playlists', 'ymc-playlist-preview')}</div>
+          <div id="ymc-playlist-preview" class="playlist-preview" aria-hidden="true" hidden>
               <div class="playlist-preview-nav"><span>‹</span><span>›</span></div>
               <div class="playlist-preview-title"><span class="playlist-preview-cover">♥</span><div><small>Плейлист</small><strong>Мне нравится</strong></div></div>
               <div class="playlist-preview-controls"><span data-preview="primary">▶ Слушать</span><span data-preview="secondary">•••</span>
                 <span data-preview="filter" data-selected>Всё</span><span data-preview="filter">Спокойное</span></div>
               <div data-preview="search" class="playlist-preview-search">⌕ Поиск трека</div>
-            </div>
+          </div>
+          <section id="ymc-playlists-gradient"><h3>Фон шапки плейлиста</h3>
+            <p class="muted">Действует и на странице «Мне нравится».</p>
             <label>Фон плейлиста<select data-prop="playlistGradient">
               <option value="palette">Из палитры темы</option><option value="theme">Свой градиент</option>
               <option value="solid">Сплошная заливка</option><option value="off">Без заливки</option><option value="native">Цвет обложки от Яндекса</option>
@@ -3863,29 +3893,29 @@
     native: 'Цвет вычисляет Яндекс Музыка по обложке. В образце показан пример.'
   };
 
-  function syncPlaylistPreview() {
+  function syncPlaylistPreview(t = previewVisual('playlists')) {
     const preview = $('ymc-playlist-preview');
-    const backdrop = playlistBackground(theme);
-    const solid = theme.playlistGradient === 'solid';
+    const backdrop = playlistBackground(t);
+    const solid = t.playlistGradient === 'solid';
     preview.style.backgroundImage = solid ? `linear-gradient(${backdrop},${backdrop})`
-      : backdrop || 'linear-gradient(180deg,#8a8a8a,transparent)';
-    preview.style.backgroundColor = theme.background;
-    const custom = theme.playlistButtons && (!(theme.addonEnabled && theme.addonPalette) || theme.playlistCustomButtons);
-    const c = custom ? playlistColors(theme) : {
+      : backdrop || (t.playlistGradient === 'off' ? 'none' : 'linear-gradient(180deg,#8a8a8a,transparent)');
+    preview.style.backgroundColor = t.background;
+    const custom = t.playlistButtons && (!(t.addonEnabled && t.addonPalette) || t.playlistCustomButtons);
+    const c = custom ? playlistColors(t) : {
       primary: '#e4e4e4', primaryText: '#202022', secondary: '#39363d', secondaryText: '#faf6ff',
       filter: '#27242d', filterText: '#faf6ff', selected: '#b8b4bf', hover: '#666169', opacity: 100, radius: null
     };
     const styles = {
-      ink: readableText(theme.text, theme.background), selected: c.selected, round: (c.radius ?? 20) + 'px',
+      ink: readableText(t.text, t.background), selected: c.selected, round: (c.radius ?? 20) + 'px',
       'filter-border': c.filterBorder || '#c8c4d3',
-      nav: theme.navigationCustom ? rgba(theme.navigationFill, theme.navigationOpacity) : '#ffffff1a',
-      'nav-ink': guardedInk(theme, theme.navigationCustom ? theme.navigationText : theme.text, navigationFill(theme)),
-      'nav-round': (theme.navigationCustom ? theme.navigationRound : 24) + 'px',
-      cover: (theme.playlistCoverCustom ? theme.playlistCoverRound : 9) + 'px',
-      search: theme.playlistSearchCustom ? rgba(theme.playlistSearchFill, theme.playlistSearchOpacity) : '#16121880',
-      'search-ink': theme.playlistSearchCustom
-        ? guardedInk(theme, theme.playlistSearchText, blendedFill(theme.playlistSearchFill, theme.playlistSearchOpacity, theme.background)) : '#fff',
-      'search-round': (theme.playlistSearchCustom ? theme.playlistSearchRound : 8) + 'px'
+      nav: t.navigationCustom ? rgba(t.navigationFill, t.navigationOpacity) : '#ffffff1a',
+      'nav-ink': guardedInk(t, t.navigationCustom ? t.navigationText : t.text, navigationFill(t)),
+      'nav-round': (t.navigationCustom ? t.navigationRound : 24) + 'px',
+      cover: (t.playlistCoverCustom ? t.playlistCoverRound : 9) + 'px',
+      search: t.playlistSearchCustom ? rgba(t.playlistSearchFill, t.playlistSearchOpacity) : '#16121880',
+      'search-ink': t.playlistSearchCustom
+        ? guardedInk(t, t.playlistSearchText, blendedFill(t.playlistSearchFill, t.playlistSearchOpacity, t.background)) : '#fff',
+      'search-round': (t.playlistSearchCustom ? t.playlistSearchRound : 8) + 'px'
     };
     for (const [name, value] of Object.entries(styles)) preview.style.setProperty('--playlist-' + name, value);
     for (const button of preview.querySelectorAll('.playlist-preview-controls [data-preview]')) {
@@ -3896,7 +3926,7 @@
       button.style.setProperty('--button-hover', rgba(c.hover, opacity));
       button.style.setProperty('--button-hover-ink', readableText(c[key + 'Text'], c.hover));
     }
-    setText($('ymc-playlist-hint'), PLAYLIST_HINT[theme.playlistGradient]);
+    setText($('ymc-playlist-hint'), PLAYLIST_HINT[t.playlistGradient]);
   }
 
   let syncSettingsTools;
@@ -4093,7 +4123,7 @@
   }
 
   function syncHistoryButtons() {
-    const busy = historyBusy || vibeBusy || libraryBusy;
+    const busy = historyBusy || vibeBusy || libraryBusy || Boolean(previewSession);
     $('ymc-undo').disabled = busy || !undoStack.length;
     $('ymc-redo').disabled = busy || !redoStack.length;
   }
@@ -4114,107 +4144,109 @@
     setText($('ymc-portrait-hint'), hint);
   }
 
-  function syncControls(resetDraft) {
-    const withMedia = Boolean(vibeMedia && theme.appMediaEnabled);
-    const photoMode = ['image', 'cover'].includes(theme.mode);
-    const playlistGradient = ['palette', 'theme'].includes(theme.playlistGradient);
-    const portraitOff = theme.portraitEffect === 'off';
+  function syncControls(resetDraft, syncCss = resetDraft) {
+    const t = editorTheme();
+    const withMedia = Boolean(vibeMedia && t.appMediaEnabled);
+    const photoMode = ['image', 'cover'].includes(t.mode);
+    const playlistGradient = ['palette', 'theme'].includes(t.playlistGradient);
+    const portraitOff = t.portraitEffect === 'off';
     const unavailable = {
-      scale: !theme.manualScale, addonEnabled: !theme.addonSheets.length, addonPalette: !theme.addonEnabled,
-      accentHover: !theme.customAccentStates, accentPress: !theme.customAccentStates,
-      appMediaFile: !theme.appMediaEnabled,
-      gradientAngle: theme.mode === 'solid', backgroundDim: !withMedia && !photoMode,
+      scale: !t.manualScale, addonEnabled: !t.addonSheets.length, addonPalette: !t.addonEnabled,
+      accentHover: !t.customAccentStates, accentPress: !t.customAccentStates,
+      appMediaFile: !t.appMediaEnabled,
+      gradientAngle: t.mode === 'solid', backgroundDim: !withMedia && !photoMode,
       mediaFit: !withMedia && !photoMode, mediaX: !withMedia && !photoMode, mediaY: !withMedia && !photoMode,
       mediaBlur: !withMedia, mediaOpacity: !withMedia,
-      patternStyle: !theme.patternEnabled, patternSymbols: theme.patternStyle !== 'symbols',
-      patternPrimary: theme.patternPalette !== 'custom', patternSecondary: theme.patternPalette !== 'custom',
-      patternDirection: !['drift', 'both'].includes(theme.patternMotion), patternPeriod: theme.patternMotion === 'still',
-      patternNativeOpacity: !theme.vibeAnimation,
-      sidebar: !theme.separateSurfaces, player: !theme.separateSurfaces,
-      sidebarEnd: !theme.sidebarGradient, sidebarAngle: !(theme.separateSurfaces && theme.sidebarGradient),
-      barOpacity: !theme.barCustom, barFit: !theme.barWallpaper, barImagePosition: !theme.barWallpaper,
-      barButtonFill: !theme.barButtonsCustom, barButtonText: !theme.barButtonsCustom,
-      barButtonHover: !theme.barButtonsCustom, barButtonOpacity: !theme.barButtonsCustom,
-      barButtonRound: !theme.barButtonsCustom,
-      spectrumHeight: theme.spectrumPlacement !== 'page', spectrumMid: theme.spectrumGradient === 'solid',
-      spectrumEnd: theme.spectrumGradient === 'solid', spectrumOverlayAmount: theme.spectrumOverlay === 'none',
-      spectrumWidth: !['bars', 'segments', 'dots'].includes(theme.spectrumStyle),
-      spectrumRound: !['bars', 'segments'].includes(theme.spectrumStyle),
-      spectrumLineWidth: !['line', 'wave'].includes(theme.spectrumStyle),
-      spectrumPeaks: !['bars', 'segments'].includes(theme.spectrumStyle),
-      likedTintImage: theme.likedShape !== 'image' || !theme.likedCustom,
-      likedColor: !theme.likedCustom, likedShape: !theme.likedCustom, likedScale: !theme.likedCustom, likedOpacity: !theme.likedCustom,
-      likedMotion: !theme.likedCustom, likedMotionSpeed: !theme.likedCustom || theme.likedMotion === 'off',
-      vibeIcon: !theme.customVibeIcons, vibeTransport: !theme.customVibeIcons,
-      vibeFill: !theme.customVibeButtons, vibePlayFill: !theme.customVibeButtons,
-      vibeHover: !theme.customVibeButtons, vibeButtonRound: !theme.customVibeButtons,
-      vibeWheelOpacity: !theme.showVibeWheel, vibeAiOpacity: !theme.aiTrackCards,
-      portraitColorSource: portraitOff, portraitColor: portraitOff || theme.portraitColorSource !== 'custom',
-      portraitOutline: portraitOff || theme.portraitEffect === 'glow',
-      portraitSpread: portraitOff || theme.portraitEffect === 'outline', portraitIntensity: portraitOff,
-      portraitBeat: !hasPortraitAura(theme), portraitBeatStrength: !hasPortraitAura(theme) || !theme.portraitBeat,
-      portraitBeatSensitivity: !hasPortraitAura(theme) || !theme.portraitBeat,
-      portraitBeatRelease: !hasPortraitAura(theme) || !theme.portraitBeat,
-      smartTransition: !theme.smartTheme, smartStrength: !theme.smartTheme, smartPaletteStyle: !theme.smartTheme,
-      motionDuration: !theme.motionEnabled, motionCurve: !theme.motionEnabled,
-      motionCards: !theme.motionEnabled, motionCardScale: !theme.motionEnabled || !theme.motionCards,
-      motionCardLift: !theme.motionEnabled || !theme.motionCards,
-      motionAura: !theme.motionEnabled, motionAuraSpeed: !theme.motionEnabled || !theme.motionAura,
-      motionBackground: !theme.motionEnabled, motionBackgroundSpeed: !theme.motionEnabled || !theme.motionBackground,
-      playerOverlayDetails: !theme.playerOverlay,
-      contrastThreshold: !theme.contrastGuard,
-      barHeight: theme.barLayout === 'native', barCoverSize: theme.barLayout === 'native',
-      barControlsSize: theme.barLayout === 'native', barTextScale: theme.barLayout === 'native',
-      barGap: theme.barLayout === 'native', barProgressSize: theme.barLayout === 'native' && theme.barProgressMode === 'native',
-      navigationFill: !theme.navigationCustom, navigationText: !theme.navigationCustom,
-      navigationOpacity: !theme.navigationCustom, navigationRound: !theme.navigationCustom,
+      patternStyle: !t.patternEnabled && previewSession?.kind !== 'pattern', patternSymbols: t.patternStyle !== 'symbols',
+      patternPrimary: t.patternPalette !== 'custom', patternSecondary: t.patternPalette !== 'custom',
+      patternDirection: !['drift', 'both'].includes(t.patternMotion), patternPeriod: t.patternMotion === 'still',
+      patternNativeOpacity: !t.vibeAnimation,
+      sidebar: !t.separateSurfaces, player: !t.separateSurfaces,
+      sidebarEnd: !t.sidebarGradient, sidebarAngle: !(t.separateSurfaces && t.sidebarGradient),
+      barOpacity: !t.barCustom, barFit: !t.barWallpaper, barImagePosition: !t.barWallpaper,
+      barButtonFill: !t.barButtonsCustom, barButtonText: !t.barButtonsCustom,
+      barButtonHover: !t.barButtonsCustom, barButtonOpacity: !t.barButtonsCustom,
+      barButtonRound: !t.barButtonsCustom,
+      spectrumHeight: t.spectrumPlacement !== 'page', spectrumMid: t.spectrumGradient === 'solid',
+      spectrumEnd: t.spectrumGradient === 'solid', spectrumOverlayAmount: t.spectrumOverlay === 'none',
+      spectrumWidth: !['bars', 'segments', 'dots'].includes(t.spectrumStyle),
+      spectrumRound: !['bars', 'segments'].includes(t.spectrumStyle),
+      spectrumLineWidth: !['line', 'wave'].includes(t.spectrumStyle),
+      spectrumPeaks: !['bars', 'segments'].includes(t.spectrumStyle),
+      likedTintImage: t.likedShape !== 'image' || !t.likedCustom,
+      likedColor: !t.likedCustom, likedShape: !t.likedCustom, likedScale: !t.likedCustom, likedOpacity: !t.likedCustom,
+      likedMotion: !t.likedCustom, likedMotionSpeed: !t.likedCustom || t.likedMotion === 'off',
+      vibeIcon: !t.customVibeIcons, vibeTransport: !t.customVibeIcons,
+      vibeFill: !t.customVibeButtons, vibePlayFill: !t.customVibeButtons,
+      vibeHover: !t.customVibeButtons, vibeButtonRound: !t.customVibeButtons,
+      vibeWheelOpacity: !t.showVibeWheel, vibeAiOpacity: !t.aiTrackCards,
+      portraitColorSource: portraitOff, portraitColor: portraitOff || t.portraitColorSource !== 'custom',
+      portraitOutline: portraitOff || t.portraitEffect === 'glow',
+      portraitSpread: portraitOff || t.portraitEffect === 'outline', portraitIntensity: portraitOff,
+      portraitBeat: !hasPortraitAura(t), portraitBeatStrength: !hasPortraitAura(t) || !t.portraitBeat,
+      portraitBeatSensitivity: !hasPortraitAura(t) || !t.portraitBeat,
+      portraitBeatRelease: !hasPortraitAura(t) || !t.portraitBeat,
+      smartTransition: !t.smartTheme, smartStrength: !t.smartTheme, smartPaletteStyle: !t.smartTheme,
+      motionDuration: !t.motionEnabled, motionCurve: !t.motionEnabled,
+      motionCards: !t.motionEnabled, motionCardScale: !t.motionEnabled || !t.motionCards,
+      motionCardLift: !t.motionEnabled || !t.motionCards,
+      motionAura: !t.motionEnabled, motionAuraSpeed: !t.motionEnabled || !t.motionAura,
+      motionBackground: !t.motionEnabled, motionBackgroundSpeed: !t.motionEnabled || !t.motionBackground,
+      playerOverlayDetails: !t.playerOverlay,
+      contrastThreshold: !t.contrastGuard,
+      barHeight: t.barLayout === 'native', barCoverSize: t.barLayout === 'native',
+      barControlsSize: t.barLayout === 'native', barTextScale: t.barLayout === 'native',
+      barGap: t.barLayout === 'native', barProgressSize: t.barLayout === 'native' && t.barProgressMode === 'native',
+      navigationFill: !t.navigationCustom, navigationText: !t.navigationCustom,
+      navigationOpacity: !t.navigationCustom, navigationRound: !t.navigationCustom,
       playlistAngle: !playlistGradient, playlistDepth: !playlistGradient, playlistFade: !playlistGradient,
-      playlistStart: !['theme', 'solid'].includes(theme.playlistGradient), playlistEnd: theme.playlistGradient !== 'theme',
-      playlistOpacity: !playlistGradient && theme.playlistGradient !== 'solid',
-      playlistCustomButtons: !theme.playlistButtons,
-      playlistCoverRound: !theme.playlistCoverCustom,
-      playlistSearchFill: !theme.playlistSearchCustom, playlistSearchText: !theme.playlistSearchCustom,
-      playlistSearchOpacity: !theme.playlistSearchCustom, playlistSearchRound: !theme.playlistSearchCustom
+      playlistStart: !['theme', 'solid'].includes(t.playlistGradient), playlistEnd: t.playlistGradient !== 'theme',
+      playlistOpacity: !playlistGradient && t.playlistGradient !== 'solid',
+      playlistCustomButtons: !t.playlistButtons,
+      playlistCoverRound: !t.playlistCoverCustom,
+      playlistSearchFill: !t.playlistSearchCustom, playlistSearchText: !t.playlistSearchCustom,
+      playlistSearchOpacity: !t.playlistSearchCustom, playlistSearchRound: !t.playlistSearchCustom
     };
-    if (!theme.barSpectrum) {
+    if (!t.barSpectrum && previewSession?.kind !== 'spectrum') {
       for (const key of Object.keys(DEFAULT)) {
         if (key.startsWith('spectrum')) unavailable[key] = true;
       }
     }
     for (const key of smartGroups) {
-      unavailable[key] = !theme.smartTheme;
-      unavailable[key + 'Amount'] = !theme.smartTheme || !theme[key];
+      unavailable[key] = !t.smartTheme;
+      unavailable[key + 'Amount'] = !t.smartTheme || !t[key];
     }
     for (const key of ['Primary', 'PrimaryText', 'Secondary', 'SecondaryText', 'Filter', 'FilterText', 'FilterBorder',
       'Selected', 'ButtonHover', 'ButtonOpacity', 'ButtonRound']) {
-      unavailable['playlist' + key] = !theme.playlistButtons || !theme.playlistCustomButtons;
+      unavailable['playlist' + key] = !t.playlistButtons || !t.playlistCustomButtons;
     }
     for (const el of shadow.querySelectorAll('[data-prop]')) {
       const key = el.dataset.prop;
-      const value = theme[key];
+      const value = t[key];
       if (el.type === 'checkbox') el.checked = value;
       else if (el.value !== String(value)) el.value = value;
       el.disabled = Boolean(unavailable[key]);
     }
     for (const el of shadow.querySelectorAll('[data-number]')) {
       const key = el.dataset.number;
-      if (el !== shadow.activeElement || el.disabled || resetDraft) el.value = theme[key] / (key === 'contrastLevel' ? 10 : 1);
+      if (el !== shadow.activeElement || el.disabled || resetDraft) el.value = t[key] / (key === 'contrastLevel' ? 10 : 1);
       el.disabled = Boolean(unavailable[key]);
     }
     if (suggestedPalette) showPaletteSuggestion(false);
-    $('ymc-addon-clear').disabled = !theme.addonSheets.length;
-    $('ymc-addon-name').textContent = theme.addonSheets.map(sheet => sheet.name).join(', ') || 'CSS дополнения не выбран.';
+    $('ymc-addon-clear').disabled = !t.addonSheets.length;
+    $('ymc-addon-name').textContent = t.addonSheets.map(sheet => sheet.name).join(', ') || 'CSS дополнения не выбран.';
     for (const group of shadow.querySelectorAll('[data-available]')) {
       setFold(group, !unavailable[group.dataset.available], !group.hasAttribute('aria-hidden'));
     }
     const spectrumProfile = Object.entries(SPECTRUM_PROFILES).find(([, { settings }]) =>
-      Object.entries(settings).every(([key, value]) => theme[key] === value));
+      Object.entries(settings).every(([key, value]) => t[key] === value));
     $('ymc-spectrum-profile').value = spectrumProfile?.[0] || '';
-    $('ymc-image-options').hidden = theme.mode !== 'image';
-    $('ymc-image-status').textContent = theme.wallpaper ? 'Локальное изображение загружено.' : 'Выберите PNG, JPG или WebP. Пока используется градиент.';
-    $('ymc-bar-clear').disabled = !theme.barWallpaper;
-    $('ymc-liked-clear').disabled = !theme.likedImage;
-    if (resetDraft) $('ymc-css').value = theme.customCss;
+    $('ymc-spectrum-retry').disabled = previewSession?.kind === 'spectrum';
+    $('ymc-image-options').hidden = t.mode !== 'image';
+    $('ymc-image-status').textContent = t.wallpaper ? 'Локальное изображение загружено.' : 'Выберите PNG, JPG или WebP. Пока используется градиент.';
+    $('ymc-bar-clear').disabled = !t.barWallpaper;
+    $('ymc-liked-clear').disabled = !t.likedImage;
+    if (syncCss) $('ymc-css').value = t.customCss;
     syncPlaylistPreview();
     syncContrastReport();
     syncHistoryButtons();
@@ -4222,10 +4254,103 @@
   }
 
   const settingKey = control => control.dataset.prop || control.dataset.setting;
+
+  const APPEARANCE_PREVIEWS = {
+    spectrum: { title: 'Эквалайзер', sections: ['ymc-theme-spectrum'] },
+    pattern: { title: 'Узоры', sections: ['ymc-theme-pattern'] },
+    portrait: { title: 'Портрет артиста', sections: ['ymc-home-portrait'] },
+    playlists: { title: 'Плейлисты', sections: [
+      'ymc-playlists-gradient', 'ymc-playlists-buttons', 'ymc-playlists-navigation', 'ymc-playlists-details'
+    ] }
+  };
+  let previewSession;
+
+  function editorTheme() {
+    return previewSession ? { ...theme, ...previewSession.patch } : theme;
+  }
+
+  function previewVisual(kind) {
+    const session = previewSession;
+    if (session?.kind !== kind || !Object.keys(session.patch).length) return visualTheme();
+    const background = portraitBackgroundColor();
+    if (session.theme !== theme || session.palette !== smartPalette || session.background !== background || !session.visual) {
+      session.theme = theme;
+      session.palette = smartPalette;
+      session.background = background;
+      const draft = editorTheme();
+      session.visual = draft.smartTheme && smartPalette
+        ? { ...draft, ...smartTarget(smartPalette, draft), coverColors: true } : draft;
+    }
+    return session.visual;
+  }
+
+  function syncAppearancePreview() {
+    const kind = previewSession?.kind;
+    syncControls(true, false);
+    if (kind === 'pattern') paintPattern($('ymc-pattern-sample'), previewVisual(kind), true, .56);
+    syncPortraitPreview(portraitBackgroundColor(), previewVisual('portrait'));
+    $('ymc-preview-apply').disabled = !kind || !Object.keys(previewSession.patch).length;
+    syncSpectrumAnimation(true);
+  }
+
+  function editorUpdate(partial, options) {
+    const keys = Object.keys(partial);
+    if (!previewSession || !keys.every(key => previewSession.keys.has(key))) {
+      update(partial, options);
+      return false;
+    }
+    const draft = sanitizeTheme({ ...editorTheme(), ...partial });
+    for (const key of keys) {
+      if (draft[key] === theme[key]) delete previewSession.patch[key];
+      else previewSession.patch[key] = draft[key];
+    }
+    previewSession.visual = null;
+    syncAppearancePreview();
+    return true;
+  }
+
+  function finishAppearancePreview(applyDraft = false, focus = false) {
+    if (!previewSession) return;
+    const { button, patch } = previewSession;
+    previewSession = undefined;
+    $(button.getAttribute('aria-controls')).hidden = true;
+    button.setAttribute('aria-pressed', 'false');
+    setText(button, 'Предпросмотр');
+    $('ymc-preview-toolbar').hidden = true;
+    if (applyDraft && Object.keys(patch).length) {
+      update(patch, { sync: false });
+      notice('Настройки из предпросмотра применены.');
+    }
+    syncAppearancePreview();
+    if (focus) button.focus({ preventScroll: true });
+  }
+
+  function startAppearancePreview(button) {
+    const kind = button.dataset.appearancePreview;
+    const close = previewSession?.button === button;
+    finishAppearancePreview();
+    if (close) return;
+    const { title, sections } = APPEARANCE_PREVIEWS[kind];
+    const keys = new Set(sections.flatMap(id => [...$(id).querySelectorAll('[data-prop], [data-setting]')].map(settingKey)));
+    previewSession = { kind, keys, button, patch: {} };
+    button.setAttribute('aria-pressed', 'true');
+    setText(button, 'Закрыть предпросмотр');
+    const sample = $(button.getAttribute('aria-controls'));
+    sample.hidden = false;
+    $('ymc-preview-toolbar').hidden = false;
+    setText($('ymc-preview-message'), title + ' · настройки меняют только образец');
+    if (kind === 'spectrum') {
+      previewLevels.fill(0);
+      previewPeaks.fill(0);
+    }
+    syncAppearancePreview();
+    sample.scrollIntoView({ block: 'nearest' });
+  }
+
   const isChanged = key => {
     if (key === 'vibeMedia') return Boolean(vibeMedia || vibeError);
     if (key === 'addonSheets') return theme.addonSheets.length > 0;
-    return Object.hasOwn(DEFAULT, key) && theme[key] !== DEFAULT[key];
+    return Object.hasOwn(DEFAULT, key) && (previewSession?.patch[key] ?? theme[key]) !== DEFAULT[key];
   };
 
   const normalizeSearch = value => value.trim().toLowerCase().replaceAll('ё', 'е');
@@ -4523,7 +4648,7 @@
     ['theme', 'ymc-theme-status', 'Применение темы',
       'Откройте карточку по её заголовку или найдите настройку поиском. «Оригинал» временно возвращает штатный вид, а ↶ и ↷ отменяют и возвращают изменения. Потяните левую границу редактора, чтобы изменить ширину. Внизу находится кнопка «Обновления»; о новой версии сообщит плашка справа сверху.', 'theme'],
     ['theme', 'ymc-theme-spectrum', 'Эквалайзер на фоне',
-      'Включите эквалайзер и выберите готовый вид или форму. «Предпросмотр» показывает рисунок даже без музыки. Автоподбор даёт один оттенок. Для трёх ручных цветов отключите группу «Эквалайзер» в умной теме и откройте «Цвета и слои». Там же регулируются свечение, сетка и второй контур. Если сигнал запаздывает, нажмите «Подключить звук».', 'spectrum'],
+      'Включите эквалайзер и выберите готовый вид или форму. «Предпросмотр» показывает рисунок даже без музыки. Изменения остаются в образце до нажатия «Применить». Автоподбор даёт один оттенок. Для трёх ручных цветов отключите группу «Эквалайзер» в умной теме и откройте «Цвета и слои». Там же регулируются свечение, сетка и второй контур. Если сигнал запаздывает, нажмите «Подключить звук».', 'spectrum'],
     ['theme', 'ymc-theme-smart', 'Умная тема по треку',
       'Основной фон берёт цвет крупного участка обложки. Для градиента может добавиться второй цвет, если он занимает заметную часть обложки. Заметные детали могут задать акцент и ауру. Эквалайзер использует один оттенок с плавным переходом по яркости. В «Переход и отдельные цвета» можно изменить силу или отключить каждую группу.', 'cover'],
     ['theme', 'ymc-theme-palette', 'Палитра',
@@ -4952,6 +5077,7 @@
   }
 
   function showDialog(name, trigger) {
+    if (name !== 'editor') finishAppearancePreview();
     if (name !== 'editor') closeGuide(false);
     if (name !== 'editor' && compareNative) {
       compareNative = false;
@@ -5140,6 +5266,7 @@
         e.stopPropagation();
         if (guideIndex >= 0) closeGuide();
         else if (activeDialog === 'editor' && !$('ymc-update-card').hidden) setUpdateCard(false, true);
+        else if (previewSession) finishAppearancePreview(false, true);
         else showDialog('');
       } else if (activeDialog === 'now' && e.key === 'Tab') {
         const current = $(activeDialog === 'editor' ? 'ymc-editor' : 'ymc-now');
@@ -5167,6 +5294,7 @@
     const tabs = [...shadow.querySelectorAll('.tabs [data-tab]')];
     const cssTab = shadow.querySelector('[data-tab="files"]');
     function tab(name) {
+      if (name !== editorTab) finishAppearancePreview();
       editorTab = name;
       const group = mainPane(name);
       syncEditorWidth();
@@ -5177,7 +5305,7 @@
       for (const pane of shadow.querySelectorAll('[data-pane]')) pane.hidden = pane.dataset.pane !== name;
       $('ymc-editor').querySelector('.panel').scrollTop = 0;
       if (name === 'player') refreshDiscord();
-      if (name === 'layout') syncPortraitPreview(portraitBackgroundColor(), visualTheme());
+      if (name === 'layout') syncPortraitPreview(portraitBackgroundColor(), previewVisual('portrait'));
       syncSpectrumAnimation();
     }
     function openTab(name) {
@@ -5220,20 +5348,17 @@
     });
     $('ymc-spectrum-profile').addEventListener('change', ({ target }) => {
       const preset = SPECTRUM_PROFILES[target.value];
-      if (preset) update(preset.settings, { sync: false });
+      if (preset) editorUpdate(preset.settings, { sync: false });
     });
-    $('ymc-spectrum-show-preview').addEventListener('click', () => {
-      spectrumPreview = !spectrumPreview;
-      $('ymc-spectrum-sample').hidden = !spectrumPreview;
-      $('ymc-spectrum-show-preview').setAttribute('aria-pressed', String(spectrumPreview));
-      setText($('ymc-spectrum-show-preview'), spectrumPreview ? 'Скрыть предпросмотр' : 'Предпросмотр');
-      syncSpectrumAnimation();
-      if (spectrumPreview) $('ymc-spectrum-sample').scrollIntoView({ block: 'nearest' });
-    });
+    for (const button of shadow.querySelectorAll('[data-appearance-preview]')) {
+      button.addEventListener('click', () => startAppearancePreview(button));
+    }
+    $('ymc-preview-apply').addEventListener('click', () => finishAppearancePreview(true, true));
+    $('ymc-preview-cancel').addEventListener('click', () => finishAppearancePreview(false, true));
     $('ymc-spectrum-retry').addEventListener('click', retrySpectrum);
     $('ymc-pattern-shuffle').addEventListener('click', () => {
       const jump = 1 + crypto.getRandomValues(new Uint16Array(1))[0] % 65534;
-      update({ patternSeed: (theme.patternSeed - 1 + jump) % 65535 + 1 }, { sync: false });
+      editorUpdate({ patternSeed: (editorTheme().patternSeed - 1 + jump) % 65535 + 1 }, { sync: false });
     });
     tab('theme');
     $('ymc-discord-save').addEventListener('click', saveDiscord);
@@ -5250,7 +5375,7 @@
         const key = el.dataset.prop;
         const value = el.type === 'checkbox' ? el.checked : el.type === 'range' ? el.valueAsNumber : el.value;
         const profile = key === 'barLayout' ? BAR_LAYOUT_PROFILES[value] : undefined;
-        update({ ...profile, [key]: value }, { immediate: !live, sync: false, historyKey: live ? key : '' });
+        editorUpdate({ ...profile, [key]: value }, { immediate: !live, sync: false, historyKey: live ? key : '' });
       });
       if (live) el.addEventListener('change', () => {
         if (lastHistoryKey === el.dataset.prop) lastHistoryKey = '';
@@ -5260,14 +5385,14 @@
       el.addEventListener('change', () => {
         const key = el.dataset.number;
         const factor = key === 'contrastLevel' ? 10 : 1;
-        if (Number.isFinite(el.valueAsNumber)) update({ [key]: el.valueAsNumber * factor }, { sync: false });
-        el.value = theme[key] / factor;
+        if (Number.isFinite(el.valueAsNumber)) editorUpdate({ [key]: el.valueAsNumber * factor }, { sync: false });
+        el.value = editorTheme()[key] / factor;
       });
       el.addEventListener('keydown', e => { if (e.key === 'Enter') el.blur(); });
     }
 
     $('ymc-open-store').addEventListener('click', () => openTab('library'));
-    $('ymc-playlist-palette').addEventListener('click', () => update({ playlistGradient: 'palette' }, { sync: false }));
+    $('ymc-playlist-palette').addEventListener('click', () => editorUpdate({ playlistGradient: 'palette' }, { sync: false }));
 
     let fileRequest = 0;
     syncSettingsTools = settingsTools(openTab, async (keys, title) => {
@@ -5277,8 +5402,8 @@
       if (keys.includes('vibeMedia') && isChanged('vibeMedia') &&
         !await changeVibeMedia(null, false, { history: false })) return;
       const patch = Object.fromEntries(keys.filter(key => Object.hasOwn(DEFAULT, key)).map(key => [key, DEFAULT[key]]));
-      update(patch, { sync: keys.includes('customCss'), previous: { settings: theme, background } });
-      notice('Блок сброшен.');
+      const staged = editorUpdate(patch, { sync: keys.includes('customCss'), previous: { settings: theme, background } });
+      notice(staged ? 'Стандартные значения показаны в образце.' : 'Блок сброшен.');
     });
     function fileInput(button, id, handle) {
       $(button).addEventListener('click', () => $(id).click());
@@ -5580,23 +5705,6 @@
       [data-ymc-app-backdrop] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-1; pointer-events:none; overflow:hidden; }
       [data-ymc-pattern] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-1; pointer-events:none; overflow:hidden; }
       ${patternRules('[data-ymc-pattern]')}
-      @media (prefers-reduced-motion:no-preference) {
-        @keyframes ymc-pattern-travel {
-          to { mask-position:calc(var(--ymc-pattern-x) + var(--ymc-pattern-dx))
-                            calc(var(--ymc-pattern-y) + var(--ymc-pattern-dy)); }
-        }
-        @keyframes ymc-pattern-shimmer {
-          0%,100% { opacity:var(--ymc-pattern-alpha); }
-          50% { opacity:calc(var(--ymc-pattern-alpha) * .53); }
-        }
-        [data-ymc-pattern]:is([data-motion="drift"],[data-motion="both"]) .ymc-pattern-ink {
-          animation:ymc-pattern-travel var(--ymc-pattern-period) linear infinite;
-        }
-        [data-ymc-pattern]:is([data-motion="shimmer"],[data-motion="both"]) .ymc-pattern-inner {
-          animation:ymc-pattern-shimmer var(--ymc-pattern-period) ease-in-out infinite;
-        }
-        [data-ymc-pattern][data-paused] :is(.ymc-pattern-ink,.ymc-pattern-inner) { animation-play-state:paused; }
-      }
       [data-ymc-page-spectrum] { position:fixed; inset:auto var(--ymc-reserved-width) 0 0; height:var(--ymc-spectrum-height); z-index:-1; pointer-events:none; }
       [data-ymc-page-spectrum] canvas { display:block; width:100%; height:100%; opacity:var(--ymc-spectrum-alpha); }
       [data-ymc-app-backdrop]::after { content:""; position:absolute; inset:0; background:var(--ymc-media-dim,transparent); }

@@ -7,7 +7,7 @@ const path = require('node:path');
 const { promisify } = require('node:util');
 
 const run = promisify(execFile);
-const VERSION = '0.5.7';
+const VERSION = '0.6.0';
 const RELEASES = 'https://github.com/nautro09/ymusic-customizer/releases';
 const LATEST = RELEASES + '/latest/download/';
 const KEY = '__YMC_UPDATE_PUBLIC_KEY__';

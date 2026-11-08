@@ -85,7 +85,7 @@ async function run() {
     assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
     assert.equal(await page.evaluate(() => location.host), 'desktop');
     assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().themeSheet), true);
-    assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().version), '0.5.7');
+    assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().version), '0.6.0');
     assert.equal(await page.evaluate(async () => (await window.ymcMac.getState()).config.discordShowAlbum), false);
 
     await page.keyboard.press('Meta+Shift+Y');

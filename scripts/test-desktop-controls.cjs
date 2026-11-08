@@ -13,7 +13,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.5.8';
+          const version = localStorage.getItem('test:next-version') ?? '0.6.1';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -26,7 +26,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const ui = page.locator('#ymusic-customizer-root');
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.5\.8/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.6\.1/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -34,7 +34,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.5.8'));
+      .querySelector('#ymc-update-label').textContent.includes('0.6.1'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -43,15 +43,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.5.9');
+    await nextRelease('0.6.2');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.5.9');
-    await nextRelease('0.5.10');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.6.2');
+    await nextRelease('0.6.3');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -224,6 +224,72 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       .style.getPropertyValue('--ymc-beat-pulse'));
     await ui.locator('#p-portraitBeat').uncheck();
     assert.equal(await portrait.evaluate(el => getComputedStyle(el).animationName), 'ymc-portrait-breathe');
+    const preview = kind => ui.locator('[data-appearance-preview="' + kind + '"]');
+    const applied = key => page.evaluate(key => YMusicCustomizer.getTheme()[key], key);
+    const saved = () => page.evaluate(() => localStorage.getItem('ymc:theme:v2'));
+    const accept = ui.locator('#ymc-preview-apply');
+
+    const portraitBaseFilter = el => getComputedStyle(el).filter.split(' drop-shadow(')[0];
+    const realPortrait = await portrait.evaluate(portraitBaseFilter);
+    const beforePortrait = await saved();
+    await preview('portrait').click();
+    await aura.selectOption('off');
+    assert.equal(await ui.locator('#ymc-portrait-preview').evaluate(el => getComputedStyle(el).filter), 'none');
+    assert.equal(await portrait.evaluate(portraitBaseFilter), realPortrait);
+    assert.equal(await saved(), beforePortrait);
+    await page.keyboard.press('Escape');
+    assert.equal(await preview('portrait').getAttribute('aria-pressed'), 'false');
+    assert.equal(await aura.inputValue(), 'glow');
+
+    await ui.locator('[data-tab=theme]').click();
+    const realMask = await readMask();
+    const beforePattern = await saved();
+    await preview('pattern').click();
+    await picker.selectOption('stars');
+    const sampleMask = await ui.locator('#ymc-pattern-sample .ymc-pattern-ink').first()
+      .evaluate(el => getComputedStyle(el).maskImage);
+    assert.notEqual(sampleMask, realMask);
+    assert.equal(await readMask(), realMask);
+    assert.equal(await saved(), beforePattern);
+    await accept.click();
+    assert.equal(await applied('patternStyle'), 'stars');
+    assert.equal(await readMask(), sampleMask);
+
+    await ui.locator('#ymc-theme-spectrum .section-toggle').click();
+    await preview('spectrum').click();
+    await ui.locator('#p-barSpectrum').check();
+    await ui.locator('#ymc-spectrum-profile').selectOption('studio');
+    await ui.locator('#p-spectrumOpacity').fill('30');
+    assert.equal(await applied('barSpectrum'), false);
+    assert.equal(await page.locator('[data-ymc-spectrum]').count(), 0);
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#ymusic-customizer-root').shadowRoot
+      .getElementById('ymc-spectrum-preview')).opacity === '0.3');
+    await accept.click();
+    assert.equal(await applied('spectrumStyle'), 'bars');
+    await page.locator('[data-ymc-spectrum]').waitFor();
+
+    await page.evaluate(() => {
+      const playlist = document.createElement('div');
+      playlist.dataset.testId = 'PLAYLIST_PAGE';
+      const backdrop = document.createElement('div');
+      backdrop.className = 'PlaylistPage_averageColorBackground__fixture';
+      playlist.append(backdrop);
+      document.body.append(playlist);
+    });
+    await ui.locator('[data-tab=playlists]').click();
+    await ui.locator('#ymc-playlists-gradient .section-toggle').click();
+    const beforePlaylist = await saved();
+    const realBackdrop = page.locator('.PlaylistPage_averageColorBackground__fixture');
+    const readBackdrop = el => el.evaluate(node => getComputedStyle(node).backgroundImage);
+    const beforeBackdrop = await readBackdrop(realBackdrop);
+    await preview('playlists').click();
+    await ui.locator('[data-prop=playlistGradient]').selectOption('off');
+    assert.equal(await readBackdrop(ui.locator('#ymc-playlist-preview')), 'none');
+    assert.equal(await readBackdrop(realBackdrop), beforeBackdrop);
+    assert.equal(await saved(), beforePlaylist);
+    await ui.locator('[data-tab=theme]').click();
+    assert.equal(await ui.locator('#ymc-preview-toolbar').isHidden(), true);
+    assert.equal(await saved(), beforePlaylist);
     assert.deepEqual(errors, []);
     console.log('PASS ' + platform + ': update toast, resize, all pattern masks, native visibility and audio-driven portrait');
   } finally {
