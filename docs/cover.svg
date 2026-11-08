@@ -1,38 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 330" width="1200" height="330" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 380" width="1240" height="380" role="img" aria-labelledby="title desc">
   <title id="title">YMusic Customizer</title>
-  <desc id="desc">Музыка звучит как прежде. Выглядит по-твоему.</desc>
+  <desc id="desc">Мод для Яндекс Музыки. Тёмный пульт с бирюзовым и фиолетовым спектром.</desc>
   <defs>
-    <linearGradient id="background" x2="1" y2="1" gradientUnits="objectBoundingBox">
-      <stop stop-color="#161123"/>
-      <stop offset="1" stop-color="#251633"/>
+    <linearGradient id="bg" x2="1" y2="1">
+      <stop stop-color="#11182a"/>
+      <stop offset=".52" stop-color="#0b101c"/>
+      <stop offset="1" stop-color="#17102a"/>
     </linearGradient>
-    <radialGradient id="light">
-      <stop stop-color="#82285e" stop-opacity=".65"/>
-      <stop offset="1" stop-color="#82285e" stop-opacity="0"/>
+    <radialGradient id="violet">
+      <stop stop-color="#9a65ff" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#9a65ff" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="signal" x1="0" x2="1">
-      <stop stop-color="#ffa17b"/>
-      <stop offset=".55" stop-color="#f66cb3"/>
-      <stop offset="1" stop-color="#a990ff"/>
+    <radialGradient id="aqua">
+      <stop stop-color="#52f4d0" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#52f4d0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="signal" x2="1" y2="0">
+      <stop stop-color="#67f8d3"/>
+      <stop offset=".52" stop-color="#7ad7ff"/>
+      <stop offset="1" stop-color="#bd96ff"/>
     </linearGradient>
-    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
-      <path d="M28 0H0v28" fill="none" stroke="#e6c2ff" stroke-opacity=".09"/>
+    <linearGradient id="edge" x2="1" y2="1">
+      <stop stop-color="#65eed0" stop-opacity=".65"/>
+      <stop offset=".52" stop-color="#344166" stop-opacity=".8"/>
+      <stop offset="1" stop-color="#bd96ff" stop-opacity=".75"/>
+    </linearGradient>
+    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M0 30V0H30" fill="none" stroke="#a4c2ee" stroke-opacity=".11"/>
     </pattern>
-    <clipPath id="frame"><rect x="1" y="1" width="1198" height="328" rx="25"/></clipPath>
+    <clipPath id="frame"><path d="M25 1h1190l24 24v330l-24 24H25L1 355V25Z"/></clipPath>
+    <clipPath id="scope"><rect x="747" y="80" width="456" height="220" rx="10"/></clipPath>
   </defs>
   <g clip-path="url(#frame)">
-    <path fill="url(#background)" d="M0 0h1200v330H0z"/>
-    <ellipse cx="1028" cy="160" rx="420" ry="260" fill="url(#light)"/>
-    <path fill="url(#grid)" d="M685 0h515v330H685z"/>
-    <path d="M686 181h35l17-24 18 41 28-81 24 112 31-152 30 196 34-228 31 251 33-219 27 148 26-87 25 64 18-39 19 18h84" fill="none" stroke="#0e0b17" stroke-opacity=".35" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M686 181h35l17-24 18 41 28-81 24 112 31-152 30 196 34-228 31 251 33-219 27 148 26-87 25 64 18-39 19 18h84" fill="none" stroke="url(#signal)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
-      <text x="56" y="78" fill="#f9b698" font-size="15" font-weight="700" letter-spacing="3">МОД ДЛЯ ЯНДЕКС МУЗЫКИ</text>
-      <text x="52" y="162" fill="#fff5fd" font-size="67" font-weight="800" letter-spacing="-2">YMusic Customizer</text>
-      <text x="57" y="207" fill="#e7d5ed" font-size="25">Музыка звучит как прежде. Выглядит по-твоему.</text>
-      <rect x="56" y="250" width="191" height="36" rx="18" fill="#ffffff" fill-opacity=".08" stroke="#d9b9ee" stroke-opacity=".4"/>
-      <text x="74" y="274" fill="#f2e4f7" font-size="15" font-weight="600">macOS  ·  Windows</text>
+    <rect width="1240" height="380" fill="url(#bg)"/>
+    <ellipse cx="1140" cy="250" rx="405" ry="280" fill="url(#violet)"/>
+    <ellipse cx="236" cy="58" rx="430" ry="240" fill="url(#aqua)"/>
+    <path d="M41 58H1199M41 324H1199" stroke="#bed6ff" stroke-opacity=".2"/>
+    <path d="M25 1h74M1 25v56M1215 379h-74M1239 355v-56" fill="none" stroke="url(#signal)" stroke-width="3"/>
+    <g fill="none" stroke="#7df7da" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M43 22h19l8 8v11H43Z" stroke-opacity=".62"/>
+      <path d="M48 32h4l3-5 4 10 3-5h3"/>
+    </g>
+    <g font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="600" font-size="13" letter-spacing="2">
+      <text x="85" y="36" fill="#d5e7f9">YMC / DESKTOP</text>
+      <text x="1197" y="36" text-anchor="end" fill="#adc1df">MACOS + WINDOWS</text>
+      <text x="43" y="350" fill="#93adca">01 / THEME</text>
+      <text x="231" y="350" fill="#93adca">02 / VISUALIZER</text>
+      <text x="464" y="350" fill="#93adca">03 / PRESENCE</text>
+      <text x="1197" y="350" text-anchor="end" fill="#b8a4e7">SIGNAL / LIVE</text>
+    </g>
+    <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif">
+      <text x="42" y="109" fill="#75f2d3" font-size="17" font-weight="700" letter-spacing="2">МОД ДЛЯ ЯНДЕКС МУЗЫКИ</text>
+      <text x="37" y="190" fill="#f3f7ff" font-size="70" font-weight="800" letter-spacing="-2">YMusic Customizer</text>
+      <text x="42" y="241" fill="#c3d2eb" font-size="28" font-weight="500">Внешний вид в ритме трека</text>
+    </g>
+    <rect x="747" y="80" width="456" height="220" rx="10" fill="#090e1b" fill-opacity=".65" stroke="url(#edge)"/>
+    <g clip-path="url(#scope)">
+      <rect x="747" y="80" width="456" height="220" fill="url(#grid)"/>
+      <circle cx="970" cy="190" r="101" fill="none" stroke="#a9d7ff" stroke-opacity=".19" stroke-dasharray="2 6"/>
+      <circle cx="970" cy="190" r="75" fill="none" stroke="#a9d7ff" stroke-opacity=".16"/>
+      <path d="M747 190h456" stroke="#94afd9" stroke-opacity=".35"/>
+      <path d="M778.0 173.7V206.3 M785.1 162.4V217.6 M792.2 164.5V215.5 M799.3 155.8V224.2 M806.4 162.3V217.7 M813.5 164.6V215.4 M820.6 157.6V222.4 M827.7 157.2V222.8 M834.8 140.1V239.9 M841.9 157.8V222.2 M849.0 146.5V233.5 M856.1 160.7V219.3 M863.2 135.9V244.1 M870.3 136.1V243.9 M877.4 135.2V244.8 M884.5 139.3V240.7 M891.6 152.7V227.3 M898.7 121.1V258.9 M905.8 132.9V247.1 M912.9 105.5V274.5 M920.0 144.6V235.4 M927.1 126.9V253.1 M934.2 133.1V246.9 M941.3 109.8V270.2 M948.4 104.1V275.9 M955.5 131.3V248.7 M962.6 119.2V260.8 M969.7 142.8V237.2 M976.8 93.7V286.3 M983.9 120.8V259.2 M991.0 105.3V274.7 M998.1 140.5V239.5 M1005.2 129.1V250.9 M1012.3 115.7V264.3 M1019.4 118.8V261.2 M1026.5 109.8V270.2 M1033.6 149.9V230.1 M1040.7 126.8V253.2 M1047.8 144.3V235.7 M1054.9 114.1V265.9 M1062.0 137.1V242.9 M1069.1 140.8V239.2 M1076.2 149.7V230.3 M1083.3 150.0V230.0 M1090.4 133.3V246.7 M1097.5 150.3V229.7 M1104.6 144.3V235.7 M1111.7 166.8V213.2 M1118.8 152.0V228.0 M1125.9 157.8V222.2 M1133.0 151.9V228.1 M1140.1 160.4V219.6 M1147.2 167.7V212.3 M1154.3 163.6V216.4 M1161.4 167.2V212.8" stroke="url(#signal)" fill="none" stroke-width="9" opacity=".13" stroke-linecap="round"/>
+      <path d="M778.0 173.7V206.3 M785.1 162.4V217.6 M792.2 164.5V215.5 M799.3 155.8V224.2 M806.4 162.3V217.7 M813.5 164.6V215.4 M820.6 157.6V222.4 M827.7 157.2V222.8 M834.8 140.1V239.9 M841.9 157.8V222.2 M849.0 146.5V233.5 M856.1 160.7V219.3 M863.2 135.9V244.1 M870.3 136.1V243.9 M877.4 135.2V244.8 M884.5 139.3V240.7 M891.6 152.7V227.3 M898.7 121.1V258.9 M905.8 132.9V247.1 M912.9 105.5V274.5 M920.0 144.6V235.4 M927.1 126.9V253.1 M934.2 133.1V246.9 M941.3 109.8V270.2 M948.4 104.1V275.9 M955.5 131.3V248.7 M962.6 119.2V260.8 M969.7 142.8V237.2 M976.8 93.7V286.3 M983.9 120.8V259.2 M991.0 105.3V274.7 M998.1 140.5V239.5 M1005.2 129.1V250.9 M1012.3 115.7V264.3 M1019.4 118.8V261.2 M1026.5 109.8V270.2 M1033.6 149.9V230.1 M1040.7 126.8V253.2 M1047.8 144.3V235.7 M1054.9 114.1V265.9 M1062.0 137.1V242.9 M1069.1 140.8V239.2 M1076.2 149.7V230.3 M1083.3 150.0V230.0 M1090.4 133.3V246.7 M1097.5 150.3V229.7 M1104.6 144.3V235.7 M1111.7 166.8V213.2 M1118.8 152.0V228.0 M1125.9 157.8V222.2 M1133.0 151.9V228.1 M1140.1 160.4V219.6 M1147.2 167.7V212.3 M1154.3 163.6V216.4 M1161.4 167.2V212.8" stroke="url(#signal)" fill="none" stroke-width="2.8" stroke-linecap="round"/>
+    </g>
+    <g fill="none" stroke="url(#signal)" stroke-width="2">
+      <path d="M759 105V92h13M1191 105V92h-13M759 275v13h13M1191 275v13h-13"/>
     </g>
   </g>
-  <rect x="1" y="1" width="1198" height="328" rx="25" fill="none" stroke="#d9b9ee" stroke-opacity=".28" stroke-width="2"/>
+  <path d="M25 1h1190l24 24v330l-24 24H25L1 355V25Z" fill="none" stroke="url(#edge)" stroke-width="2"/>
 </svg>

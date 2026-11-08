@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="286" height="72" viewBox="0 0 286 72" role="img" aria-label="Скачать для macOS">
+  <path d="M13 1h260l12 12v46l-12 12H13L1 59V13Z" fill="#111828" stroke="#75f2d3" stroke-opacity=".75" stroke-width="2"/>
+  <path d="M13 2h60v68H13L2 59V13Z" fill="#102524"/>
+  <g transform="translate(13 12) scale(.75)" stroke="#75f2d3" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M13 13h38a4 4 0 0 1 4 4v24H9V17a4 4 0 0 1 4-4ZM4 43h56l-3 6H7Z"/><path d="M28 43h8"/></g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif">
+    <text x="82" y="31" fill="#f4f7ff" font-size="16" font-weight="750">Скачать для macOS</text>
+    <text x="82" y="52" fill="#b9c8e3" font-size="13">Apple Silicon / Intel</text>
+  </g>
+  <path d="M264 26v13m-5-5 5 5 5-5m-10 10h10" fill="none" stroke="#75f2d3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
