@@ -21,6 +21,9 @@ xcrun lipo -create "$staging/arm64" "$staging/x86_64" -output "$contents/MacOS/Y
 cp "$project/macos/Info.plist" "$contents/Info.plist"
 cp "$project/macos/"{bootstrap,preload,discord,discord-activity}.cjs "$contents/Resources/"
 cp "$project/mod/ymusic-customizer.js" "$project/LICENSE" "$project/licenses/Next-Music-Client-MIT.txt" "$contents/Resources/"
+if [[ -n "${YMC_SEARCH_AUDIO_DIR:-}" ]]; then
+    python3 "$project/../scripts/bundle-search-audio.py" "$contents/Resources/ymusic-customizer.js" "$YMC_SEARCH_AUDIO_DIR"
+fi
 python3 "$project/../scripts/embed-update-key.py" "$contents/Resources/update.cjs"
 if [[ -n "${YMC_MACOS_SIGN_IDENTITY:-}" ]]; then
     /usr/bin/codesign --force --sign "$YMC_MACOS_SIGN_IDENTITY" --options runtime --timestamp "$app"

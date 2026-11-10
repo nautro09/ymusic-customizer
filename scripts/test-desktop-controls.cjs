@@ -1,10 +1,13 @@
 // Run with Playwright and Chromium: node scripts/test-desktop-controls.cjs
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
+const fs = require('node:fs/promises');
+const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { chromium } = require('playwright');
 
-async function searchAudioSmoke(page, ui) {
+async function searchAudioSmoke(page, ui, platform) {
   const mountSearch = () => page.evaluate(() => {
     const root = document.createElement('div');
     root.dataset.testId = 'SEARCH_PAGE';
@@ -21,36 +24,39 @@ async function searchAudioSmoke(page, ui) {
       setTimeout(() => {
         results.insertAdjacentHTML('beforeend', '<div class="CommonTrack_root__demo"><span class="Meta_title__demo">67 (Six Seven)</span>' +
           '<span class="Meta_artists__demo">Gazan</span><button data-test-id="PLAY_BUTTON">Слушать</button></div>');
-        results.querySelector('button:last-child').onclick = () => { window.wrongTrack = true; };
         results.lastElementChild.querySelector('button').onclick = () => { window.nativeSoundPlayed = true; };
       }, 220);
     });
     const NativeAudio = window.Audio;
     window.Audio = function (...args) {
       const audio = new NativeAudio(...args);
-      if (args[0]?.startsWith('blob:')) window.testLocalSound = audio;
+      if (args[0]?.startsWith('blob:')) {
+        window.testLocalSound = audio;
+        window.testLocalSoundCount = (window.testLocalSoundCount || 0) + 1;
+      }
       return audio;
     };
   });
-  let popups = 0;
+  let popups = 0, fileChoosers = 0;
   const countPopup = () => { popups++; };
+  const countFileChooser = () => { fileChoosers++; };
   page.on('popup', countPopup);
+  page.on('filechooser', countFileChooser);
   await mountSearch();
   const search = page.locator('[data-test-id=SEARCH_PAGE_SEARCH_INPUT]');
   await search.fill('6767');
-  await search.press('Enter');
+  await search.fill('67678');
+  await page.waitForTimeout(650);
+  assert.equal(await page.evaluate(() => window.submittedQuery), undefined);
+  await search.fill('6767');
   await page.waitForFunction(() => window.nativeSoundPlayed);
   assert.equal(await page.evaluate(() => window.submittedQuery), 'Gazan 67 (Six Seven)');
   assert.equal(await page.evaluate(() => window.wrongTrack), undefined);
 
-  const notice = ui.locator('#ymc-search-sound');
   await search.fill('КАТЯ КАТЕРИНА ЭХ ДУША');
-  await search.press('Enter');
-  await notice.waitFor();
-  const [picker] = await Promise.all([
-    page.waitForEvent('filechooser'),
-    ui.locator('#ymc-search-sound-pick').click()
-  ]);
+  await page.waitForTimeout(650);
+  assert.equal(await page.evaluate(() => window.testLocalSound), undefined);
+  assert.equal(await ui.locator('#ymc-search-sound,#ymc-search-sound-file').count(), 0);
   const rate = 8000, samples = rate;
   const wav = Buffer.alloc(44 + samples * 2);
   wav.write('RIFF');
@@ -66,21 +72,27 @@ async function searchAudioSmoke(page, ui) {
   wav.write('data', 36);
   wav.writeUInt32LE(samples * 2, 40);
   for (let i = 0; i < samples; i++) wav.writeInt16LE(Math.sin(i * Math.PI * 2 * 440 / rate) * 2000, 44 + i * 2);
-  await picker.setFiles({ name: 'local-fixture.wav', mimeType: 'audio/wav', buffer: wav });
-  await page.waitForFunction(() => window.testLocalSound?.currentTime > .04);
-  await notice.waitFor({ state: 'hidden' });
+  const stage = await fs.mkdtemp(path.join(os.tmpdir(), 'ymc-test-audio-'));
+  try {
+    const renderer = path.join(stage, 'renderer.js');
+    await fs.copyFile(path.resolve(__dirname, '..', platform, 'mod/ymusic-customizer.js'), renderer);
+    await fs.writeFile(path.join(stage, 'katya.wav'), wav);
+    execFileSync('python3', [path.join(__dirname, 'bundle-search-audio.py'), renderer, stage]);
+    await page.addInitScript({ path: renderer });
+  } finally {
+    await fs.rm(stage, { recursive: true, force: true });
+  }
   await page.reload();
   await mountSearch();
   await search.fill('катя  катерина эх душа');
-  await search.press('Enter');
   await page.waitForFunction(() => window.testLocalSound?.currentTime > .04);
-  assert.equal(await notice.isHidden(), true);
+  await search.press('Enter');
+  await page.waitForTimeout(650);
+  assert.equal(await page.evaluate(() => window.testLocalSoundCount), 1);
   assert.equal(popups, 0);
-  await search.fill('6767');
-  const replacement = page.waitForEvent('filechooser');
-  await search.press('Alt+Enter');
-  await replacement;
+  assert.equal(fileChoosers, 0);
   page.off('popup', countPopup);
+  page.off('filechooser', countFileChooser);
   await page.reload();
 }
 
@@ -93,7 +105,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.8.3';
+          const version = localStorage.getItem('test:next-version') ?? '0.8.4';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -105,10 +117,10 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await page.goto(pathToFileURL(path.resolve(__dirname, '..', platform, 'demo.html')).href);
     const update = partial => page.evaluate(partial => YMusicCustomizer.update(partial), partial);
     const ui = page.locator('#ymusic-customizer-root');
-    await searchAudioSmoke(page, ui);
+    await searchAudioSmoke(page, ui, platform);
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.3/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.4/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -116,7 +128,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.8.3'));
+      .querySelector('#ymc-update-label').textContent.includes('0.8.4'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -125,15 +137,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.8.4');
+    await nextRelease('0.8.5');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.4');
-    await nextRelease('0.8.5');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.5');
+    await nextRelease('0.8.6');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();

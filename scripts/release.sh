@@ -59,6 +59,9 @@ if [[ -n "$identity" ]]; then
   xcrun stapler validate "$packaged_app"
 fi
 cp -R windows "$stage/windows"
+if [[ -n "${YMC_SEARCH_AUDIO_DIR:-}" ]]; then
+  python3 scripts/bundle-search-audio.py "$stage/windows/mod/ymusic-customizer.js" "$YMC_SEARCH_AUDIO_DIR"
+fi
 python3 scripts/embed-update-key.py "$stage/windows/scripts/update.cjs"
 (
   cd "$stage/windows"
