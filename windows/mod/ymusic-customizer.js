@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.8.3 for Windows and macOS. MIT.
+ * YMusic Customizer v0.8.4 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.8.3';
+  const version = '0.8.4';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';

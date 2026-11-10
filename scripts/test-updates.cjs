@@ -12,7 +12,7 @@ const source = fs.readFileSync(path.join(__dirname, '../shared/update.cjs'), 'ut
   .replace("'__YMC_UPDATE_PUBLIC_KEY__'", JSON.stringify(publicKey.export({ type: 'spki', format: 'pem' })));
 const archive = Buffer.from('test archive');
 const hash = createHash('sha256').update(archive).digest('hex');
-const manifest = Buffer.from(JSON.stringify({ version: '0.8.4', sha256: { win32: hash }, notes: 'Проверка' }));
+const manifest = Buffer.from(JSON.stringify({ version: '0.8.5', sha256: { win32: hash }, notes: 'Проверка' }));
 const signature = sign('sha256', manifest, privateKey);
 const files = { 'update.json': manifest, 'update.sig': signature, 'YMusic-Customizer-Windows.zip': archive };
 const handlers = new Map();
@@ -46,7 +46,7 @@ async function main() {
   const install = handlers.get('ymc:update:install');
   assert.ok((await check('outside')).error);
   assert.ok((await install('trusted')).error);
-  files['update.json'] = Buffer.from(manifest.toString().replace('0.8.4', '0.9.0'));
+  files['update.json'] = Buffer.from(manifest.toString().replace('0.8.5', '0.9.0'));
   assert.ok((await check('trusted')).error, 'edited manifest must be rejected');
   files['update.json'] = manifest;
   assert.equal((await check('trusted')).available, true);
