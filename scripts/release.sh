@@ -60,7 +60,6 @@ if [[ -n "$identity" ]]; then
 fi
 cp -R windows "$stage/windows"
 python3 scripts/embed-update-key.py "$stage/windows/scripts/update.cjs"
-python3 scripts/bundle-renderer.py windows/mod/ymusic-customizer.js "$stage/windows/mod/ymusic-customizer.js"
 (
   cd "$stage/windows"
   python3 -m zipfile -c "$stage/artifacts/YMusic-Customizer-Windows.zip" README.md LICENSE docs licenses mod scripts УСТАНОВИТЬ.bat УДАЛИТЬ.bat

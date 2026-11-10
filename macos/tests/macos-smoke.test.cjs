@@ -1,6 +1,6 @@
 // Run on macOS against a copy built by YMusic Customizer.app. Uses a fresh profile and mock Discord.
 const assert = require('node:assert/strict');
-const { mkdir, mkdtemp, readFile, rm, writeFile } = require('node:fs/promises');
+const { mkdir, mkdtemp, rm, writeFile } = require('node:fs/promises');
 const net = require('node:net');
 const path = require('node:path');
 const { setTimeout: delay } = require('node:timers/promises');
@@ -85,28 +85,13 @@ async function run() {
     assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
     assert.equal(await page.evaluate(() => location.host), 'desktop');
     assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().themeSheet), true);
-    assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().version), '0.7.7');
+    assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().version), '0.7.6');
     assert.equal(await page.evaluate(async () => (await window.ymcMac.getState()).config.discordShowAlbum), false);
 
     await page.keyboard.press('Meta+Shift+Y');
     const editor = page.locator('#ymc-editor');
     await editor.waitFor({ state: 'visible' });
-    assert.equal(await editor.locator('.tabs [data-tab]:visible').count(), 5);
-    assert.equal(await page.evaluate(async () => (await window.ymcMac.musicPlus('status')).installed), null);
-    if (process.argv[3]) {
-      const manifest = await readFile(process.argv[3], 'utf8');
-      await app.evaluate((_, raw) => {
-        const fetch = globalThis.fetch;
-        globalThis.fetch = (url, options) => String(url).endsWith('/music-plus-beta/music-plus.json')
-          ? Promise.resolve(new Response(raw)) : fetch(url, options);
-      }, manifest);
-      await editor.locator('[data-tab=library]').click();
-      await editor.locator('[data-tab=plugins]').click();
-      await editor.getByRole('button', { name: 'Скачать и установить' }).click();
-      await editor.locator('[data-tab=music-plus]:visible').waitFor();
-      assert.equal(await page.evaluate(async () => (await window.ymcMac.musicPlus('status')).installed.version), '0.1.0');
-      await editor.locator('[data-tab=theme]').click();
-    }
+    assert.equal(await editor.locator('.tabs [data-tab]').count(), 5);
     assert.equal(await page.locator('#ymc-guide-offer').isVisible(), true);
     await page.evaluate(async () => {
       const frame = document.createElement('div');

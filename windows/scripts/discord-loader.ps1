@@ -77,8 +77,6 @@ function Edit-UpdateLoader([string]$Text, [string]$Updater = '', [switch]$Preloa
     // BEGIN YMC_UPDATE
     checkUpdate: () => ipcRenderer.invoke("ymc:update:check"),
     installUpdate: () => ipcRenderer.invoke("ymc:update:install"),
-    musicPlus: (action, value) => ["status", "check", "install", "remove", "connect", "search", "cancel", "open"].includes(action)
-      ? ipcRenderer.invoke("ymc:music-plus:" + action, value) : null,
     // END YMC_UPDATE
 '@
     } else {

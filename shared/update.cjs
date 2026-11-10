@@ -7,7 +7,7 @@ const path = require('node:path');
 const { promisify } = require('node:util');
 
 const run = promisify(execFile);
-const VERSION = '0.7.7';
+const VERSION = '0.7.6';
 const RELEASES = 'https://github.com/nautro09/ymusic-customizer/releases';
 const LATEST = RELEASES + '/latest/download/';
 const KEY = '__YMC_UPDATE_PUBLIC_KEY__';
@@ -79,10 +79,6 @@ function powershell(script, args, extraEnv = {}) {
 }
 
 function attachUpdater(app, ipcMain, trusted) {
-  if (typeof ymcMusicPlusNative !== 'undefined') {
-    const { shell } = require('electron');
-    ymcMusicPlusNative.attachMusicPlus(app, ipcMain, trusted, KEY, VERSION, url => shell.openExternal(url));
-  }
   const packageName = PACKAGE[process.platform];
   if (!packageName) return;
   let request;

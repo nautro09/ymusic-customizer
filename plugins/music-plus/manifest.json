@@ -1,8 +1,0 @@
-{
-  "id": "music-plus",
-  "version": "0.1.0",
-  "api": 1,
-  "minCustomizer": "0.7.7",
-  "sources": ["youtube", "soundcloud", "vk", "spotify"],
-  "notes": "Поиск видео YouTube и треков SoundCloud, ссылки VK Музыки и Spotify, локальная Своя волна."
-}
