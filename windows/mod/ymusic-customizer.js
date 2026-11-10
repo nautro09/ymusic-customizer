@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.7.6 for Windows and macOS. MIT.
+ * YMusic Customizer v0.7.7 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.7.6';
+  const version = '0.7.7';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -4349,6 +4349,9 @@
     .head-actions .head-icon{min-width:32px;padding:5px 8px;font-size:16px;line-height:1.25}
     .editor-tools input{flex:1 1 120px;min-width:100px;font-size:12px}
     .shop-nav{margin-top:8px}
+    #ymc-music-plus-store,#ymc-music-plus-settings{display:grid;gap:8px}
+    .music-plus-connect{display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+    .music-plus-connect .btn{justify-self:start}
     .settings-results{max-height:25vh;overflow:auto;overscroll-behavior:contain;margin-top:7px;padding:6px;border:1px solid var(--border);border-radius:9px;background:var(--control)}
     .settings-results button{display:block;width:100%;text-align:start;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:var(--fg);font-size:12px}
     .settings-results button:hover,.settings-results button:focus-visible{background:var(--hover)}
@@ -4570,9 +4573,11 @@
     player: ['Плеер', 'Нижняя панель, расширенное окно и Discord.'],
     playlists: ['Плейлисты', 'Шапка, кнопки и поиск. Настройки действуют и на «Мне нравится».'],
     library: ['Магазин и CSS', 'Готовые темы, ваши сохранения и файлы. Редактор CSS находится в соседнем разделе этой вкладки.'],
-    files: ['CSS и файлы', 'Свои правила, совместимый CSS Next Music и обмен файлами темы.']
+    files: ['CSS и файлы', 'Свои правила, совместимый CSS Next Music и обмен файлами темы.'],
+    plugins: ['Плагины', 'Дополнения, которые устанавливаются отдельно от оформления.'],
+    'music-plus': ['Музыка+', 'Подключение площадок и обновления бета-плагина.']
   };
-  const mainPane = pane => pane === 'files' ? 'library' : pane;
+  const mainPane = pane => ['files', 'plugins'].includes(pane) ? 'library' : pane;
   const paneIntro = key => `<div class="pane-intro"><h2>${PANES[key][0]}</h2><p>${PANES[key][1]}</p></div>`;
   const previewButton = (kind, sample, id = '') => `<button ${id ? `id="${id}"` : ''} class="btn" type="button"
     data-appearance-preview="${kind}" aria-controls="${sample}" aria-pressed="false">Предпросмотр</button>`;
@@ -4589,6 +4594,7 @@
             <button class="btn" data-tab="theme">Тема</button><button class="btn" data-tab="layout">Главная</button>
             <button class="btn" data-tab="player">Плеер</button><button class="btn" data-tab="playlists">Плейлисты</button>
             <button class="btn" data-tab="library">Магазин и CSS</button>
+            <button class="btn" data-tab="music-plus" hidden>Музыка+ <small>β</small></button>
           </nav>
           <div class="editor-tools">
             <input id="ymc-settings-search" type="search" aria-label="Поиск настроек" placeholder="Найти настройку">
@@ -4603,6 +4609,7 @@
           </div>
           <nav id="ymc-shop-nav" class="shop-nav" aria-label="Магазин и CSS" hidden>
             <button class="btn" id="ymc-show-catalog">Магазин тем</button><button class="btn" data-tab="files">CSS и файлы</button>
+            <button class="btn" data-tab="plugins">Плагины</button>
           </nav>
           <p id="ymc-notice" class="notice" role="status"></p><p id="ymc-save-error" class="error" role="alert"></p>
         </header>
@@ -5073,6 +5080,14 @@
             <label>Название новой темы<input type="text" id="ymc-library-name" maxlength="60" placeholder="Название текущей темы"></label>
             <button class="btn" id="ymc-library-save" data-find="Сохранить тему">Сохранить текущую как новую</button>
           </section>
+        </div>
+        <div data-pane="plugins" hidden>
+          ${paneIntro('plugins')}
+          <section id="ymc-music-plus-store"><h3>Музыка+ · бета</h3><p class="muted">Доступно в настольной сборке.</p></section>
+        </div>
+        <div data-pane="music-plus" hidden>
+          ${paneIntro('music-plus')}
+          <section id="ymc-music-plus-settings"></section>
         </div>
         <div data-pane="files" hidden>
           ${paneIntro('files')}
@@ -6079,7 +6094,9 @@
     ['files', 'ymc-shop-addon', 'Тема Next Music',
       'Выберите один или несколько CSS-файлов из распакованной темы. Первая галочка включает файлы, вторая отдаёт CSS управление общей палитрой. Локальные скрипты и сервер ресурсов Next Music для этого режима недоступны.'],
     ['files', 'ymc-shop-files', 'Файлы темы',
-      'JSON сохраняет параметры оформления, CSS выгружает правила. Импорт JSON применяет сохранённые параметры. Кнопка «Сбросить» здесь возвращает все параметры оформления и убирает активный фон.']
+      'JSON сохраняет параметры оформления, CSS выгружает правила. Импорт JSON применяет сохранённые параметры. Кнопка «Сбросить» здесь возвращает все параметры оформления и убирает активный фон.'],
+    ['plugins', 'ymc-music-plus-store', 'Плагины',
+      'Откройте «Магазин и CSS» → «Плагины» и установите «Музыка+». В новой вкладке можно подключить YouTube и SoundCloud и проверять обновления. В поиске нажмите «Источники», выберите площадки и запустите поиск. На главной «Своя волна» собирает сохранённые находки за сеанс.']
   ];
   const RELEASES = [
     { version: '0.5.6', notes: ['Проверка и установка обновлений из Customizer.'],
@@ -6124,7 +6141,11 @@
       'Свёрнутая боковая панель возвращается из зоны внутри окна. Широкий плеер сохраняет сетку, когда под ним есть нижняя строка.',
       'Умная тема защищает контраст текста в поиске. Штатные градиенты и маски иконок сохраняются.'
     ], steps: ['ymc-home-track', 'ymc-theme-smart', 'ymc-theme-pattern', 'ymc-home-sidebar', 'ymc-home-animation',
-      'ymc-theme-contrast', 'ymc-player-layout'] }
+      'ymc-theme-contrast', 'ymc-player-layout'] },
+    { version: '0.7.7', notes: [
+      'В «Магазине и CSS» появились плагины. «Музыка+» добавляет поиск на других площадках и подбор из сохранённых находок.',
+      'В скрытом окне Customizer пропускает периодическое обновление оформления.'
+    ], steps: ['ymc-music-plus-store'] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -6841,6 +6862,14 @@
 
     const tabs = [...shadow.querySelectorAll('.tabs [data-tab]')];
     const cssTab = shadow.querySelector('[data-tab="files"]');
+    const pluginsTab = shadow.querySelector('[data-tab="plugins"]');
+    const musicPlus = globalThis.__ymcMusicPlus?.({
+      shadow, request: discordBridge?.musicPlus,
+      goTo(name) {
+        if (activeDialog !== 'editor') showDialog('editor', launcher);
+        openTab(name);
+      }
+    });
     function tab(name) {
       if (name !== editorTab) finishAppearancePreview();
       editorTab = name;
@@ -6850,6 +6879,8 @@
       $('ymc-shop-nav').hidden = group !== 'library';
       $('ymc-show-catalog').setAttribute('aria-pressed', String(name === 'library'));
       cssTab.setAttribute('aria-pressed', String(name === 'files'));
+      pluginsTab.setAttribute('aria-pressed', String(name === 'plugins'));
+      musicPlus?.open(name);
       for (const pane of shadow.querySelectorAll('[data-pane]')) pane.hidden = pane.dataset.pane !== name;
       $('ymc-editor').querySelector('.panel').scrollTop = 0;
       if (name === 'player') refreshDiscord();
@@ -6864,7 +6895,7 @@
       setUpdateCard(false);
       tab(name);
     }
-    [...tabs, cssTab].forEach(button => button.addEventListener('click', () => openTab(button.dataset.tab)));
+    [...tabs, cssTab, pluginsTab].forEach(button => button.addEventListener('click', () => openTab(button.dataset.tab)));
     $('ymc-show-catalog').addEventListener('click', () => openTab('library'));
     $('ymc-sidebar-reset').addEventListener('click', () => update(Object.fromEntries(
       Object.entries(DEFAULT).filter(([key]) => ['sidebarDock','sidebarAlign','sidebarSize','sidebarGap','sidebarInset',
@@ -6941,6 +6972,7 @@
       editorUpdate({ patternSeed: (editorTheme().patternSeed - 1 + jump) % 65535 + 1 }, { sync: false });
     });
     tab('theme');
+    musicPlus?.init();
     $('ymc-discord-save').addEventListener('click', saveDiscord);
     $('ymc-discord-album').addEventListener('change', () => syncDiscordPreview());
     $('ymc-discord-paused').addEventListener('change', () => syncDiscordPreview());
@@ -7189,10 +7221,17 @@
       }
       refresh();
     });
-    document.addEventListener('visibilitychange', () => {
+    let visualRefresh;
+    function syncVisualRefresh() {
+      clearInterval(visualRefresh);
+      visualRefresh = document.hidden ? undefined : setInterval(refresh, 720);
+      patternLayer?.toggleAttribute('data-paused', document.hidden);
       refresh();
-    });
+    }
+    document.addEventListener('visibilitychange', syncVisualRefresh);
     window.addEventListener('pagehide', () => {
+      clearInterval(visualRefresh);
+      visualRefresh = undefined;
       overlaySpectrum = false;
       if (spectrumFrame !== undefined) cancelAnimationFrame(spectrumFrame);
       spectrumFrame = undefined;
@@ -7214,7 +7253,7 @@
     window.addEventListener('pageshow', event => {
       if (!event.persisted) return;
       apply();
-      refresh();
+      syncVisualRefresh();
     });
     setupUpdates();
     let mountFrame;
@@ -7222,12 +7261,14 @@
       if (document.hidden || mountFrame !== undefined) return;
       mountFrame = requestAnimationFrame(() => {
         mountFrame = undefined;
-        syncNativeMounts();
+        if (!document.hidden) syncNativeMounts();
       });
     };
     const nativeMountSelector = [SELECTOR.navbar, SELECTOR.profile, NAV_ENTRY, VIBE_HERO, VIBE_ALBUM,
       PORTRAIT, SELECTOR.player, SELECTOR.fullscreen, '[class*="VibePage_vibeAnimation__"] canvas'].join(', ');
     new MutationObserver(records => {
+      musicPlus?.consider(records);
+      if (document.hidden) return;
       if (!host.isConnected || !baseStyle.isConnected || !waveFilter.isConnected ||
           records.some(record => [...record.addedNodes, ...record.removedNodes].some(node =>
             node.nodeType === 1 && (node.matches(nativeMountSelector) || node.querySelector(nativeMountSelector))))) scheduleMounts();
@@ -7238,7 +7279,6 @@
       }, true);
     }
     document.addEventListener('fullscreenchange', syncNativeMounts);
-    setInterval(refresh, 720);
     if (discordBridge?.reportTrack) {
       reportDiscordTrack();
       setInterval(reportDiscordTrack, 2500);
@@ -7250,7 +7290,7 @@
     initOnboarding();
     syncControls(true);
     apply();
-    refresh();
+    syncVisualRefresh();
     showReleaseNotes();
     window.YMusicCustomizer = {
       getTheme: () => cloneTheme(theme),

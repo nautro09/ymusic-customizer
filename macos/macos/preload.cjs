@@ -9,7 +9,9 @@ if (window === window.top && location.protocol === 'music-application:' && locat
     setConfig: settings => ipcRenderer.invoke('ymc:discord:config', settings),
     reportTrack: track => ipcRenderer.send('ymc:discord:track', track),
     checkUpdate: () => ipcRenderer.invoke('ymc:update:check'),
-    installUpdate: () => ipcRenderer.invoke('ymc:update:install')
+    installUpdate: () => ipcRenderer.invoke('ymc:update:install'),
+    musicPlus: (action, value) => ['status', 'check', 'install', 'remove', 'connect', 'search', 'cancel', 'open'].includes(action)
+      ? ipcRenderer.invoke('ymc:music-plus:' + action, value) : null
   });
   contextBridge.executeInMainWorld({
     func: () => {
