@@ -17,7 +17,7 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
-        checkUpdate: async () => ({ available: true, version: '0.7.6', notes: 'Новая версия для проверки' }),
+        checkUpdate: async () => ({ available: true, version: '0.7.7', notes: 'Новая версия для проверки' }),
         installUpdate: async () => {
           window.ymcInstallRequested = true;
           return { error: 'Тестовая установка остановлена.' };
@@ -31,7 +31,7 @@ async function run() {
         ...(platform === 'Win32' ? {} : { reportTrack: track => { window.lastDiscordTrack = track; } })
       };
       if (!localStorage.getItem('ymc:theme:v1')) {
-        localStorage.setItem('ymc:last-version', '0.7.5');
+        localStorage.setItem('ymc:last-version', '0.7.6');
         localStorage.setItem('ymc:theme:v1', JSON.stringify({ version: 1, name: 'Старая тема', round: 9, customCss: 'body{--legacy:1}' }));
       }
     }, process.env.YMC_TEST_PLATFORM);
@@ -55,7 +55,7 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
-    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.7.6').waitFor();
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.7.7').waitFor();
     assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
     await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
@@ -101,8 +101,10 @@ async function run() {
     assert.match(await page.locator('section.PlayerBarDesktop_root__demo').evaluate(el => getComputedStyle(el).backgroundColor), /17, 34, 51/);
     assert.equal(await page.locator('.PlayerBarDesktop_controls__demo').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)');
     await ui.locator('[data-tab=player]').click();
+    const footerGrid = await page.addStyleTag({ content:
+      '@media (min-width:700px) { .DefaultLayout_root__demo { grid-template-areas:"navbar content" "navbar playerbar" "navbar barBelow"; } }' });
     await ui.locator('#p-widePlayer').check();
-    assert.equal(await grid(), '"navbar content" "playerbar playerbar"');
+    assert.equal(await grid(), '"navbar content" "playerbar playerbar" "barBelow barBelow"');
     await page.setViewportSize({ width: 620, height: 830 });
     await page.waitForFunction(() => !document.querySelector('[data-ymc-wide]'));
     assert.equal(await grid(), '"content" "playerbar"');
@@ -110,6 +112,8 @@ async function run() {
     assert.ok(narrowClose && narrowClose.x + narrowClose.width <= 620);
     await page.setViewportSize({ width: 1260, height: 850 });
     await page.waitForFunction(() => Boolean(document.querySelector('[data-ymc-wide]')));
+    await footerGrid.evaluate(el => el.remove());
+    await page.evaluate(() => dispatchEvent(new Event('resize')));
     await ui.locator('[data-tab=theme]').click();
     await ui.locator('#p-visualizer').check();
     await ui.locator('[data-tab=player]').click();
@@ -667,7 +671,7 @@ async function run() {
     }
     assert.equal(await guide.isHidden(), true);
     assert.equal(await offer.isHidden(), true);
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.7.5');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.7.6');
     await page.reload();
     await launcher.click();
     assert.equal(await offer.isHidden(), true);
@@ -677,13 +681,13 @@ async function run() {
     });
     await page.reload();
     await ui.locator('#ymc-whats-new').waitFor();
-    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0\.5\.6 до v0\.7\.5/);
+    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0\.5\.6 до v0\.7\.6/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /v0.6.0/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /Светлая умная тема/);
     await ui.locator('#ymc-release-guide').click();
-    assert.match(await progress.textContent(), /Шаг 1 из 12/);
+    assert.match(await progress.textContent(), /Шаг 1 из 14/);
     const updatedSections = new Set();
-    for (let step = 1; step <= 12; step++) {
+    for (let step = 1; step <= 14; step++) {
       updatedSections.add(await ui.locator('#ymc-guide-title').textContent());
       await next.click();
     }
@@ -779,7 +783,10 @@ async function run() {
     await ui.locator('#p-motionEnabled').check();
     await ui.locator('#p-motionBackground').check();
     await ui.locator('#p-motionBackgroundSpeed').fill('9');
-    const bodyMotion = () => page.locator('body').evaluate(el => [getComputedStyle(el).animationName, getComputedStyle(el).animationDuration]);
+    const bodyMotion = () => page.locator('body').evaluate(el => {
+      const layer = getComputedStyle(el, '::before');
+      return [layer.animationName, layer.animationDuration];
+    });
     assert.deepEqual(await bodyMotion(), ['ymc-background-drift', '9s']);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     assert.equal((await bodyMotion())[0], 'none');
@@ -833,7 +840,11 @@ async function run() {
       const [r, g, b] = channels(color);
       return g > r + 25 && g > b + 15;
     }), 'one green hue matches the larger cover area: ' + firstSpectrum);
-    await page.waitForFunction(end => !['rgb(16, 16, 24)', end].includes(getComputedStyle(document.body).backgroundColor), cssColor(firstColor));
+    await page.waitForFunction(() => {
+      const layer = document.querySelector('[data-ymc-backdrop-fade]');
+      return layer && Number(getComputedStyle(layer).opacity) > .02 && Number(getComputedStyle(layer).opacity) < .95;
+    });
+    await page.locator('[data-ymc-backdrop-fade]').waitFor({ state: 'detached' });
     await waitBodyColor(cssColor(firstColor));
     await page.waitForFunction(expected => getComputedStyle(document.body).color === expected, cssColor(firstText));
     assert.equal(await accent(), '#224466');
@@ -1001,7 +1012,7 @@ async function run() {
       await ctx.close();
     });
     assert.deepEqual(errors, []);
-    console.log('PASS: spectrum recovery and drawn cover colors, cover gradients and auras, cover retry, stable stylesheet, 35 first-run and 12 upgrade guide steps, existing controls');
+    console.log('PASS: spectrum recovery and drawn cover colors, cover gradients and auras, cover retry, stable stylesheet, 35 first-run and 14 upgrade guide steps, existing controls');
   } finally {
     await browser.close();
   }

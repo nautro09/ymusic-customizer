@@ -13,7 +13,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.7.6';
+          const version = localStorage.getItem('test:next-version') ?? '0.7.7';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -27,7 +27,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const ui = page.locator('#ymusic-customizer-root');
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.6/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.7/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -35,7 +35,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.7.6'));
+      .querySelector('#ymc-update-label').textContent.includes('0.7.7'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -44,15 +44,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.7.7');
+    await nextRelease('0.7.8');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.7');
-    await nextRelease('0.7.8');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.8');
+    await nextRelease('0.7.9');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -129,7 +129,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const pattern = page.locator('[data-ymc-pattern]');
     const ink = pattern.locator('.ymc-pattern-ink').first();
     const geometries = new Set();
-    const readPattern = (layer = pattern) => layer.locator('pattern').evaluate(el => el.innerHTML);
+    const readPattern = (layer = pattern) => layer.locator('pattern').evaluateAll(nodes => nodes.map(el => el.innerHTML).join(''));
     const options = await picker.locator('option').evaluateAll(nodes => nodes.map(node => node.value));
     assert.equal(options.length, 15);
     for (const option of options) {
@@ -372,6 +372,10 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       assert.equal(await layout.evaluate(el => el.style.getPropertyValue('--ymc-nav-reserve')), '0px');
       assert.equal(await edgeToggle.getAttribute('aria-expanded'), 'false');
       assert.equal(await edgeToggle.locator('svg').isHidden(), true);
+      if (side === 'left' || side === 'right') {
+        const box = await edgeToggle.boundingBox();
+        assert.ok(box.width >= 40 && box.x >= 6 && box.x + box.width <= 1254);
+      }
       const hint = () => edgeToggle.evaluate(el => {
         const css = getComputedStyle(el, '::before');
         return [css.content, css.backgroundColor, Math.min(parseFloat(css.width), parseFloat(css.height))];
@@ -408,14 +412,21 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const name = artist.locator('a');
     const baseline = await trackArt.boundingBox();
     const titleBaseline = await name.boundingBox();
-    await adaptive.check();
-    assert.equal(await trackArt.isHidden(), true);
+    const hideCover = ui.locator('#p-vibeHideCoverWithPortrait');
+    await hideCover.check();
+    await trackArt.waitFor({ state: 'hidden' });
     assert.deepEqual(await name.boundingBox(), titleBaseline);
+    await hideCover.uncheck();
+    await trackArt.waitFor();
+    await adaptive.check();
+    assert.deepEqual(await trackArt.boundingBox(), baseline);
     await portrait.evaluate(el => { el.removeAttribute('src'); });
     await page.waitForFunction(() => {
-      const img = document.querySelector('#fixture-track-cover');
-      return getComputedStyle(img).visibility === 'visible' && img.getBoundingClientRect().width > 100;
+      const cover = document.querySelector('#fixture-track-cover').closest('[class*="VibePage_albumCover__"]');
+      return cover.getAnimations().some(animation => animation.effect.getKeyframes().some(frame => 'scale' in frame));
     });
+    await trackArt.evaluate(el => Promise.allSettled(el.closest('[class*="VibePage_albumCover__"]').getAnimations()
+      .map(animation => animation.finished)));
     const coverWidth = async size => {
       await ui.locator('#p-vibeAdaptiveCoverSize').fill(String(size));
       return (await trackArt.boundingBox()).width;
@@ -512,6 +523,17 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.ok(Math.min(...floorPixel) >= 225, floorPixel);
     assert.deepEqual(floorPixel, clearPixels[0], 'the animation’s dark floor leaves the light theme intact');
     assert.ok(wavePixel.some((value, index) => value < clearPixels[1][index] - 15), { wavePixel, clearPixels });
+    await wave.evaluate(el => el.insertAdjacentHTML('beforeend',
+      '<label class="AnimatedSearchInput_root__fixture"><input placeholder="Поиск"></label>'));
+    const searchContrast = await wave.locator('input[placeholder=Поиск]').evaluate(el => {
+      const luminance = css => css.match(/\d+/g).slice(0, 3).map(Number).map(n =>
+        n <= 10 ? n / 3294.6 : ((n / 255 + .055) / 1.055) ** 2.4)
+        .reduce((total, n, i) => total + n * [.2126, .7152, .0722][i], .05);
+      const fill = luminance(getComputedStyle(el).backgroundColor);
+      const ink = luminance(getComputedStyle(el, '::placeholder').color);
+      return Math.max(fill, ink) / Math.min(fill, ink);
+    });
+    assert.ok(searchContrast >= 4.5, searchContrast);
     await update({ smartBackground: false, smartGradient: false, background: '#FFFFFF' });
     assert.match(await waveCanvas.evaluate(el => getComputedStyle(el).filter), /opacity\(0\.28\)/,
       'foreground-only smart colors also protect a manually selected white background');
@@ -581,17 +603,17 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await page.locator('[data-ymc-spectrum]').count(), 0);
     await page.evaluate(() => YMusicCustomizer.open());
     await page.locator('#test-audio').click();
+    await page.waitForFunction(() => Number(document.querySelector('[data-pulse-only]').style.getPropertyValue('--ymc-aura-beat')) > .10);
+    const geometryBeforeBeat = await readPattern();
+    const waveFrame = await nativeWave.boundingBox();
     await page.waitForFunction(() => {
-      const portrait = document.querySelector('#vibe-fixture [data-test-id=VIBE_ARTIST_COVER] img');
-      return parseFloat(portrait.style.getPropertyValue('--ymc-beat-pulse')) >= 10;
+      const arc = document.querySelector('[data-ymc-pattern] [data-pattern-plane=arc]');
+      const canvas = document.querySelector('.VibePage_vibeAnimation__fixture canvas');
+      const [x, y] = getComputedStyle(canvas).scale.split(' ').map(Number);
+      return Number(arc.style.opacity) > .10 && arc.querySelector('path').getAttribute('d').includes('Q') && x > 1.01 && y < x;
     });
-    await page.waitForFunction(() => {
-      const effect = document.querySelector('[data-ymc-pattern]');
-      const wave = document.querySelector('.VibePage_vibeAnimation__fixture');
-      return Number(effect.style.getPropertyValue('--ymc-pattern-beat')) > .10 &&
-        effect.querySelector('[data-ymc-bend]').getAttribute('d').includes('Q') &&
-        Number(getComputedStyle(wave).scale) > 1.01;
-    });
+    assert.equal(await readPattern(), geometryBeforeBeat, 'a beat does not rebuild SVG geometry');
+    assert.deepEqual(await nativeWave.boundingBox(), waveFrame, 'a beat leaves the native animation container in place');
     assert.equal(await page.locator('[data-ymc-spectrum]').count(), 0, 'pulse uses audio without mounting a canvas');
     await ui.locator('#p-portraitBeatStrength').fill('215');
     await aura.selectOption('bloom');
@@ -605,10 +627,9 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await aura.selectOption('glow');
 
     await page.locator('#demo-audio').evaluate(el => el.pause());
-    await page.waitForFunction(() => !document.querySelector('#vibe-fixture [data-test-id=VIBE_ARTIST_COVER] img')
-      .style.getPropertyValue('--ymc-beat-pulse'));
-    await page.waitForFunction(() => !document.querySelector('[data-ymc-pattern]').style.getPropertyValue('--ymc-pattern-beat') &&
-      !document.getElementById('vibe-fixture').style.getPropertyValue('--ymc-wave-beat'));
+    await page.waitForFunction(() => !document.querySelector('[data-pulse-only]').style.getPropertyValue('--ymc-aura-beat'));
+    await page.waitForFunction(() => !document.querySelector('[data-ymc-pattern] [data-pattern-plane=arc]').style.opacity &&
+      !document.querySelector('.VibePage_vibeAnimation__fixture canvas').style.getPropertyValue('--ymc-wave-beat'));
     await ui.locator('#p-portraitBeat').uncheck();
     assert.equal(await portrait.evaluate(el => getComputedStyle(el).animationName), 'ymc-portrait-breathe');
     const preview = kind => ui.locator('[data-appearance-preview="' + kind + '"]');
@@ -637,9 +658,9 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const sampleSvg = sample.locator('svg');
     await ui.locator('#p-patternOpacity').fill('90');
     const visibleSample = await sample.screenshot();
-    await sampleSvg.evaluate(el => { el.style.visibility = 'hidden'; });
+    await sampleSvg.evaluateAll(nodes => nodes.forEach(el => { el.style.visibility = 'hidden'; }));
     assert.ok(!visibleSample.equals(await sample.screenshot()), 'the SVG pattern renders in the preview');
-    await sampleSvg.evaluate(el => { el.style.removeProperty('visibility'); });
+    await sampleSvg.evaluateAll(nodes => nodes.forEach(el => el.style.removeProperty('visibility')));
     assert.notEqual(await readPattern(sample), realArtwork);
     assert.equal(await readPattern(), realArtwork);
     assert.equal(await saved(), beforePattern);

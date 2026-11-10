@@ -59,6 +59,7 @@ assert.equal(artworkUrl('https://avatars.yandex.net/a'), 'https://avatars.yandex
 assert.equal(artworkUrl('https://yandex.net.attacker.test/a'), '');
 assert.equal(artworkUrl('javascript:alert(1)'), '');
 assert.equal(expandGrid('"navbar content" "navbar playerbar" "barBelow barBelow"'), '"navbar content" "playerbar playerbar" "barBelow barBelow"');
+assert.equal(expandGrid('"navbar content" "navbar playerbar" "navbar barBelow"'), '"navbar content" "playerbar playerbar" "barBelow barBelow"');
 assert.equal(expandGrid('"navbar content" "playerbar playerbar"'), '');
 assert.equal(expandGrid('"content" "playerbar"'), '');
 assert.equal(expandGrid('"navbar playerbar" "navbar playerbar"'), '');
@@ -71,6 +72,8 @@ assert.deepEqual([manualSpectrum.smartSpectrum, manualSpectrum.spectrumGradient,
   manualSpectrum.spectrumStart, manualSpectrum.spectrumMid, manualSpectrum.spectrumEnd],
 [false, 'vertical', '#FF0000', '#00FF00', '#0000FF']);
 assert.equal(sanitizeTheme({ spectrumGlow: 250, spectrumStyle: 'segments' }).spectrumGlow, 100);
+assert.equal(sanitizeTheme({ vibeAdaptiveCover: true }).vibeHideCoverWithPortrait, true);
+assert.equal(sanitizeTheme({ vibeAdaptiveCover: true, vibeHideCoverWithPortrait: false }).vibeHideCoverWithPortrait, false);
 
 const width = 48;
 const coverPixels = new Uint8ClampedArray(width * width * 4);
