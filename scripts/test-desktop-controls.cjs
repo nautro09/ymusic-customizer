@@ -13,7 +13,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.7.7';
+          const version = localStorage.getItem('test:next-version') ?? '0.8.2';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -27,7 +27,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const ui = page.locator('#ymusic-customizer-root');
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.7/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.2/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -35,7 +35,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.7.7'));
+      .querySelector('#ymc-update-label').textContent.includes('0.8.2'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -44,15 +44,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.7.8');
+    await nextRelease('0.8.3');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.8');
-    await nextRelease('0.7.9');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.3');
+    await nextRelease('0.8.4');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -130,8 +130,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const ink = pattern.locator('.ymc-pattern-ink').first();
     const geometries = new Set();
     const readPattern = (layer = pattern) => layer.locator('pattern').evaluateAll(nodes => nodes.map(el => el.innerHTML).join(''));
-    const options = await picker.locator('option').evaluateAll(nodes => nodes.map(node => node.value));
-    assert.equal(options.length, 15);
+    const options = await picker.locator('optgroup').first().locator('option').evaluateAll(nodes => nodes.map(node => node.value));
     for (const option of options) {
       await picker.selectOption(option);
       geometries.add(await readPattern());
@@ -145,6 +144,19 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.deepEqual(artSize, [Math.round(view.width), Math.round(view.height)], 'one random arrangement covers the viewport');
     await ui.locator('[data-prop=patternSymbols]').fill('<&✦');
     assert.match((await pattern.locator('pattern text').allTextContents()).join(''), /[<&]/);
+    const lineOptions = await picker.locator('optgroup').last().locator('option').evaluateAll(nodes => nodes.map(node => node.value));
+    assert.equal(lineOptions.length, 7);
+    const lines = new Set();
+    for (const option of lineOptions) {
+      await picker.selectOption(option);
+      lines.add(await pattern.locator('.ymc-line-stroke').getAttribute('d'));
+    }
+    assert.equal(lines.size, 7);
+    await picker.selectOption('squareGrid');
+    await ui.locator('#p-patternCell').fill('66');
+    assert.equal(await pattern.locator('pattern').getAttribute('width'), '66');
+    await ui.locator('#p-patternJunctions').fill('70');
+    assert.ok(await pattern.locator('pattern circle').count());
     await picker.selectOption('constellations');
     await ui.locator('[data-prop=patternPalette]').selectOption('custom');
     const fixedArtwork = await readPattern();
@@ -243,6 +255,11 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
         '<div class="VibePage_albumCover__fixture AlbumCover_root__fixture" ' +
         'style="position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);width:96px;height:96px"></div></section>';
       stage.querySelector('.AlbumCover_root__fixture').append(cover);
+      stage.querySelector('section').insertAdjacentHTML('beforeend', `
+        <div data-test-id="VIBE_PLAYERBAR_TIMECODE_SLIDER" style="display:flex;position:relative;align-items:center;width:300px;height:40px">
+          <span class="VibePlayerbarMeta_trackName__fixture">Имя исполнителя — Название песни</span>
+          <span data-test-id="VIBE_PLAYERBAR_TIMECODE">0:05 / 2:24</span><input type="range" aria-label="Перемотка">
+        </div>`);
       cover.style.cssText = 'display:block;width:100%;height:100%';
       root.append(stage);
       root.style.cssText = 'container-type:size;height:580px;position:relative';
@@ -450,6 +467,25 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await wave.locator('[data-ymc-sized-cover]').count(), 0);
     assert.deepEqual(await trackArt.boundingBox(), baseline);
     assert.deepEqual(await name.boundingBox(), titleBaseline);
+    const coverFocus = ui.locator('#p-vibeCoverFocus');
+    await coverFocus.check();
+    assert.equal(await name.isHidden(), true);
+    assert.ok((await trackArt.boundingBox()).width > largeCover);
+    await coverFocus.uncheck();
+    assert.deepEqual(await trackArt.boundingBox(), baseline);
+    const trackLayout = ui.locator('[data-prop=vibeTrackLayout]');
+    const timecode = wave.locator('[data-test-id=VIBE_PLAYERBAR_TIMECODE]');
+    const bubble = wave.locator('[data-test-id=VIBE_PLAYERBAR_TIMECODE_SLIDER]');
+    await trackLayout.selectOption('time');
+    assert.equal(await wave.locator('[data-ymc-wave-track-title]').textContent(), 'Название песни');
+    assert.equal(await timecode.evaluate(el => getComputedStyle(el).opacity), '0');
+    await bubble.locator('input').focus();
+    assert.equal(await timecode.evaluate(el => getComputedStyle(el).opacity), '1');
+    await trackLayout.selectOption('artist');
+    assert.equal(await wave.locator('[data-ymc-timeline-artist]').textContent(), 'Имя исполнителя');
+    await trackLayout.selectOption('native');
+    assert.equal(await bubble.getAttribute('data-ymc-vibe-timeline'), null);
+    assert.equal(await wave.locator('[data-ymc-wave-track-title]').count(), 0);
     await portrait.evaluate((el, src) => { el.src = src; }, await trackArt.getAttribute('src'));
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -615,6 +651,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await readPattern(), geometryBeforeBeat, 'a beat does not rebuild SVG geometry');
     assert.deepEqual(await nativeWave.boundingBox(), waveFrame, 'a beat leaves the native animation container in place');
     assert.equal(await page.locator('[data-ymc-spectrum]').count(), 0, 'pulse uses audio without mounting a canvas');
+    await update({ patternStyle: 'squareGrid', patternJunctions: 80, patternBeatEffect: 'shake' });
+    const line = pattern.locator('.ymc-line-stroke');
+    const endpoints = value => value.match(/M-?[\d.]+ -?[\d.]+Q|-?[\d.]+ -?[\d.]+(?=M|$)/g);
+    const initialPath = await line.getAttribute('d');
+    const initialNodes = await pattern.locator('.ymc-line-junctions').innerHTML();
+    await page.waitForFunction(previous => document.querySelector('[data-ymc-pattern] .ymc-line-stroke')?.getAttribute('d') !== previous, initialPath);
+    assert.deepEqual(endpoints(await line.getAttribute('d')), endpoints(initialPath));
+    assert.equal(await pattern.locator('.ymc-line-junctions').innerHTML(), initialNodes);
+    await update({ patternStyle: 'grid', patternBeatEffect: 'bend' });
     await ui.locator('#p-portraitBeatStrength').fill('215');
     await aura.selectOption('bloom');
     const filledAura = wave.locator('[data-ymc-portrait-aura]');

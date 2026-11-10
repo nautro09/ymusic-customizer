@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.7.6 for Windows and macOS. MIT.
+ * YMusic Customizer v0.8.1 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.7.6';
+  const version = '0.8.1';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -36,6 +36,11 @@
     ripples: 'Круги на воде', rain: 'Метеорный дождь', snow: 'Снежинки',
     petals: 'Лепестки', bubbles: 'Пузырьки', notes: 'Ноты', pixels: 'Пиксели', symbols: 'Свои символы'
   };
+  const LINE_PATTERNS = {
+    squareGrid: 'Клеточки', honeycombGrid: 'Сплошные соты', diamondGrid: 'Ромбы',
+    triangleGrid: 'Треугольники', brickGrid: 'Кирпичная кладка', diagonalGrid: 'Диагонали', chevronGrid: 'Зигзаги'
+  };
+  const isLinePattern = key => Object.hasOwn(LINE_PATTERNS, key);
   const PATTERN_DIRECTIONS = {
     right: [1, 0, 'Вправо'], left: [-1, 0, 'Влево'], up: [0, -1, 'Вверх'], down: [0, 1, 'Вниз'],
     upRight: [1, -1, 'Вправо и вверх'], upLeft: [-1, -1, 'Влево и вверх'],
@@ -90,6 +95,7 @@
     showVibePortrait: true, showVibeArtist: true, showVibeHeading: true,
     waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 72, waveTone: 60, waveBeat: 70,
     waveClearRail: true, waveNativeOpacity: 100, vibeAdaptiveCover: false, vibeHideCoverWithPortrait: false, vibeAdaptiveCoverSize: 78,
+    vibeCoverFocus: false, vibeTrackLayout: 'native',
     sidebarDock: 'native', sidebarAlign: 'center', sidebarSize: 62, sidebarGap: 5, sidebarInset: 10,
     sidebarCompact: true, sidebarCollapsed: false, sidebarOrder: '', sidebarHidden: '',
     sidebarIconSize: 22, sidebarEdgeHint: true, sidebarEdgeCustom: false, sidebarEdgeColor: '#B5D4FF',
@@ -97,6 +103,7 @@
     patternEnabled: false, patternStyle: 'stars', patternScope: 'app', patternPalette: 'theme',
     patternPrimary: '#B5D4FF', patternSecondary: '#A88AFF', patternSymbols: '✦ ◇ ♪',
     patternOpacity: 48, patternDensity: 44, patternSize: 100, patternGlow: 0, patternSeed: 173,
+    patternCell: 42, patternLineWidth: 1, patternJunctions: 0,
     patternMotion: 'still', patternDirection: 'upRight', patternPeriod: 32,
     patternX: 0, patternY: 0, patternNativeOpacity: 32,
     patternBeatEffect: 'off', patternBeatStrength: 85, patternBeatSensitivity: 70, patternBeatRelease: 300,
@@ -241,7 +248,8 @@
     likedShape: ['native', 'star', 'diamond', 'image'], likedMotion: ['off', 'pulse', 'sparkle'],
     mediaFit: ['cover', 'contain'], barFit: ['cover', 'contain'], barImagePosition: ['center', 'top', 'bottom'],
     portraitEffect: ['off', 'glow', 'outline', 'both', 'bloom'], portraitColorSource: ['theme', 'background', 'custom'],
-    patternStyle: Object.keys(PATTERNS), patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
+    vibeTrackLayout: ['native', 'time', 'artist'],
+    patternStyle: [...Object.keys(PATTERNS), ...Object.keys(LINE_PATTERNS)], patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
     patternMotion: ['still', 'drift', 'shimmer', 'both'], patternDirection: Object.keys(PATTERN_DIRECTIONS),
     patternBeatEffect: Object.keys(PATTERN_BEAT_EFFECTS),
     smartPaletteStyle: Object.keys(PALETTE_VARIANTS),
@@ -275,6 +283,7 @@
     portraitOutline: [1, 8, 'px'], portraitSpread: [4, 48, 'px'], portraitIntensity: [0, 100, '%'],
     portraitBeatStrength: [0, 250, '%'], portraitBeatSensitivity: [10, 100, '%'], portraitBeatRelease: [80, 900, 'мс'],
     patternOpacity: [0, 100, '%'], patternDensity: [10, 100, '%'], patternSize: [45, 200, '%'],
+    patternCell: [18, 144, 'px'], patternLineWidth: [1, 5, 'px'], patternJunctions: [0, 100, '%'],
     patternGlow: [0, 16, 'px'], patternSeed: [1, 65535, ''], patternPeriod: [6, 90, 'с'],
     patternX: [0, 100, '%'], patternY: [0, 100, '%'], patternNativeOpacity: [0, 100, '%'],
     patternBeatStrength: [0, 200, '%'], patternBeatSensitivity: [10, 100, '%'], patternBeatRelease: [80, 900, 'мс'],
@@ -289,7 +298,7 @@
   const TOGGLES = ['enabled', 'manualScale', 'separateSurfaces', 'widePlayer', 'playerOverlay', 'visualizer', 'addonEnabled', 'addonPalette',
     'vibeAnimation', 'hideVibeTrack', 'hideVibeControls', 'appMediaEnabled', 'barCustom', 'barSpectrum', 'sidebarGradient',
     'showVibePortrait', 'showVibeArtist', 'showVibeHeading', 'showCornerAppVersion', 'showCornerLoaderVersion',
-    'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'vibeHideCoverWithPortrait',
+    'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'vibeHideCoverWithPortrait', 'vibeCoverFocus',
     'sidebarCompact', 'sidebarCollapsed',
     'sidebarEdgeHint', 'sidebarEdgeCustom',
     'customVibeIcons', 'aiTrackCards', 'showVibeWheel', 'playlistButtons', 'likedCustom', 'likedTintImage',
@@ -377,12 +386,20 @@
   const PLAYLIST_SELECTED = PLAYLIST_FILTER + ':is([aria-pressed="true"],[aria-selected="true"],[aria-current="true"])';
   const PLAYLIST_SEARCH = ':is(input[data-test-id="PLAYLIST_SEARCH_INPUT"],input[data-test-id="SEARCH_PLAYLIST_INPUT"],input[aria-label="Поиск трека"],input[placeholder="Поиск трека"])';
   const SEARCH_BOX = '[class*="AnimatedSearchInput_root__"]';
+  const SEARCH_INPUT = 'input[data-test-id="SEARCH_PAGE_SEARCH_INPUT"]';
+  const SEARCH_SURPRISES = new Map([
+    ['6767', 'https://www.youtube.com/watch?v=iTkVZdai1es'],
+    ['катя катерина эх душа', 'https://www.youtube.com/watch?v=CLvXFVbb82Q'],
+    ['кирилл лох', 'https://www.youtube.com/watch?v=E7WmVnHKAJg']
+  ]);
   const VIBE_PLAY = 'button:is([class*="VibePlayerControls_playButton__"],[class*="VibePlayerControls_playButton_playing__"],[class*="VibePlayerBar_button_play__"],[class*="VibePlayerBar_playButton__"],[data-test-id="PLAY_BUTTON"],[data-test-id="PAUSE_BUTTON"],[aria-label="Пауза" i],[aria-label="Играть" i],[aria-label="Воспроизвести" i],[aria-label="Pause" i],[aria-label="Play" i])';
   const VIBE_ALBUM = '[class*="VibePage_albumCover__"]:not([class*="VibePage_albumCover_hidden__"])';
   const VIBE_TRANSPORT = ':is([data-test-id="VIBE_PLAYERBAR"],[class*="VibePlayerBar_root__"],[class*="VibePlayerControls_root__"])';
   const VIBE_DYNAMIC_HEADING = '[data-test-id="VIBE_DYNAMIC_TITLE_VIBE"]';
   const VIBE_OTHER_TITLES = ':is(' + VIBE_DYNAMIC_HEADING + ',[data-test-id="VIBE_DYNAMIC_TITLE_GENERATIVE"],[data-test-id="VIBE_DYNAMIC_TITLE_NON_MUSIC_ENTITY_TITLE"])';
   const VIBE_HERO = '[class*="VibePage_root__"], [data-test-id="VIBE_PAGE"]';
+  const VIBE_TRACK_NAME = '[class*="VibePlayerbarMeta_trackName__"]';
+  const VIBE_TIMECODE = ':is([data-test-id="VIBE_PLAYERBAR_TIMECODE"],[class*="VibePlayerbarMeta_timecodeOverlay__"])';
   const PORTRAIT = ':is([data-test-id="VIBE_ARTIST_COVER"],[class*="VibeArtistCover_root__"])';
   const SELECTOR = {
     layout: '[class*="DefaultLayout_root"]',
@@ -803,7 +820,7 @@
           overflow:visible !important;
         }
       ` : ''}
-      ${t.vibeAdaptiveCover || t.vibeHideCoverWithPortrait ? `
+      ${t.vibeCoverFocus || t.vibeAdaptiveCover || t.vibeHideCoverWithPortrait ? `
         @media (prefers-reduced-motion:no-preference) {
           ${scoped('[data-ymc-track-art] ' + VIBE_ALBUM)} {
             transform-origin:bottom center;
@@ -823,6 +840,24 @@
         ${scoped('[data-ymc-track-art="cover"] [data-ymc-art-no-room]')} {
           visibility:hidden !important; pointer-events:none !important;
         }
+      ` : ''}
+      ${t.vibeTrackLayout !== 'native' ? `
+        ${scoped('[data-ymc-wave-title-slot]')} { position:relative; }
+        ${scoped('[data-ymc-wave-title-slot] > :not([data-ymc-wave-track-title])')} { visibility:hidden !important; }
+        ${scoped('[data-ymc-wave-track-title]')} {
+          position:absolute; inset:0; margin:auto; width:max-content; height:max-content; max-width:100%; box-sizing:border-box;
+          font-family:var(--ym-font-heading,inherit); font-weight:800; line-height:1.04;
+          font-size:clamp(24px,6.2vw,104px); text-align:center; overflow-wrap:anywhere;
+          display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;
+        }
+        ${scoped('[data-ymc-vibe-timeline] ' + VIBE_TRACK_NAME)} { visibility:hidden !important; }
+        ${scoped('[data-ymc-vibe-timeline] ' + VIBE_TIMECODE)} { opacity:0 !important; }
+        ${scoped('[data-ymc-vibe-timeline]:is(:hover,:focus-within) ' + VIBE_TIMECODE)} { opacity:1 !important; }
+        ${scoped('[data-ymc-vibe-timeline] [data-ymc-timeline-artist]')} {
+          position:absolute; inset-inline:12%; pointer-events:none; overflow:hidden; white-space:nowrap;
+          text-overflow:ellipsis; text-align:center; font-weight:700;
+        }
+        ${scoped('[data-ymc-vibe-timeline]:is(:hover,:focus-within) [data-ymc-timeline-artist]')} { visibility:hidden; }
       ` : ''}
     `;
   }
@@ -927,8 +962,60 @@
     }
   }
 
-  const WAVE_TITLES = '[class*="VibePage_text__"],[data-test-id="VIBE_DYNAMIC_TITLE_VIBE"],[data-test-id="VIBE_DYNAMIC_TITLE_GENERATIVE"]';
+  const WAVE_TITLES = '[class*="VibePage_text__"],[data-test-id="VIBE_DYNAMIC_ARTISTS"] > :not([aria-hidden="true"]),'
+    + '[data-test-id="VIBE_DYNAMIC_TITLE_VIBE"],[data-test-id="VIBE_DYNAMIC_TITLE_GENERATIVE"]';
   let sizedArt, sizedHero, artObserver, artSizeSetting, artTargets = [], coverAnimation, waveBeatCanvas;
+  let trackTitleSlot, waveTrackTitle, timeline, timelineArtist;
+
+  function syncWaveTrackLayout(hero) {
+    const layout = hero && theme.vibeTrackLayout !== 'native' ? theme.vibeTrackLayout : '';
+    const slider = layout ? hero.querySelector(SELECTOR.vibeTrack) : null;
+    const metadata = slider ? navigator.mediaSession?.metadata : null;
+    const nativeName = slider?.querySelector('[class*="VibePlayerbarTrackName_trackNameText__"]') ||
+      slider?.querySelector(VIBE_TRACK_NAME);
+    const artistSlot = slider && hero.querySelector(SELECTOR.vibeArtist);
+    const nativeArtist = artistSlot && Array.from(artistSlot.childNodes)
+      .filter(child => child !== waveTrackTitle).map(child => child.textContent).join('').trim();
+    const artist = metadata?.artist || nativeArtist || '';
+    const line = nativeName?.textContent.trim() || '';
+    const prefix = artist + ' — ';
+    const title = metadata?.title || (artist && line.startsWith(prefix) ? line.slice(prefix.length) : line);
+    const slot = title ? artistSlot : null;
+    if (trackTitleSlot !== slot) {
+      trackTitleSlot?.removeAttribute('data-ymc-wave-title-slot');
+      waveTrackTitle?.remove();
+      trackTitleSlot = slot;
+      waveTrackTitle = null;
+    }
+    if (slot && !waveTrackTitle) {
+      waveTrackTitle = document.createElement('div');
+      waveTrackTitle.dataset.ymcWaveTrackTitle = '';
+      slot.append(waveTrackTitle);
+      slot.dataset.ymcWaveTitleSlot = '';
+    }
+    if (waveTrackTitle) setText(waveTrackTitle, title);
+
+    const nextTimeline = slot ? slider : null;
+    if (timeline !== nextTimeline) {
+      timeline?.removeAttribute('data-ymc-vibe-timeline');
+      timelineArtist?.remove();
+      timeline = nextTimeline;
+      timelineArtist = null;
+    }
+    if (!timeline) return;
+    if (timeline.dataset.ymcVibeTimeline !== layout) timeline.dataset.ymcVibeTimeline = layout;
+    if (layout === 'artist' && artist) {
+      if (!timelineArtist) {
+        timelineArtist = document.createElement('span');
+        timelineArtist.dataset.ymcTimelineArtist = '';
+        timeline.append(timelineArtist);
+      }
+      setText(timelineArtist, artist);
+    } else if (timelineArtist) {
+      timelineArtist.remove();
+      timelineArtist = null;
+    }
+  }
 
   function resizeAdaptiveArt() {
     if (!sizedArt?.isConnected || !sizedHero?.isConnected) return;
@@ -943,7 +1030,8 @@
       const box = title.getBoundingClientRect();
       if (box.height && getComputedStyle(title).visibility === 'visible') titleBottom = Math.max(titleBottom, box.bottom);
     }
-    const room = Math.floor(Math.min(352, frame.width * .66, artBottom - titleBottom - 12));
+    const coverFocus = theme.vibeCoverFocus && theme.vibeTrackLayout === 'native';
+    const room = Math.floor(Math.min(coverFocus ? 560 : 352, frame.width * .66, artBottom - titleBottom - 12));
     const size = Math.max(0, Math.floor(room * theme.vibeAdaptiveCoverSize / 100));
     sizedArt.toggleAttribute('data-ymc-art-no-room', size < 16);
     const css = Math.max(1, size) + 'px';
@@ -973,9 +1061,10 @@
         for (const node of new Set(targets)) artObserver.observe(node);
       }
     }
-    if (art && (changedArt || changedTargets || artSizeSetting !== theme.vibeAdaptiveCoverSize)) {
+    const sizeSetting = [theme.vibeAdaptiveCoverSize, theme.vibeCoverFocus, theme.vibeTrackLayout, theme.showVibeArtist].join('/');
+    if (art && (changedArt || changedTargets || artSizeSetting !== sizeSetting)) {
       // Measure the native anchor before applying the new dimensions on the first pass.
-      artSizeSetting = theme.vibeAdaptiveCoverSize;
+      artSizeSetting = sizeSetting;
       resizeAdaptiveArt();
       art.setAttribute('data-ymc-sized-cover', '');
     }
@@ -1000,14 +1089,16 @@
       resetBeatEnvelope(waveBeatState);
     }
     activeHero = hero;
+    syncWaveTrackLayout(hero);
     document.documentElement.toggleAttribute('data-ymc-on-wave', Boolean(hero));
-    const adaptsArt = theme.vibeAdaptiveCover || theme.vibeHideCoverWithPortrait;
+    const enlargesArt = theme.vibeAdaptiveCover || theme.vibeCoverFocus;
+    const adaptsArt = enlargesArt || theme.vibeHideCoverWithPortrait;
     portraitNode = hero && theme.showVibePortrait && (adaptsArt || hasBeatAura(theme)) ? [...hero.querySelectorAll(SELECTOR.portrait)]
       .find(img => img.complete && img.naturalWidth > 0 && img.getClientRects().length &&
         getComputedStyle(img).visibility === 'visible') : undefined;
     const adaptiveHero = adaptsArt && !hero?.matches('[class*="VibePage_bigCardPanel_opened__"]') ? hero : null;
     const priorArt = adaptiveHero?.dataset.ymcTrackArt;
-    const nextArt = portraitNode && theme.vibeHideCoverWithPortrait ? 'portrait' : !portraitNode && theme.vibeAdaptiveCover ? 'cover' : 'native';
+    const nextArt = portraitNode && theme.vibeHideCoverWithPortrait ? 'portrait' : !portraitNode && enlargesArt ? 'cover' : 'native';
     const animateArt = priorArt && priorArt !== nextArt && !reducedMotion();
     const cover = animateArt ? adaptiveHero.querySelector(VIBE_ALBUM) : null;
     const oldWidth = cover?.getBoundingClientRect().width;
@@ -1651,7 +1742,8 @@
     const beatPortrait = hasBeatAura(t) && t.portraitEffect !== 'bloom';
     const pulsePortrait = t.motionEnabled && t.motionAura && hasPortraitAura(t) && t.portraitEffect !== 'bloom' && !beatPortrait;
     const hiddenElements = [
-      [t.showVibePortrait, PORTRAIT], [t.showVibeArtist, SELECTOR.vibeArtist], [t.showVibeHeading, SELECTOR.vibeHeading],
+      [t.showVibePortrait, PORTRAIT], [t.showVibeArtist && !t.vibeCoverFocus, SELECTOR.vibeArtist + ':not([data-ymc-wave-title-slot])'],
+      [t.showVibeHeading, SELECTOR.vibeHeading],
       [t.showCornerAppVersion, SELECTOR.cornerVersion], [t.showCornerLoaderVersion, SELECTOR.cornerLoader],
       [t.showCornerAudioFormat, SELECTOR.cornerFormat]
     ].filter(([visible]) => !visible).map(([, selector]) => selector).join(', ');
@@ -2899,6 +2991,65 @@
     </div>`;
   }
 
+  const HEX_HEIGHT = Math.sqrt(3) / 2;
+  // Each entry describes one repeating tile, using shared vertices for every junction.
+  const LINE_TILES = {
+    squareGrid: [1, 1, [[0, 0, 1, 0], [0, 0, 0, 1]]],
+    honeycombGrid: [3, 2 * HEX_HEIGHT, [
+      [.5, -HEX_HEIGHT, 1, 0], [1, 0, .5, HEX_HEIGHT], [.5, HEX_HEIGHT, -.5, HEX_HEIGHT],
+      [2, 0, 2.5, HEX_HEIGHT], [2.5, HEX_HEIGHT, 2, 2 * HEX_HEIGHT], [2, 2 * HEX_HEIGHT, 1, 2 * HEX_HEIGHT]
+    ]],
+    diamondGrid: [2, 2, [[0, 0, 1, 1], [1, 1, 2, 2], [0, 2, 1, 1], [1, 1, 2, 0]]],
+    triangleGrid: [1, 2 * HEX_HEIGHT, [
+      [0, 0, 1, 0], [0, 0, .5, HEX_HEIGHT], [1, 0, .5, HEX_HEIGHT], [.5, HEX_HEIGHT, 1.5, HEX_HEIGHT],
+      [.5, HEX_HEIGHT, 0, 2 * HEX_HEIGHT], [.5, HEX_HEIGHT, 1, 2 * HEX_HEIGHT]
+    ]],
+    brickGrid: [2, 1.4, [[0, 0, 1, 0], [1, 0, 2, 0], [0, 0, 0, .7],
+      [0, .7, 1, .7], [1, .7, 2, .7], [1, .7, 1, 1.4]]],
+    diagonalGrid: [1, 1, [[0, 0, 1, 1]]],
+    chevronGrid: [2, 1, [[0, 0, 1, .5], [1, .5, 2, 0]]]
+  };
+
+  function lineTile(t, id, width, height) {
+    const [unitsX, unitsY, edges] = LINE_TILES[t.patternStyle];
+    const size = t.patternCell;
+    const tileWidth = size * unitsX, tileHeight = size * unitsY;
+    const segments = [], anchors = new Map();
+    const precision = number => Math.round(number * 100) / 100;
+    // Include adjacent copies to keep diagonal strokes and curves continuous at tile seams.
+    for (const [index, [x1, y1, x2, y2]] of edges.entries()) {
+      for (const dx of [-tileWidth, 0, tileWidth]) for (const dy of [-tileHeight, 0, tileHeight]) {
+        const ax = x1 * size + dx, ay = y1 * size + dy, bx = x2 * size + dx, by = y2 * size + dy;
+        const margin = size * .28 + t.patternLineWidth;
+        if (Math.max(ax, bx) < -margin || Math.min(ax, bx) > tileWidth + margin ||
+            Math.max(ay, by) < -margin || Math.min(ay, by) > tileHeight + margin) continue;
+        segments.push({
+          start: `M${precision(ax)} ${precision(ay)}Q`, end: ` ${precision(bx)} ${precision(by)}`,
+          midX: (ax + bx) / 2, midY: (ay + by) / 2, nx: -(by - ay), ny: bx - ax, phase: index * 1.83
+        });
+        for (const [x, y] of [[ax, ay], [bx, by]]) anchors.set(`${precision(x)}/${precision(y)}`, [precision(x), precision(y)]);
+      }
+    }
+    const path = (bend = 0, phase = 0) => segments.map(edge => {
+      const wave = bend * Math.cos(edge.phase + phase);
+      return edge.start + precision(edge.midX + edge.nx * wave) + ' ' +
+        precision(edge.midY + edge.ny * wave) + edge.end;
+    }).join('');
+    const radius = Math.max(1.1, t.patternLineWidth * .85) + t.patternJunctions / 55;
+    const dots = t.patternJunctions ? [...anchors.values()].map(([x, y]) =>
+      `<circle cx="${x}" cy="${y}" r="${radius}"/>`).join('') : '';
+    const markup = `<div class="ymc-pattern-plane" data-pattern-plane="lines">
+      <svg class="ymc-pattern-inner" viewBox="0 0 ${width} ${height}" aria-hidden="true">
+        <defs><pattern id="${id}" patternUnits="userSpaceOnUse" width="${tileWidth}" height="${tileHeight}">
+          <path class="ymc-line-stroke" d="${path()}" fill="none" stroke-width="${t.patternLineWidth}"/>
+          <path class="ymc-line-echo" d="${path()}" fill="none" stroke-width="${t.patternLineWidth}" opacity="0"/>
+          <g class="ymc-line-junctions" opacity="${t.patternJunctions / 100}">${dots}</g>
+        </pattern></defs><rect class="ymc-pattern-ink" fill="url(#${id})" width="100%" height="100%"/>
+      </svg>
+    </div>`;
+    return { markup, path };
+  }
+
   function patternRules(layer) {
     return `
       ${layer} .ymc-pattern-plane { position:absolute; inset:0; pointer-events:none; }
@@ -2906,6 +3057,9 @@
       ${layer}[data-glow] .ymc-pattern-inner { filter:drop-shadow(0 0 var(--ymc-pattern-glow) var(--ymc-pattern-accent)); }
       ${layer} .ymc-pattern-mark { color:var(--ymc-pattern-color); fill:currentColor; }
       ${layer} .ymc-pattern-mark.accent, ${layer} [data-pattern-plane="reflection"] .ymc-pattern-mark { color:var(--ymc-pattern-accent); }
+      ${layer} .ymc-line-stroke { stroke:var(--ymc-pattern-color); stroke-linecap:round; }
+      ${layer} .ymc-line-echo { stroke:var(--ymc-pattern-accent); stroke-linecap:round; }
+      ${layer} .ymc-line-junctions { fill:var(--ymc-pattern-accent); }
       ${layer} :is([data-pattern-plane="reflection"],[data-pattern-plane="arc"]) { opacity:0; }
       @media (prefers-reduced-motion:no-preference) {
         @keyframes ymc-pattern-travel { to { translate:var(--ymc-pattern-dx) var(--ymc-pattern-dy); } }
@@ -2913,7 +3067,7 @@
           0%,100% { opacity:var(--ymc-pattern-alpha); }
           50% { opacity:calc(var(--ymc-pattern-alpha) * .53); }
         }
-        ${layer}:is([data-motion="drift"],[data-motion="both"]) .ymc-pattern-ink {
+        ${layer}:not([data-linear]):is([data-motion="drift"],[data-motion="both"]) .ymc-pattern-ink {
           animation:ymc-pattern-travel var(--ymc-pattern-period) linear infinite;
         }
         ${layer}:is([data-motion="shimmer"],[data-motion="both"]) .ymc-pattern-inner {
@@ -2932,24 +3086,30 @@
   const patternVisible = () => isStyled() && theme.patternEnabled && theme.patternOpacity > 0;
 
   function sizePattern(surface, state) {
+    if (!state?.theme) return;
     const { theme: t, scale } = state;
     const { clientWidth: width, clientHeight: height } = surface;
     if (!width || !height) return;
-    const key = [width, height, t.patternStyle, t.patternSeed, t.patternDensity, t.patternSymbols, t.patternSize, t.patternBeatEffect].join('/');
+    const linear = isLinePattern(t.patternStyle);
+    const key = (linear ? [width, height, t.patternStyle, t.patternCell, t.patternLineWidth, t.patternJunctions, t.patternBeatEffect] :
+      [width, height, t.patternStyle, t.patternSeed, t.patternDensity, t.patternSymbols, t.patternSize, t.patternBeatEffect]).join('/');
     if (key !== state.key) {
       state.key = key;
       const id = surface.dataset.patternId;
-      const layers = patternArtwork(t, width, height, scale, id);
-      surface.innerHTML = [...layers].map(([effect, marks]) =>
+      const tile = linear ? lineTile(t, id + '-lines', width, height) : null;
+      surface.toggleAttribute('data-linear', linear);
+      surface.innerHTML = tile?.markup || [...patternArtwork(t, width, height, scale, id)].map(([effect, marks]) =>
         patternMarkup(id + '-' + effect, effect, marks, width, height)).join('');
+      state.line = tile && { path: tile.path, stroke: surface.querySelector('.ymc-line-stroke'),
+        echo: surface.querySelector('.ymc-line-echo') };
       state.planes = Object.fromEntries([...surface.children].map(plane => [plane.dataset.patternPlane, plane.style]));
       state.tiles = [...surface.querySelectorAll('pattern')];
       state.beat = 0;
     }
     const [dx, dy] = PATTERN_DIRECTIONS[t.patternDirection];
     for (const tile of state.tiles) {
-      tile.setAttribute('x', Math.round(width * t.patternX / 100));
-      tile.setAttribute('y', Math.round(height * t.patternY / 100));
+      tile.setAttribute('x', Math.round((linear ? Number(tile.getAttribute('width')) : width) * t.patternX / 100));
+      tile.setAttribute('y', Math.round((linear ? Number(tile.getAttribute('height')) : height) * t.patternY / 100));
     }
     surface.style.setProperty('--ymc-pattern-dx', dx * width + 'px');
     surface.style.setProperty('--ymc-pattern-dy', dy * height + 'px');
@@ -2999,8 +3159,27 @@
   function paintPatternBeat(surface, level, now = 0) {
     const state = patternStates.get(surface);
     if (!state?.planes || !level && !state.beat) return;
-    if (level && now - (state.paintedAt ?? -Infinity) < 31) return;
+    if (level && now - (state.paintedAt ?? -Infinity) < (state.line ? 48 : 31)) return;
     const beat = Math.round(Math.min(2, level) * 32) / 32;
+    if (state.line) {
+      const effect = state.theme.patternBeatEffect;
+      const vibrates = effect === 'shake' || effect === 'mixed';
+      if (beat === state.beat && !vibrates) return;
+      state.paintedAt = now;
+      state.beat = beat;
+      const { path, stroke, echo } = state.line;
+      const bend = Math.min(.30, beat * .22);
+      if (effect === 'pulse') {
+        stroke.style.strokeWidth = beat ? state.theme.patternLineWidth * (1 + beat * .55) + 'px' : '';
+      } else {
+        stroke.setAttribute('d', path(bend, vibrates ? now * .012 : 0));
+      }
+      if (effect === 'echo' || effect === 'mixed') {
+        echo.setAttribute('d', path(-bend * .7, vibrates ? now * .012 : 0));
+        echo.style.opacity = String(Math.min(.6, beat * .5));
+      }
+      return;
+    }
     const { pulse, shake, reflection, bend, arc } = state.planes;
     if (beat === state.beat && !shake) return;
     state.paintedAt = now;
@@ -4688,12 +4867,22 @@
             <div id="ymc-pattern-sample" class="pattern-sample" data-pattern-id="ymc-pattern-preview-tile" aria-hidden="true" hidden></div>
             ${whenAvailable('patternStyle', 'patternEnabled', `
               <div class="grid">
-                <label>Рисунок<select data-prop="patternStyle">${Object.entries(PATTERNS).map(([key, label]) =>
-                  `<option value="${key}">${label}</option>`).join('')}</select></label>
+                <label>Рисунок<select data-prop="patternStyle">
+                  <optgroup label="Значки и фигуры">${Object.entries(PATTERNS).map(([key, label]) =>
+                    `<option value="${key}">${label}</option>`).join('')}</optgroup>
+                  <optgroup label="Сплошные линейные фоны">${Object.entries(LINE_PATTERNS).map(([key, label]) =>
+                    `<option value="${key}">${label}</option>`).join('')}</optgroup>
+                </select></label>
                 <label>Где показывать<select data-prop="patternScope"><option value="app">Во всём приложении</option><option value="wave">Только «Моя волна»</option></select></label>
               </div>
               ${whenAvailable('patternSymbols', 'patternStyle', `<label>Свои символы<input type="text" data-prop="patternSymbols" maxlength="32" placeholder="✦ ◇ ♪"></label>`)}
-              ${range('patternOpacity', 'Видимость узора')}${range('patternDensity', 'Плотность рисунка')}${range('patternSize', 'Масштаб рисунка')}
+              ${range('patternOpacity', 'Видимость узора')}
+              ${whenAvailable('patternDensity', 'patternStyle', range('patternDensity', 'Плотность рисунка') + range('patternSize', 'Масштаб рисунка'))}
+              ${whenAvailable('patternCell', 'patternStyle', `
+                ${range('patternCell', 'Размер ячейки')}${range('patternLineWidth', 'Толщина линий')}
+                ${range('patternJunctions', 'Видимость узлов')}
+                <p class="muted">Для волн выберите «Изгиб линий» или «Вибрация». Узлы остаются на месте.</p>
+              `)}
               <label>Цвета узора<select data-prop="patternPalette"><option value="theme">Из текущей темы</option><option value="custom">Два своих цвета</option></select></label>
               ${whenAvailable('patternPrimary', 'patternPalette', `<div class="grid">${swatch('patternPrimary', 'Основной цвет')}${swatch('patternSecondary', 'Цвет деталей')}</div>`)}
               <details class="settings-more"><summary>Реакция на музыку</summary>
@@ -4711,8 +4900,8 @@
                 ${whenAvailable('patternPeriod', 'patternMotion', range('patternPeriod', 'Длительность цикла'))}
                 ${range('patternGlow', 'Свечение')}${range('patternX', 'Сдвиг по горизонтали')}${range('patternY', 'Сдвиг по вертикали')}
                 ${whenAvailable('patternNativeOpacity', 'vibeAnimation', range('patternNativeOpacity', 'Видимость штатной анимации за «Моей волной»'))}
-                <div class="pattern-seed"><label>Номер раскладки<input type="number" min="1" max="65535" step="1" data-number="patternSeed"></label>
-                  <button class="btn" id="ymc-pattern-shuffle" type="button" data-setting="patternSeed" data-find="Перемешать узор">Перемешать</button></div>
+                ${whenAvailable('patternSeed', 'patternStyle', `<div class="pattern-seed"><label>Номер раскладки<input type="number" min="1" max="65535" step="1" data-number="patternSeed"></label>
+                  <button class="btn" id="ymc-pattern-shuffle" type="button" data-setting="patternSeed" data-find="Перемешать узор">Перемешать</button></div>`)}
               </details>
               <p class="muted">Узор рисуется поверх вашего фона, за текстом и кнопками.</p>
             `)}
@@ -4917,11 +5106,17 @@
               <p class="muted">Пульсация использует звук эквалайзера и работает даже при скрытом рисунке. Она заменяет равномерное дыхание, пока включена.</p>`)}
           </section>
           <section id="ymc-home-track"><h3>Обложка и строка трека</h3>
+            ${check('vibeCoverFocus', 'Скрыть имя артиста и увеличить обложку без портрета')}
             ${check('vibeAdaptiveCover', 'Увеличивать обложку, если у артиста нет фото')}
             ${whenAvailable('vibeAdaptiveCoverSize', 'vibeAdaptiveCover', range('vibeAdaptiveCoverSize', 'Размер крупной обложки'))}
             ${check('vibeHideCoverWithPortrait', 'Скрывать обложку, когда видно фото артиста')}
             ${range('vibeCoverOpacity', 'Непрозрачность обложки трека')}
             ${range('vibeTrackOpacity', 'Подложка строки трека')}
+            <label>Название и время<select data-prop="vibeTrackLayout">
+              <option value="native">Штатная раскладка</option>
+              <option value="time">Название сверху · в строке только время при наведении</option>
+              <option value="artist">Название сверху · в строке артист или время при наведении</option>
+            </select></label>
             ${check('hideVibeTrack', 'Скрыть строку трека целиком')}
           </section>
           <section id="ymc-home-badges"><h3>Значки в правом нижнем углу</h3>
@@ -5504,8 +5699,12 @@
       mediaFit: !withMedia && !photoMode, mediaX: !withMedia && !photoMode, mediaY: !withMedia && !photoMode,
       mediaBlur: !withMedia, mediaOpacity: !withMedia,
       patternStyle: !t.patternEnabled && previewSession?.kind !== 'pattern', patternSymbols: t.patternStyle !== 'symbols',
+      patternDensity: isLinePattern(t.patternStyle), patternSize: isLinePattern(t.patternStyle),
+      patternSeed: isLinePattern(t.patternStyle), patternCell: !isLinePattern(t.patternStyle),
+      patternLineWidth: !isLinePattern(t.patternStyle), patternJunctions: !isLinePattern(t.patternStyle),
       patternPrimary: t.patternPalette !== 'custom', patternSecondary: t.patternPalette !== 'custom',
-      patternDirection: !['drift', 'both'].includes(t.patternMotion), patternPeriod: t.patternMotion === 'still',
+      patternDirection: isLinePattern(t.patternStyle) || !['drift', 'both'].includes(t.patternMotion),
+      patternPeriod: t.patternMotion === 'still' || isLinePattern(t.patternStyle) && t.patternMotion === 'drift',
       patternBeatStrength: t.patternBeatEffect === 'off', patternBeatSensitivity: t.patternBeatEffect === 'off',
       patternBeatRelease: t.patternBeatEffect === 'off',
       patternNativeOpacity: !t.vibeAnimation || t.waveStyle !== 'native',
@@ -5515,7 +5714,8 @@
       sidebarAlign: t.sidebarDock === 'native', sidebarSize: t.sidebarDock === 'native',
       sidebarGap: t.sidebarDock === 'native', sidebarInset: t.sidebarDock === 'native', sidebarCompact: t.sidebarDock === 'native',
       sidebarEdgeCustom: !t.sidebarEdgeHint, sidebarEdgeColor: !t.sidebarEdgeHint || !t.sidebarEdgeCustom,
-      vibeAdaptiveCoverSize: !t.vibeAdaptiveCover,
+      vibeAdaptiveCover: t.vibeCoverFocus,
+      vibeAdaptiveCoverSize: !(t.vibeAdaptiveCover || t.vibeCoverFocus),
       sidebar: !t.separateSurfaces, player: !t.separateSurfaces,
       sidebarEnd: !t.sidebarGradient, sidebarAngle: !(t.separateSurfaces && t.sidebarGradient),
       barOpacity: !t.barCustom, barFit: !t.barWallpaper, barImagePosition: !t.barWallpaper,
@@ -6049,7 +6249,7 @@
     ['layout', 'ymc-home-portrait', 'Портрет артиста',
       'Выберите мягкую ауру, обводку или плотное свечение. У плотного свечения мягкие края, а пульс заметнее. Цвет можно взять из темы, подобрать по фону или задать вручную. «Пульсировать в такт музыке» усиливает ауру на басовых ударах. Настройте силу, чувствительность и затухание. Силу можно поднять до 250%. Пульсация работает даже при скрытом эквалайзере.'],
     ['layout', 'ymc-home-track', 'Обложка и строка трека',
-      'Включите увеличение обложки без фото артиста. Если портрет есть, обложка остаётся штатного размера. Отдельной галочкой её можно скрыть. Переход между видами плавный, а крупная обложка помещается в свободное место под именем.'],
+      'Увеличьте обложку без портрета и при желании освободите место, скрыв имя артиста. В списке «Название и время» можно вынести название трека наверх. В строке останется имя артиста или пустая подложка. Время видно при наведении и фокусе с клавиатуры.'],
     ['layout', 'ymc-home-badges', 'Значки в правом нижнем углу',
       'Здесь можно по отдельности убрать номер версии Яндекс Музыки, версию загрузчика и формат аудио, например FLAC. Показать можно только значки, которые предоставляет клиент или загрузчик.'],
     ['player', 'ymc-player-layout', 'Конструктор нижнего плеера',
@@ -6124,7 +6324,11 @@
       'Свёрнутая боковая панель возвращается из зоны внутри окна. Широкий плеер сохраняет сетку, когда под ним есть нижняя строка.',
       'Умная тема защищает контраст текста в поиске. Штатные градиенты и маски иконок сохраняются.'
     ], steps: ['ymc-home-track', 'ymc-theme-smart', 'ymc-theme-pattern', 'ymc-home-sidebar', 'ymc-home-animation',
-      'ymc-theme-contrast', 'ymc-player-layout'] }
+      'ymc-theme-contrast', 'ymc-player-layout'] },
+    { version: '0.8.1', notes: [
+      'Обложка без портрета может занять место имени артиста. Название трека можно вынести наверх, а строку оставить пустой или показать в ней артиста до наведения.',
+      'Семь сплошных линейных узоров с регулируемым размером ячеек, толщиной линий и видимостью узлов. Под бас линии изгибаются между неподвижными узлами.'
+    ], steps: ['ymc-home-track', 'ymc-theme-pattern'] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -6792,6 +6996,16 @@
       }
       const modifier = (e.ctrlKey && !e.metaKey) || (mac && e.metaKey && !e.ctrlKey);
       const target = e.composedPath()[0];
+      if (!activeDialog && e.isTrusted && e.key === 'Enter' && !e.repeat && !e.isComposing &&
+          !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && target instanceof HTMLInputElement && target.matches(SEARCH_INPUT)) {
+        const match = SEARCH_SURPRISES.get(target.value.trim().toLowerCase().replace(/\s+/g, ' '));
+        if (match) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open(match, '_blank', 'noopener');
+          return;
+        }
+      }
       const typing = target instanceof HTMLElement && (target.isContentEditable ||
         target.matches('textarea,input:is([type=text],[type=search],[type=number])'));
       if (activeDialog === 'editor' && modifier && !e.altKey && !typing &&
