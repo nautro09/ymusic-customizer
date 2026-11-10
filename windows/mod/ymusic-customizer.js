@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.8.1 for Windows and macOS. MIT.
+ * YMusic Customizer v0.8.2 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.8.1';
+  const version = '0.8.2';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -387,10 +387,12 @@
   const PLAYLIST_SEARCH = ':is(input[data-test-id="PLAYLIST_SEARCH_INPUT"],input[data-test-id="SEARCH_PLAYLIST_INPUT"],input[aria-label="Поиск трека"],input[placeholder="Поиск трека"])';
   const SEARCH_BOX = '[class*="AnimatedSearchInput_root__"]';
   const SEARCH_INPUT = 'input[data-test-id="SEARCH_PAGE_SEARCH_INPUT"]';
+  const SEARCH_PAGE = ':is([data-test-id="SEARCH_PAGE"],[class*="SearchPage_root__"])';
+  const SEARCH_TRACK = '[class*="CommonTrack_root__"]:not([class*="CommonTrack_root_disabled__"],[aria-disabled="true"])';
   const SEARCH_SURPRISES = new Map([
-    ['6767', 'https://www.youtube.com/watch?v=iTkVZdai1es'],
-    ['катя катерина эх душа', 'https://www.youtube.com/watch?v=CLvXFVbb82Q'],
-    ['кирилл лох', 'https://www.youtube.com/watch?v=E7WmVnHKAJg']
+    ['6767', { id: '67', query: 'Gazan 67 (Six Seven)', titles: ['67 six seven', '67'], artists: ['gazan', 'газан'] }],
+    ['катя катерина эх душа', { id: 'katya' }],
+    ['кирилл лох', { id: 'kirill', query: 'Казённый Унитаз Супер унитаз', titles: ['супер унитаз'], artists: ['казенный унитаз'] }]
   ]);
   const VIBE_PLAY = 'button:is([class*="VibePlayerControls_playButton__"],[class*="VibePlayerControls_playButton_playing__"],[class*="VibePlayerBar_button_play__"],[class*="VibePlayerBar_playButton__"],[data-test-id="PLAY_BUTTON"],[data-test-id="PAUSE_BUTTON"],[aria-label="Пауза" i],[aria-label="Играть" i],[aria-label="Воспроизвести" i],[aria-label="Pause" i],[aria-label="Play" i])';
   const VIBE_ALBUM = '[class*="VibePage_albumCover__"]:not([class*="VibePage_albumCover_hidden__"])';
@@ -2075,6 +2077,7 @@
 
   const recentAudio = new Set();
   const playerAudioNodes = new WeakMap();
+  const localSounds = new WeakSet();
   const audioEvents = ['playing', 'loadeddata', 'emptied', 'pause', 'ended', 'volumechange'];
   let audioRefreshFrame;
 
@@ -2106,7 +2109,7 @@
     const nativePlay = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function (...args) {
       const result = Reflect.apply(nativePlay, this, args);
-      if (this instanceof HTMLAudioElement) {
+      if (this instanceof HTMLAudioElement && !localSounds.has(this)) {
         rememberAudio(this);
         wakeAudio();
       }
@@ -2125,14 +2128,14 @@
     };
     for (const event of audioEvents) {
       document.addEventListener(event, ({ target }) => {
-        if (target instanceof HTMLAudioElement) wakeAudio();
+        if (target instanceof HTMLAudioElement && !localSounds.has(target)) wakeAudio();
       }, true);
     }
   }
 
   function audioCandidates() {
     return [...new Set([...recentAudio].reverse().concat([...document.querySelectorAll('audio')]))]
-      .filter(media => (media.currentSrc || media.srcObject) && !media.ended);
+      .filter(media => !localSounds.has(media) && (media.currentSrc || media.srcObject) && !media.ended);
   }
 
   function currentMedia() {
@@ -2519,6 +2522,140 @@
     // Keep the original slot so existing installs retain their background.
     return localStorageRequest('backgrounds', mode, store =>
       mode === 'readonly' ? store.get('vibe') : file ? store.put(file, 'vibe') : store.delete('vibe'));
+  }
+
+  let soundRequest, playingSound, selectedSound, pickerSound;
+  const soundKey = sound => 'search-audio:' + sound.id;
+  const normalizeTrackName = value => value.toLowerCase().replaceAll('ё', 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+  function stopLocalSound() {
+    if (!playingSound) return;
+    const { audio, url } = playingSound;
+    playingSound = null;
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    URL.revokeObjectURL(url);
+  }
+
+  async function playLocalSound(file) {
+    const media = currentMedia();
+    stopLocalSound();
+    const url = URL.createObjectURL(file);
+    const audio = new Audio(url);
+    localSounds.add(audio);
+    audio.volume = Math.min(.6, media?.volume ?? .6);
+    audio.muted = media?.muted ?? false;
+    playingSound = { audio, url };
+    const cleanup = () => {
+      if (playingSound?.audio === audio) stopLocalSound();
+    };
+    audio.addEventListener('ended', cleanup, { once: true });
+    try {
+      await audio.play();
+    } catch (error) {
+      cleanup();
+      throw error;
+    }
+    audio.addEventListener('error', cleanup, { once: true });
+  }
+
+  function offerLocalSound(sound, message) {
+    selectedSound = sound;
+    setText($('ymc-search-sound-status'), message);
+    $('ymc-search-sound').hidden = false;
+  }
+
+  function chooseLocalSound(sound) {
+    if (!sound) return;
+    pickerSound = sound;
+    const picker = $('ymc-search-sound-file');
+    picker.value = '';
+    picker.click();
+  }
+
+  async function rememberLocalSound(file, sound) {
+    if (!file || !sound) return;
+    selectedSound = sound;
+    if (!file.size || file.size > 32 * 1024 * 1024 ||
+        !/\.(?:mp3|wav|m4a|aac|ogg|opus|flac|aiff?)$/i.test(file.name)) {
+      offerLocalSound(sound, 'Выберите аудиофайл до 32 МБ: MP3, WAV, M4A, OGG или FLAC.');
+      return;
+    }
+    soundRequest?.abort();
+    try {
+      await playLocalSound(file);
+    } catch {
+      offerLocalSound(sound, 'Не удалось воспроизвести этот файл. Попробуйте MP3 или WAV.');
+      return;
+    }
+    try {
+      await localStorageRequest('backgrounds', 'readwrite', store => store.put(file, soundKey(sound)));
+      if (selectedSound === sound) $('ymc-search-sound').hidden = true;
+    } catch {
+      offerLocalSound(sound, 'Звук воспроизведён, но файл не удалось сохранить в этом профиле.');
+    }
+  }
+
+  function findSearchTrack(page, sound) {
+    for (const row of page.querySelectorAll(SEARCH_TRACK)) {
+      if (!row.getClientRects().length || row.closest('[aria-hidden="true"],[hidden]')) continue;
+      const title = normalizeTrackName(row.querySelector(SELECTOR.barTitle)?.textContent || '');
+      const artist = normalizeTrackName(row.querySelector(SELECTOR.barArtist)?.textContent || '');
+      const accessibleName = normalizeTrackName(row.getAttribute('aria-label') || '');
+      const exact = sound.titles.some(name => sound.artists.some(author =>
+        (title === name && artist === author) || accessibleName === author + ' ' + name));
+      if (exact) return row;
+    }
+    return null;
+  }
+
+  async function playNativeSearchResult(input, sound, signal) {
+    if (!input.isConnected || !input.closest(SEARCH_PAGE)) return false;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, sound.query);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    const end = performance.now() + 6000;
+    while (!signal.aborted && performance.now() < end) {
+      const page = document.querySelector(SEARCH_PAGE);
+      if (!page) return false;
+      const row = findSearchTrack(page, sound);
+      if (row) {
+        const play = row.querySelector('button[data-test-id="PLAY_BUTTON"]:not(:disabled,[aria-disabled="true"])');
+        if (play) play.click();
+        else row.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 2 }));
+        return true;
+      }
+      await new Promise(resolve => setTimeout(resolve, 160));
+    }
+    return false;
+  }
+
+  async function activateSearchSound(input, sound) {
+    soundRequest?.abort();
+    stopLocalSound();
+    selectedSound = null;
+    $('ymc-search-sound').hidden = true;
+    const request = new AbortController();
+    soundRequest = request;
+    try {
+      const file = await localStorageRequest('backgrounds', 'readonly', store => store.get(soundKey(sound)))
+        .catch(() => null);
+      if (request.signal.aborted) return;
+      if (file instanceof Blob) {
+        try {
+          await playLocalSound(file);
+        } catch {
+          if (!request.signal.aborted) offerLocalSound(sound, 'Не удалось воспроизвести сохранённый звук. Выберите файл заново.');
+        }
+        return;
+      }
+      if (sound.query && await playNativeSearchResult(input, sound, request.signal)) return;
+      if (!request.signal.aborted) offerLocalSound(sound, sound.query
+        ? 'Запись недоступна в поиске. Можно выбрать свой аудиофайл.'
+        : 'Выберите локальный аудиофайл для этой фразы. Customizer запомнит его.');
+    } finally {
+      if (soundRequest === request) soundRequest = null;
+    }
   }
 
   const libraryId = () => [...crypto.getRandomValues(new Uint32Array(4))].join('-');
@@ -4516,6 +4653,8 @@
     .update-toast .muted{margin:2px 0 0}
     .update-toast .btn{padding:5px 9px;font-size:12px}
     #ymc-update-toast-open{margin-top:8px}
+    #ymc-search-sound{top:auto;bottom:100px}
+    #ymc-search-sound-pick{margin-top:8px}
     .head{position:sticky;top:0;background:var(--bg);padding:14px 0 9px;border-bottom:1px solid var(--border);z-index:2}
     .headrow,.line,.tabs{display:flex;align-items:center;gap:10px}
     .headrow,.line{justify-content:space-between}
@@ -5313,6 +5452,14 @@
       </div>
       <button id="ymc-update-toast-open" class="btn primary" type="button">Посмотреть обновление</button>
     </div>
+    <div id="ymc-search-sound" class="update-toast" role="group" aria-label="Локальный звук" hidden>
+      <div class="update-toast-head">
+        <p id="ymc-search-sound-status" class="muted" role="status"></p>
+        <button id="ymc-search-sound-close" class="btn" type="button" aria-label="Закрыть">✕</button>
+      </div>
+      <button id="ymc-search-sound-pick" class="btn primary" type="button">Выбрать аудиофайл</button>
+    </div>
+    <input id="ymc-search-sound-file" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.aif,.aiff" hidden>
     <dialog id="ymc-whats-new" class="release-dialog" aria-labelledby="ymc-release-title">
       <header><span class="pill" id="ymc-release-version"></span><button id="ymc-release-close" class="btn" type="button" aria-label="Закрыть">×</button></header>
       <h2 id="ymc-release-title">Что нового</h2>
@@ -6989,6 +7136,19 @@
     $('ymc-now-close').addEventListener('click', () => showDialog(''));
     $('ymc-now').addEventListener('click', e => { if (e.target === e.currentTarget) showDialog(''); });
     $('ymc-now-cover').addEventListener('error', e => { e.currentTarget.hidden = true; });
+    $('ymc-search-sound-close').addEventListener('click', () => { $('ymc-search-sound').hidden = true; });
+    $('ymc-search-sound-pick').addEventListener('click', () => chooseLocalSound(selectedSound));
+    $('ymc-search-sound-file').addEventListener('change', event => {
+      const sound = pickerSound;
+      pickerSound = null;
+      void rememberLocalSound(event.currentTarget.files[0], sound);
+    });
+    document.addEventListener('input', event => {
+      if (event.isTrusted && event.target.matches?.(SEARCH_INPUT)) {
+        soundRequest?.abort();
+        $('ymc-search-sound').hidden = true;
+      }
+    }, true);
 
     document.addEventListener('keydown', e => {
       if (e.isTrusted && spectrumContext?.state === 'suspended' && spectrumFrame !== undefined) {
@@ -6997,12 +7157,15 @@
       const modifier = (e.ctrlKey && !e.metaKey) || (mac && e.metaKey && !e.ctrlKey);
       const target = e.composedPath()[0];
       if (!activeDialog && e.isTrusted && e.key === 'Enter' && !e.repeat && !e.isComposing &&
-          !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && target instanceof HTMLInputElement && target.matches(SEARCH_INPUT)) {
+          !e.ctrlKey && !e.metaKey && !e.shiftKey && target instanceof HTMLInputElement && target.matches(SEARCH_INPUT)) {
         const match = SEARCH_SURPRISES.get(target.value.trim().toLowerCase().replace(/\s+/g, ' '));
         if (match) {
           e.preventDefault();
           e.stopPropagation();
-          window.open(match, '_blank', 'noopener');
+          if (e.altKey) {
+            soundRequest?.abort();
+            chooseLocalSound(match);
+          } else void activateSearchSound(target, match);
           return;
         }
       }
@@ -7407,6 +7570,8 @@
       refresh();
     });
     window.addEventListener('pagehide', () => {
+      soundRequest?.abort();
+      stopLocalSound();
       overlaySpectrum = false;
       if (spectrumFrame !== undefined) cancelAnimationFrame(spectrumFrame);
       spectrumFrame = undefined;
