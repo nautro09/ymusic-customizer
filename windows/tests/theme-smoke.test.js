@@ -234,7 +234,9 @@ const whiteWithFooter = pixelSample((x, y) => y >= 44 && x >= 6 && x < 42
   ? [198, 20, 126, 255] : [250, 250, 250, 255]);
 assert.ok(white.achromatic && black.achromatic);
 assert.ok(whiteWithFooter.achromatic, 'a colorful footer should not tint a nearly white cover');
-assert.ok(channels(paletteFromSample(white, 'balanced').background)[0] >= 200);
+const whiteTheme = paletteFromSample(white, 'balanced');
+assert.ok(Math.min(...channels(whiteTheme.background)) >= 235);
+assert.ok(Math.min(...channels(whiteTheme.gradientEnd)) >= 220);
 assert.ok(channels(paletteFromSample(black, 'balanced').background)[0] <= 60);
 for (const cover of [black, white, whiteWithFooter]) {
   const neutralStyles = styleNames.map(style => paletteFromSample(cover, style));
@@ -263,6 +265,21 @@ const portraitTheme = paletteFromSample(warmPortrait, 'balanced');
 assert.ok(spread(portraitTheme.background) < 5);
 assert.ok(spread(portraitTheme.accent) > 50);
 assert.ok(contrastRatio(portraitTheme.text, portraitTheme.background) >= 4.5);
+
+const whiteWithShadows = pixelSample((x, y) => {
+  if (x < 24) return [249, 249, 248, 255];
+  if (y < 13) return [27, 182, 206, 255];
+  return [20, 21, 24, 255];
+});
+assert.equal(whiteWithShadows.brightBackdrop, true);
+const whiteWithAccent = paletteFromSample(whiteWithShadows, 'balanced');
+assert.ok(Math.min(...channels(whiteWithAccent.background)) >= 235);
+assert.ok(spread(whiteWithAccent.accent) > 50);
+assert.ok(contrastRatio(whiteWithAccent.text, whiteWithAccent.gradientEnd) >= 6);
+assert.ok(Math.max(...channels(paletteFromSample(whiteWithShadows, 'dark').background)) < 60);
+const lightWithColor = paletteFromSample(redFrame, 'light');
+assert.ok(Math.min(...channels(lightWithColor.background)) >= 230);
+assert.ok(contrastRatio(lightWithColor.text, lightWithColor.gradientEnd) >= 6);
 
 const transparentEdges = pixelSample((x, y) => x >= 14 && x < 33 && y >= 11 && y < 38
   ? [219, 81, 20, 255] : [255, 255, 255, 0]);

@@ -17,7 +17,7 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
-        checkUpdate: async () => ({ available: true, version: '0.7.5', notes: 'Новая версия для проверки' }),
+        checkUpdate: async () => ({ available: true, version: '0.7.6', notes: 'Новая версия для проверки' }),
         installUpdate: async () => {
           window.ymcInstallRequested = true;
           return { error: 'Тестовая установка остановлена.' };
@@ -31,7 +31,7 @@ async function run() {
         ...(platform === 'Win32' ? {} : { reportTrack: track => { window.lastDiscordTrack = track; } })
       };
       if (!localStorage.getItem('ymc:theme:v1')) {
-        localStorage.setItem('ymc:last-version', '0.7.4');
+        localStorage.setItem('ymc:last-version', '0.7.5');
         localStorage.setItem('ymc:theme:v1', JSON.stringify({ version: 1, name: 'Старая тема', round: 9, customCss: 'body{--legacy:1}' }));
       }
     }, process.env.YMC_TEST_PLATFORM);
@@ -55,7 +55,7 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
-    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.7.5').waitFor();
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.7.6').waitFor();
     assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
     await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
@@ -667,7 +667,7 @@ async function run() {
     }
     assert.equal(await guide.isHidden(), true);
     assert.equal(await offer.isHidden(), true);
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.7.4');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.7.5');
     await page.reload();
     await launcher.click();
     assert.equal(await offer.isHidden(), true);
@@ -677,8 +677,9 @@ async function run() {
     });
     await page.reload();
     await ui.locator('#ymc-whats-new').waitFor();
-    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0.5.6 до v0.7.4/);
+    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0\.5\.6 до v0\.7\.5/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /v0.6.0/);
+    assert.match(await ui.locator('#ymc-release-notes').textContent(), /Светлая умная тема/);
     await ui.locator('#ymc-release-guide').click();
     assert.match(await progress.textContent(), /Шаг 1 из 12/);
     const updatedSections = new Set();
@@ -964,7 +965,7 @@ async function run() {
     assert.equal(await bodyColor(), 'rgb(68, 17, 89)');
     await page.keyboard.press('Escape');
     await page.evaluate(() => {
-      YMusicCustomizer.update({ barSpectrum: true, spectrumPlacement: 'page', spectrumStyle: 'wave' });
+      YMusicCustomizer.update({ barSpectrum: true, spectrumPlacement: 'page', spectrumStyle: 'wave', spectrumGlow: 0 });
       const button = document.createElement('button');
       button.id = 'test-native-graph';
       button.textContent = 'Проверить штатный аудиограф';
@@ -986,6 +987,13 @@ async function run() {
     await page.waitForFunction(() => {
       const diag = YMusicCustomizer.diagnostics();
       return diag.spectrumInput === 'native' && diag.spectrumState === 'live';
+    });
+    await page.waitForFunction(() => {
+      const canvas = document.querySelector('[data-ymc-page-spectrum] canvas');
+      if (Math.abs(canvas.getBoundingClientRect().bottom - innerHeight) > 1) return false;
+      const { width, height } = canvas;
+      return canvas.getContext('2d').getImageData(0, height - 1, width, 1).data
+        .some((value, index) => index % 4 === 3 && value > 24);
     });
     await page.evaluate(async () => {
       const { audio, ctx } = window.testAudioGraph;

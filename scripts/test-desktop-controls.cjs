@@ -13,7 +13,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.7.5';
+          const version = localStorage.getItem('test:next-version') ?? '0.7.6';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -23,10 +23,11 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       };
     }, navigatorPlatform);
     await page.goto(pathToFileURL(path.resolve(__dirname, '..', platform, 'demo.html')).href);
+    const update = partial => page.evaluate(partial => YMusicCustomizer.update(partial), partial);
     const ui = page.locator('#ymusic-customizer-root');
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.5/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.7\.6/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -34,7 +35,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.7.5'));
+      .querySelector('#ymc-update-label').textContent.includes('0.7.6'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -43,15 +44,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.7.6');
+    await nextRelease('0.7.7');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.6');
-    await nextRelease('0.7.7');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.7.7');
+    await nextRelease('0.7.8');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -127,42 +128,33 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const picker = ui.locator('[data-prop=patternStyle]');
     const pattern = page.locator('[data-ymc-pattern]');
     const ink = pattern.locator('.ymc-pattern-ink').first();
-    const masks = new Set();
-    const readMask = () => ink.evaluate(node => getComputedStyle(node).maskImage);
+    const geometries = new Set();
+    const readPattern = (layer = pattern) => layer.locator('pattern').evaluate(el => el.innerHTML);
     const options = await picker.locator('option').evaluateAll(nodes => nodes.map(node => node.value));
     assert.equal(options.length, 15);
     for (const option of options) {
       await picker.selectOption(option);
-      const mask = await readMask();
-      assert.match(mask, /^url\("data:image\/svg\+xml,/);
-      masks.add(mask);
-      const visibleArt = await ink.evaluate(async node => {
-        const svgUrl = getComputedStyle(node).maskImage.slice(5, -2);
-        const decoded = decodeURIComponent(svgUrl.slice(svgUrl.indexOf(',') + 1));
-        if (new DOMParser().parseFromString(decoded, 'image/svg+xml').querySelector('parsererror')) return false;
-        const image = new Image();
-        image.src = svgUrl;
-        await image.decode();
-        const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 320;
-        const draw = canvas.getContext('2d');
-        draw.drawImage(image, 0, 0);
-        return draw.getImageData(0, 0, 320, 320).data.some((value, index) => index % 4 === 3 && value > 70);
-      });
-      assert.equal(visibleArt, true, option);
+      geometries.add(await readPattern());
+      const marks = await pattern.locator('.ymc-pattern-mark').evaluateAll(nodes =>
+        nodes.map(el => el.getAttribute('transform')));
+      assert.ok(marks.length > 10 && new Set(marks).size === marks.length, option);
     }
-    assert.equal(masks.size, 15, 'all built-in/custom modes draw distinct masks');
+    assert.equal(geometries.size, 15, 'all built-in/custom modes draw distinct motifs');
+    const artSize = await pattern.locator('pattern').evaluate(el => [el.getAttribute('width'), el.getAttribute('height')].map(Number));
+    const view = await pattern.boundingBox();
+    assert.deepEqual(artSize, [Math.round(view.width), Math.round(view.height)], 'one random arrangement covers the viewport');
     await ui.locator('[data-prop=patternSymbols]').fill('<&✦');
-    assert.match(decodeURIComponent(await readMask()), /&#x3c;|&#x26;/);
+    assert.match((await pattern.locator('pattern text').allTextContents()).join(''), /[<&]/);
     await picker.selectOption('constellations');
     await ui.locator('[data-prop=patternPalette]').selectOption('custom');
-    const fixedArtwork = await readMask();
+    const fixedArtwork = await readPattern();
     await ui.locator('[data-prop=patternPrimary]').fill('#20d8bb');
-    assert.equal(await readMask(), fixedArtwork, 'changing colors does not rebuild geometry');
-    assert.equal(await ink.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(32, 216, 187)');
-    await ui.locator('#ymc-theme-pattern summary').click();
+    assert.equal(await readPattern(), fixedArtwork, 'changing colors does not rebuild geometry');
+    assert.equal(await pattern.locator('.ymc-pattern-mark:not(.accent)').first()
+      .evaluate(el => getComputedStyle(el).color), 'rgb(32, 216, 187)');
+    await ui.getByText('Движение, свечение и положение', { exact: true }).click();
     await ui.locator('#ymc-pattern-shuffle').click();
-    assert.notEqual(await readMask(), fixedArtwork);
+    assert.notEqual(await readPattern(), fixedArtwork);
     assert.equal(await pattern.evaluate(el => getComputedStyle(el).pointerEvents), 'none');
     assert.ok(Math.abs((await pattern.boundingBox()).width - (await editor.boundingBox()).x) <= 1);
     await ui.locator('[data-prop=patternMotion]').selectOption('both');
@@ -319,6 +311,10 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       for (const box of [pin, avatar]) assert.ok(Math.abs(center(box) - center(icon)) <= 1, JSON.stringify({ side, compact, icon, box }));
       const gap = horizontal ? fold.x - profile.right : fold.y - profile.bottom;
       assert.ok(gap >= 0 && gap <= 16, JSON.stringify({ side, compact, fold, profile }));
+      if (horizontal && align === 'center') {
+        assert.ok(Math.min(...cells.map(cell => cell.x)) - panel.x <= 8, { side, panel, cells });
+        assert.ok(panel.right - Math.max(...cells.map(cell => cell.right)) <= 8, { side, panel, cells });
+      }
       const logo = navRoot.locator('[data-ymc-nav-brand-part="' + (compact ? 'mark' : 'full') + '"] svg');
       const logoBox = await logo.boundingBox();
       const brandCell = await navRoot.locator('[data-ymc-nav-cell="brand"]').boundingBox();
@@ -326,15 +322,25 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       assert.equal(logoBox.height, 30);
       assert.ok(Math.abs(logoBox.x + logoBox.width / 2 - brandCell.x - brandCell.width / 2) <= 1);
       assert.equal(await search.evaluate(el => getComputedStyle(el, '::after').content), compact ? 'none' : '"Поиск"');
-      return horizontal ? cells[0].x : panel.y;
+      return { start: horizontal ? cells[0].x : panel.y, icon };
     };
     for (const side of ['top', 'bottom', 'left', 'right']) {
       const start = await assertDock(side, false, 'start');
       const center = await assertDock(side, false);
       const end = await assertDock(side, false, 'end');
-      assert.ok(start < center && center < end, JSON.stringify({ side, start, center, end }));
-      await assertDock(side, true);
+      const horizontal = side === 'top' || side === 'bottom';
+      assert.ok((horizontal ? start.start <= center.start + 1 : start.start < center.start) && center.start < end.start,
+        JSON.stringify({ side, start, center, end }));
+      const compact = await assertDock(side, true);
+      if (horizontal) assert.deepEqual(compact.icon, center.icon, 'showing labels must not move the icons');
     }
+    await assertDock('top', false);
+    const iconSize = () => navRoot.locator('[data-ymc-nav-cell="route"] [data-ymc-nav-symbol] svg').first()
+      .evaluate(el => el.getBoundingClientRect().width);
+    assert.equal(await iconSize(), 22);
+    await update({ sidebarIconSize: 36 });
+    assert.equal(await iconSize(), 36);
+    await update({ sidebarIconSize: 22 });
     await page.setViewportSize({ width: 960, height: 850 });
     await assertDock('top', false);
     await page.setViewportSize({ width: 760, height: 850 });
@@ -365,7 +371,25 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       assert.equal(await edgeToggle.evaluate(el => el.parentElement === document.body), true);
       assert.equal(await layout.evaluate(el => el.style.getPropertyValue('--ymc-nav-reserve')), '0px');
       assert.equal(await edgeToggle.getAttribute('aria-expanded'), 'false');
-      await edgeToggle.click();
+      assert.equal(await edgeToggle.locator('svg').isHidden(), true);
+      const hint = () => edgeToggle.evaluate(el => {
+        const css = getComputedStyle(el, '::before');
+        return [css.content, css.backgroundColor, Math.min(parseFloat(css.width), parseFloat(css.height))];
+      });
+      assert.equal((await hint())[2], 3);
+      if (side === 'top') {
+        await update({ sidebarEdgeCustom: true, sidebarEdgeColor: '#ff3e76' });
+        assert.equal((await hint())[1], 'rgb(255, 62, 118)');
+        await update({ sidebarEdgeHint: false });
+        assert.equal((await hint())[0], 'none');
+        await page.mouse.move(240, 200);
+        await edgeToggle.focus();
+        await page.keyboard.press('Enter');
+        await update({ sidebarEdgeHint: true, sidebarEdgeCustom: false });
+      } else {
+        await edgeToggle.hover();
+        await page.waitForFunction(() => document.querySelector('[data-ymc-nav-edge]').getAttribute('aria-expanded') === 'true');
+      }
       assert.equal(await navRoot.getAttribute('data-ymc-nav-collapsed'), null);
       assert.equal(await navRoot.evaluate(el => el.inert), false);
       assert.equal(await edgeToggle.getAttribute('aria-expanded'), 'true');
@@ -375,6 +399,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await search.isVisible(), true);
     assert.equal(await navRoot.getAttribute('data-ymc-nav-dock'), null);
     assert.equal(await navRoot.locator('[data-ymc-nav-cell],[data-ymc-nav-native-label]').count(), 0);
+    await navRoot.evaluate(el => Promise.allSettled(el.getAnimations().map(animation => animation.finished)));
     assert.deepEqual(await search.boundingBox(), nativeSize);
 
     await ui.locator('#ymc-home-track .section-toggle').click();
@@ -428,15 +453,14 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await ui.locator('#ymc-home-animation .section-toggle').click();
     await ui.locator('[data-prop=waveStyle]').selectOption('custom');
     await testCover('#f02b22');
-    const update = partial => page.evaluate(partial => YMusicCustomizer.update(partial), partial);
-    await update({ mode: 'solid', background: '#000000' });
+    await update({ mode: 'solid', background: '#000000', patternNativeOpacity: 100 });
     assert.match(await nativeWave.evaluate(el => getComputedStyle(el).filter), /ymc-native-wave-tint/);
     const nativeMatrix = await page.locator('#ymc-native-wave-tint feColorMatrix').getAttribute('values');
     assert.equal(await nativeWave.isVisible(), true, 'the custom filter keeps the original animation visible');
     await update({ background: '#ffffff' });
     await page.waitForFunction(() => {
       const matrix = document.querySelector('#ymc-native-wave-tint feColorMatrix').getAttribute('values').split(' ').map(Number);
-      return matrix[0] - matrix[5] > .008;
+      return matrix[4] - matrix[9] > .08;
     });
     assert.notEqual(await page.locator('#ymc-native-wave-tint feColorMatrix').getAttribute('values'), nativeMatrix);
     await update({ wavePalette: 'custom', waveTint: '#f02030', waveOpacity: 100, background: '#000000' });
@@ -444,26 +468,54 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       el.textContent = '';
       el.style.cssText = 'width:32px;height:32px;background:lime';
     });
-    const png = (await nativeWave.screenshot()).toString('base64');
-    const [renderedRed, renderedGreen] = await page.evaluate(async png => {
+    const wavePixels = async () => page.evaluate(async png => {
       const image = new Image();
       image.src = 'data:image/png;base64,' + png;
       await image.decode();
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
       context.drawImage(image, 0, 0);
-      return [...context.getImageData(16, 16, 1, 1).data];
-    }, png);
+      return [5, 26].map(x => [...context.getImageData(x, 16, 1, 1).data.slice(0, 3)]);
+    }, (await nativeWave.screenshot()).toString('base64'));
+    const [[renderedRed, renderedGreen]] = await wavePixels();
     assert.ok(renderedRed > renderedGreen + 18, { renderedRed, renderedGreen });
     await ui.locator('[data-prop=waveStyle]').selectOption('native');
     assert.equal(await nativeWave.evaluate(el => getComputedStyle(el).filter), 'none');
+    await nativeWave.evaluate(el => {
+      el.style.background = 'transparent';
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 32;
+      canvas.style.display = 'block';
+      el.append(canvas);
+    });
+    const waveCanvas = nativeWave.locator('canvas');
     const pause = wave.locator('button[aria-label=Пауза]');
     const icon = pause.locator('svg');
     await wave.locator('.VibePlayerControls_root__fixture').evaluate(el => el.insertAdjacentHTML('beforeend',
       '<button aria-label="Следующий"><svg style="color:#999" width="14" height="14" fill="none"><path stroke="#999" d="M0 0L12 7L0 14"/></svg></button>'));
     const nextIcon = wave.locator('button[aria-label=Следующий] svg');
-    await update({ smartTheme: true, smartStrength: 100, smartPaletteStyle: 'light', smartTransition: 400, contrastGuard: true });
-    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.VibePage_vibeAnimation__fixture')).opacity) < .24);
+    await update({ smartTheme: true, smartStrength: 92, smartPaletteStyle: 'light', smartTransition: 400, contrastGuard: true });
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.VibePage_vibeAnimation__fixture canvas'))
+      .filter.includes('opacity(0.28)'));
+    assert.match(await waveCanvas.evaluate(el => getComputedStyle(el).filter), /ymc-native-wave-tint/);
+    assert.equal(await nativeWave.evaluate(el => getComputedStyle(el).filter), 'none', 'native framing keeps its colors');
+    assert.equal(await nativeWave.evaluate(el => getComputedStyle(el).opacity), '1', 'stock fades are preserved');
+    const clearPixels = await wavePixels();
+    await waveCanvas.evaluate(el => {
+      const ctx = el.getContext('2d');
+      ctx.fillStyle = '#161616';
+      ctx.fillRect(0, 0, 16, 32);
+      ctx.fillStyle = '#36d9e9';
+      ctx.fillRect(16, 0, 16, 32);
+    });
+    const [floorPixel, wavePixel] = await wavePixels();
+    assert.ok(Math.min(...floorPixel) >= 225, floorPixel);
+    assert.deepEqual(floorPixel, clearPixels[0], 'the animation’s dark floor leaves the light theme intact');
+    assert.ok(wavePixel.some((value, index) => value < clearPixels[1][index] - 15), { wavePixel, clearPixels });
+    await update({ smartBackground: false, smartGradient: false, background: '#FFFFFF' });
+    assert.match(await waveCanvas.evaluate(el => getComputedStyle(el).filter), /opacity\(0\.28\)/,
+      'foreground-only smart colors also protect a manually selected white background');
+    await update({ smartBackground: true, smartGradient: true });
     const redPause = await icon.evaluate(el => getComputedStyle(el).color);
     assert.notEqual(redPause, 'rgb(136, 136, 136)');
     assert.equal(await icon.locator('path').evaluate(el => getComputedStyle(el).fill), redPause);
@@ -521,7 +573,10 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await ui.locator('#p-portraitBeat').check();
     await ui.locator('#p-portraitBeatSensitivity').fill('95');
     await ui.locator('#p-portraitBeatStrength').fill('95');
-    await page.evaluate(() => YMusicCustomizer.update({ motionEnabled: true, motionAura: true }));
+    await update({
+      motionEnabled: true, motionAura: true, patternStyle: 'grid', patternBeatEffect: 'bend',
+      patternBeatStrength: 160, patternBeatSensitivity: 95, waveStyle: 'custom', waveBeat: 140
+    });
     assert.equal(await portrait.evaluate(el => getComputedStyle(el).animationName), 'none');
     assert.equal(await page.locator('[data-ymc-spectrum]').count(), 0);
     await page.evaluate(() => YMusicCustomizer.open());
@@ -529,6 +584,13 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await page.waitForFunction(() => {
       const portrait = document.querySelector('#vibe-fixture [data-test-id=VIBE_ARTIST_COVER] img');
       return parseFloat(portrait.style.getPropertyValue('--ymc-beat-pulse')) >= 10;
+    });
+    await page.waitForFunction(() => {
+      const effect = document.querySelector('[data-ymc-pattern]');
+      const wave = document.querySelector('.VibePage_vibeAnimation__fixture');
+      return Number(effect.style.getPropertyValue('--ymc-pattern-beat')) > .10 &&
+        effect.querySelector('[data-ymc-bend]').getAttribute('d').includes('Q') &&
+        Number(getComputedStyle(wave).scale) > 1.01;
     });
     assert.equal(await page.locator('[data-ymc-spectrum]').count(), 0, 'pulse uses audio without mounting a canvas');
     await ui.locator('#p-portraitBeatStrength').fill('215');
@@ -545,6 +607,8 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await page.locator('#demo-audio').evaluate(el => el.pause());
     await page.waitForFunction(() => !document.querySelector('#vibe-fixture [data-test-id=VIBE_ARTIST_COVER] img')
       .style.getPropertyValue('--ymc-beat-pulse'));
+    await page.waitForFunction(() => !document.querySelector('[data-ymc-pattern]').style.getPropertyValue('--ymc-pattern-beat') &&
+      !document.getElementById('vibe-fixture').style.getPropertyValue('--ymc-wave-beat'));
     await ui.locator('#p-portraitBeat').uncheck();
     assert.equal(await portrait.evaluate(el => getComputedStyle(el).animationName), 'ymc-portrait-breathe');
     const preview = kind => ui.locator('[data-appearance-preview="' + kind + '"]');
@@ -565,18 +629,23 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await aura.inputValue(), 'glow');
 
     await ui.locator('[data-tab=theme]').click();
-    const realMask = await readMask();
+    const realArtwork = await readPattern();
     const beforePattern = await saved();
     await preview('pattern').click();
     await picker.selectOption('stars');
-    const sampleMask = await ui.locator('#ymc-pattern-sample .ymc-pattern-ink').first()
-      .evaluate(el => getComputedStyle(el).maskImage);
-    assert.notEqual(sampleMask, realMask);
-    assert.equal(await readMask(), realMask);
+    const sample = ui.locator('#ymc-pattern-sample');
+    const sampleSvg = sample.locator('svg');
+    await ui.locator('#p-patternOpacity').fill('90');
+    const visibleSample = await sample.screenshot();
+    await sampleSvg.evaluate(el => { el.style.visibility = 'hidden'; });
+    assert.ok(!visibleSample.equals(await sample.screenshot()), 'the SVG pattern renders in the preview');
+    await sampleSvg.evaluate(el => { el.style.removeProperty('visibility'); });
+    assert.notEqual(await readPattern(sample), realArtwork);
+    assert.equal(await readPattern(), realArtwork);
     assert.equal(await saved(), beforePattern);
     await accept.click();
     assert.equal(await applied('patternStyle'), 'stars');
-    assert.equal(await readMask(), sampleMask);
+    assert.notEqual(await readPattern(), realArtwork);
 
     await ui.locator('#ymc-theme-spectrum .section-toggle').click();
     await preview('spectrum').click();
