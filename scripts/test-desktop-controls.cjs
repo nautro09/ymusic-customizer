@@ -105,7 +105,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.8.5';
+          const version = localStorage.getItem('test:next-version') ?? '0.8.6';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -120,7 +120,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await searchAudioSmoke(page, ui, platform);
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.5/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.6/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -128,7 +128,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.8.5'));
+      .querySelector('#ymc-update-label').textContent.includes('0.8.6'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -137,15 +137,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.8.6');
+    await nextRelease('0.8.7');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.6');
-    await nextRelease('0.8.7');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.7');
+    await nextRelease('0.8.8');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -295,7 +295,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await ui.locator('[data-tab=layout]').click();
     await ui.locator('#ymc-home-hero .section-toggle').click();
     for (const [control, target] of [
-      ['showVibePortrait', portrait], ['showVibeArtist', artist], ['showVibeHeading', heading]
+      ['showVibePortrait', portrait], ['showVibeHeading', heading]
     ]) {
       await ui.locator('#p-' + control).uncheck();
       assert.equal(await target.isHidden(), true, control);
@@ -350,7 +350,8 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       stage.querySelector('.AlbumCover_root__fixture').append(cover);
       stage.querySelector('section').insertAdjacentHTML('beforeend', `
         <div data-test-id="VIBE_PLAYERBAR_TIMECODE_SLIDER" style="display:flex;position:relative;align-items:center;width:300px;height:40px">
-          <span class="VibePlayerbarMeta_trackName__fixture">Имя исполнителя — Название песни</span>
+          <span data-test-id="VIBE_PLAYERBAR_TRACK_NAME" class="VibePlayerbarMeta_trackName__fixture"><span class="VibePlayerbarMeta_artists__fixture">Имя исполнителя —</span> Название песни</span>
+          <span class="VibePlayerbarMeta_explicitMarkContainer__fixture">!</span>
           <span data-test-id="VIBE_PLAYERBAR_TIMECODE">0:05 / 2:24</span><input type="range" aria-label="Перемотка">
         </div>`);
       cover.style.cssText = 'display:block;width:100%;height:100%';
@@ -560,25 +561,63 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await wave.locator('[data-ymc-sized-cover]').count(), 0);
     assert.deepEqual(await trackArt.boundingBox(), baseline);
     assert.deepEqual(await name.boundingBox(), titleBaseline);
-    const coverFocus = ui.locator('#p-vibeCoverFocus');
-    await coverFocus.check();
-    assert.equal(await name.isHidden(), true);
-    assert.ok((await trackArt.boundingBox()).width > largeCover);
-    await coverFocus.uncheck();
-    assert.deepEqual(await trackArt.boundingBox(), baseline);
     const trackLayout = ui.locator('[data-prop=vibeTrackLayout]');
+    await trackLayout.selectOption('noArtist');
+    assert.equal(await name.isHidden(), true);
+    assert.deepEqual(await trackArt.boundingBox(), baseline);
+    await adaptive.check();
+    assert.ok((await trackArt.boundingBox()).width > largeCover);
+    await adaptive.uncheck();
+    assert.deepEqual(await trackArt.boundingBox(), baseline);
+
     const timecode = wave.locator('[data-test-id=VIBE_PLAYERBAR_TIMECODE]');
     const bubble = wave.locator('[data-test-id=VIBE_PLAYERBAR_TIMECODE_SLIDER]');
+    const nativeTrackName = bubble.locator('[data-test-id=VIBE_PLAYERBAR_TRACK_NAME]');
+    const explicitMark = bubble.locator('[class*="VibePlayerbarMeta_explicitMarkContainer__"]');
+    const trackHeading = wave.locator('[data-ymc-wave-track-title]');
+    const artistInBubble = wave.locator('[data-ymc-timeline-artist]');
+    await trackLayout.selectOption('artist');
+    assert.equal(await trackHeading.textContent(), 'Название песни');
+    assert.equal(await artistInBubble.textContent(), 'Имя исполнителя');
+    assert.equal(await artistInBubble.isVisible(), true);
+    assert.equal(await nativeTrackName.isHidden(), true);
+    assert.equal(await timecode.evaluate(el => getComputedStyle(el).opacity), '0');
+    await bubble.hover();
+    assert.equal(await artistInBubble.isHidden(), true);
+    assert.equal(await timecode.evaluate(el => getComputedStyle(el).opacity), '1');
+    await page.mouse.move(235, 200);
+    assert.equal(await artistInBubble.isVisible(), true);
+    await page.evaluate(() => {
+      navigator.mediaSession.metadata = new MediaMetadata({ title: 'Старый трек', artist: 'Старый артист' });
+      document.querySelector('[data-test-id=VIBE_PLAYERBAR_TRACK_NAME]').innerHTML =
+        '<span class="VibePlayerbarMeta_artists__fixture">Новый артист —</span> Новый трек';
+    });
+    await page.waitForFunction(() => document.querySelector('[data-ymc-wave-track-title]')?.textContent === 'Новый трек');
+    assert.equal(await artistInBubble.textContent(), 'Новый артист');
+    await page.evaluate(() => { navigator.mediaSession.metadata = null; });
     await trackLayout.selectOption('time');
-    assert.equal(await wave.locator('[data-ymc-wave-track-title]').textContent(), 'Название песни');
+    assert.equal(await trackHeading.textContent(), 'Новый трек');
+    assert.equal(await artistInBubble.count(), 0);
+    assert.equal(await nativeTrackName.isHidden(), true);
+    assert.equal(await explicitMark.isHidden(), true);
     assert.equal(await timecode.evaluate(el => getComputedStyle(el).opacity), '0');
     await bubble.locator('input').focus();
     assert.equal(await timecode.evaluate(el => getComputedStyle(el).opacity), '1');
-    await trackLayout.selectOption('artist');
-    assert.equal(await wave.locator('[data-ymc-timeline-artist]').textContent(), 'Имя исполнителя');
+    await ui.locator('#p-hideVibeTrack').check();
+    assert.equal(await bubble.isHidden(), true);
+    assert.equal(await trackHeading.isVisible(), true);
+    assert.equal(await ui.locator('#p-vibeTrackOpacity').isDisabled(), true);
+    await ui.locator('#p-hideVibeTrack').uncheck();
+    assert.equal(await ui.locator('#p-vibeTrackOpacity').isEnabled(), true);
     await trackLayout.selectOption('native');
     assert.equal(await bubble.getAttribute('data-ymc-vibe-timeline'), null);
-    assert.equal(await wave.locator('[data-ymc-wave-track-title]').count(), 0);
+    assert.equal(await trackHeading.count(), 0);
+    assert.equal(await name.isVisible(), true);
+    assert.equal(await nativeTrackName.isVisible(), true);
+    await ui.locator('#p-showVibePortrait').uncheck();
+    assert.equal(await hideCover.isDisabled(), true);
+    await ui.locator('#p-showVibePortrait').check();
+    assert.equal(await hideCover.isEnabled(), true);
     await portrait.evaluate((el, src) => { el.src = src; }, await trackArt.getAttribute('src'));
 
     await page.emulateMedia({ reducedMotion: 'reduce' });

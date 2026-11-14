@@ -74,6 +74,13 @@ assert.deepEqual([manualSpectrum.smartSpectrum, manualSpectrum.spectrumGradient,
 assert.equal(sanitizeTheme({ spectrumGlow: 250, spectrumStyle: 'segments' }).spectrumGlow, 100);
 assert.equal(sanitizeTheme({ vibeAdaptiveCover: true }).vibeHideCoverWithPortrait, true);
 assert.equal(sanitizeTheme({ vibeAdaptiveCover: true, vibeHideCoverWithPortrait: false }).vibeHideCoverWithPortrait, false);
+const legacyCover = sanitizeTheme({ vibeCoverFocus: true });
+assert.equal(legacyCover.vibeAdaptiveCover, true);
+assert.equal(legacyCover.vibeTrackLayout, 'noArtist');
+assert.equal(legacyCover.vibeHideCoverWithPortrait, false);
+assert.equal(sanitizeTheme({ showVibeArtist: false }).vibeTrackLayout, 'noArtist');
+assert.equal(sanitizeTheme({ showVibeArtist: false, vibeTrackLayout: 'time' }).vibeTrackLayout, 'time');
+assert.deepEqual(sanitizeTheme(legacyCover), legacyCover);
 
 const width = 48;
 const coverPixels = new Uint8ClampedArray(width * width * 4);

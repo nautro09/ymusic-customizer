@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.8.4 for Windows and macOS. MIT.
+ * YMusic Customizer v0.8.5 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.8.4';
+  const version = '0.8.5';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -92,10 +92,10 @@
     visualizer: false, wallpaper: '', customCss: '',
     vibeCoverOpacity: 100, vibeTrackOpacity: 100, vibeControlsOpacity: 100,
     vibeAnimation: true, hideVibeTrack: false, hideVibeControls: false, appMediaEnabled: true,
-    showVibePortrait: true, showVibeArtist: true, showVibeHeading: true,
+    showVibePortrait: true, showVibeHeading: true,
     waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 72, waveTone: 60, waveBeat: 70,
     waveClearRail: true, waveNativeOpacity: 100, vibeAdaptiveCover: false, vibeHideCoverWithPortrait: false, vibeAdaptiveCoverSize: 78,
-    vibeCoverFocus: false, vibeTrackLayout: 'native',
+    vibeTrackLayout: 'native',
     sidebarDock: 'native', sidebarAlign: 'center', sidebarSize: 62, sidebarGap: 5, sidebarInset: 10,
     sidebarCompact: true, sidebarCollapsed: false, sidebarOrder: '', sidebarHidden: '',
     sidebarIconSize: 22, sidebarEdgeHint: true, sidebarEdgeCustom: false, sidebarEdgeColor: '#B5D4FF',
@@ -248,7 +248,7 @@
     likedShape: ['native', 'star', 'diamond', 'image'], likedMotion: ['off', 'pulse', 'sparkle'],
     mediaFit: ['cover', 'contain'], barFit: ['cover', 'contain'], barImagePosition: ['center', 'top', 'bottom'],
     portraitEffect: ['off', 'glow', 'outline', 'both', 'bloom'], portraitColorSource: ['theme', 'background', 'custom'],
-    vibeTrackLayout: ['native', 'time', 'artist'],
+    vibeTrackLayout: ['native', 'noArtist', 'artist', 'time'],
     patternStyle: [...Object.keys(PATTERNS), ...Object.keys(LINE_PATTERNS)], patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
     patternMotion: ['still', 'drift', 'shimmer', 'both'], patternDirection: Object.keys(PATTERN_DIRECTIONS),
     patternBeatEffect: Object.keys(PATTERN_BEAT_EFFECTS),
@@ -297,8 +297,8 @@
   };
   const TOGGLES = ['enabled', 'manualScale', 'separateSurfaces', 'widePlayer', 'playerOverlay', 'visualizer', 'addonEnabled', 'addonPalette',
     'vibeAnimation', 'hideVibeTrack', 'hideVibeControls', 'appMediaEnabled', 'barCustom', 'barSpectrum', 'sidebarGradient',
-    'showVibePortrait', 'showVibeArtist', 'showVibeHeading', 'showCornerAppVersion', 'showCornerLoaderVersion',
-    'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'vibeHideCoverWithPortrait', 'vibeCoverFocus',
+    'showVibePortrait', 'showVibeHeading', 'showCornerAppVersion', 'showCornerLoaderVersion',
+    'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'vibeHideCoverWithPortrait',
     'sidebarCompact', 'sidebarCollapsed',
     'sidebarEdgeHint', 'sidebarEdgeCustom',
     'customVibeIcons', 'aiTrackCards', 'showVibeWheel', 'playlistButtons', 'likedCustom', 'likedTintImage',
@@ -343,6 +343,10 @@
       if (typeof value[key] === 'boolean') safe[key] = value[key];
     }
     if (value.vibeAdaptiveCover === true && !Object.hasOwn(value, 'vibeHideCoverWithPortrait')) safe.vibeHideCoverWithPortrait = true;
+    if (value.vibeCoverFocus === true) safe.vibeAdaptiveCover = true;
+    if (safe.vibeTrackLayout === 'native' && (value.vibeCoverFocus === true || value.showVibeArtist === false)) {
+      safe.vibeTrackLayout = 'noArtist';
+    }
     for (const [key, max] of Object.entries({ name: 60, customCss: 20_000 })) {
       if (typeof value[key] === 'string') safe[key] = value[key].slice(0, max);
     }
@@ -401,7 +405,8 @@
   const VIBE_DYNAMIC_HEADING = '[data-test-id="VIBE_DYNAMIC_TITLE_VIBE"]';
   const VIBE_OTHER_TITLES = ':is(' + VIBE_DYNAMIC_HEADING + ',[data-test-id="VIBE_DYNAMIC_TITLE_GENERATIVE"],[data-test-id="VIBE_DYNAMIC_TITLE_NON_MUSIC_ENTITY_TITLE"])';
   const VIBE_HERO = '[class*="VibePage_root__"], [data-test-id="VIBE_PAGE"]';
-  const VIBE_TRACK_NAME = '[class*="VibePlayerbarMeta_trackName__"]';
+  const VIBE_TRACK_NAME = ':is([data-test-id="VIBE_PLAYERBAR_TRACK_NAME"],[class*="VibePlayerbarMeta_trackName__"])';
+  const VIBE_TRACK_ARTIST = '[class*="VibePlayerbarMeta_artists__"]';
   const VIBE_TIMECODE = ':is([data-test-id="VIBE_PLAYERBAR_TIMECODE"],[class*="VibePlayerbarMeta_timecodeOverlay__"])';
   const PORTRAIT = ':is([data-test-id="VIBE_ARTIST_COVER"],[class*="VibeArtistCover_root__"])';
   const SELECTOR = {
@@ -823,7 +828,7 @@
           overflow:visible !important;
         }
       ` : ''}
-      ${t.vibeCoverFocus || t.vibeAdaptiveCover || t.vibeHideCoverWithPortrait ? `
+      ${t.vibeAdaptiveCover || t.vibeHideCoverWithPortrait ? `
         @media (prefers-reduced-motion:no-preference) {
           ${scoped('[data-ymc-track-art] ' + VIBE_ALBUM)} {
             transform-origin:bottom center;
@@ -844,20 +849,22 @@
           visibility:hidden !important; pointer-events:none !important;
         }
       ` : ''}
-      ${t.vibeTrackLayout !== 'native' ? `
-        ${scoped('[data-ymc-wave-title-slot]')} { position:relative; }
-        ${scoped('[data-ymc-wave-title-slot] > :not([data-ymc-wave-track-title])')} { visibility:hidden !important; }
+      ${['artist', 'time'].includes(t.vibeTrackLayout) ? `
+        ${scoped('[data-ymc-wave-title-slot]')} { position:relative; visibility:hidden !important; }
         ${scoped('[data-ymc-wave-track-title]')} {
           position:absolute; inset:0; margin:auto; width:max-content; height:max-content; max-width:100%; box-sizing:border-box;
-          font-family:var(--ym-font-heading,inherit); font-weight:800; line-height:1.04;
+          font-family:var(--ym-font-heading,inherit); font-weight:800; line-height:1.04; visibility:visible !important;
           font-size:clamp(24px,6.2vw,104px); text-align:center; overflow-wrap:anywhere;
-          display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;
+          display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; pointer-events:none;
         }
         ${scoped('[data-ymc-vibe-timeline] ' + VIBE_TRACK_NAME)} { visibility:hidden !important; }
+        ${scoped('[data-ymc-vibe-timeline="time"] [class*="VibePlayerbarMeta_explicitMarkContainer__"]')} { visibility:hidden !important; }
+        ${scoped('[data-ymc-vibe-timeline="time"]:not(:hover,:focus-within)')}::before { visibility:hidden !important; }
         ${scoped('[data-ymc-vibe-timeline] ' + VIBE_TIMECODE)} { opacity:0 !important; }
         ${scoped('[data-ymc-vibe-timeline]:is(:hover,:focus-within) ' + VIBE_TIMECODE)} { opacity:1 !important; }
         ${scoped('[data-ymc-vibe-timeline] [data-ymc-timeline-artist]')} {
-          position:absolute; inset-inline:12%; pointer-events:none; overflow:hidden; white-space:nowrap;
+          position:absolute; inset-inline:12%; inset-block-start:50%; translate:0 -50%;
+          pointer-events:none; overflow:hidden; white-space:nowrap;
           text-overflow:ellipsis; text-align:center; font-weight:700;
         }
         ${scoped('[data-ymc-vibe-timeline]:is(:hover,:focus-within) [data-ymc-timeline-artist]')} { visibility:hidden; }
@@ -966,23 +973,24 @@
   }
 
   const WAVE_TITLES = '[class*="VibePage_text__"],[data-test-id="VIBE_DYNAMIC_ARTISTS"] > :not([aria-hidden="true"]),'
-    + '[data-test-id="VIBE_DYNAMIC_TITLE_VIBE"],[data-test-id="VIBE_DYNAMIC_TITLE_GENERATIVE"]';
+    + '[data-ymc-wave-track-title],' + VIBE_OTHER_TITLES;
   let sizedArt, sizedHero, artObserver, artSizeSetting, artTargets = [], coverAnimation, waveBeatCanvas;
   let trackTitleSlot, waveTrackTitle, timeline, timelineArtist;
 
   function syncWaveTrackLayout(hero) {
-    const layout = hero && theme.vibeTrackLayout !== 'native' ? theme.vibeTrackLayout : '';
-    const slider = layout ? hero.querySelector(SELECTOR.vibeTrack) : null;
+    const layout = theme.vibeTrackLayout;
+    const slider = ['artist', 'time'].includes(layout) ? hero?.querySelector(SELECTOR.vibeTrack) : null;
     const metadata = slider ? navigator.mediaSession?.metadata : null;
-    const nativeName = slider?.querySelector('[class*="VibePlayerbarTrackName_trackNameText__"]') ||
-      slider?.querySelector(VIBE_TRACK_NAME);
     const artistSlot = slider && hero.querySelector(SELECTOR.vibeArtist);
     const nativeArtist = artistSlot && Array.from(artistSlot.childNodes)
       .filter(child => child !== waveTrackTitle).map(child => child.textContent).join('').trim();
-    const artist = metadata?.artist || nativeArtist || '';
+    const nativeName = slider?.querySelector('[class*="VibePlayerbarTrackName_trackNameText__"]') ||
+      slider?.querySelector(VIBE_TRACK_NAME);
+    const artistPrefix = nativeName?.querySelector(VIBE_TRACK_ARTIST)?.textContent.trim();
+    const artist = artistPrefix?.replace(/\s*—$/, '') || nativeArtist || metadata?.artist || '';
     const line = nativeName?.textContent.trim() || '';
-    const prefix = artist + ' — ';
-    const title = metadata?.title || (artist && line.startsWith(prefix) ? line.slice(prefix.length) : line);
+    const prefix = artistPrefix || artist + ' —';
+    const title = (line.startsWith(prefix) ? line.slice(prefix.length).trim() : line) || metadata?.title || '';
     const slot = title ? artistSlot : null;
     if (trackTitleSlot !== slot) {
       trackTitleSlot?.removeAttribute('data-ymc-wave-title-slot');
@@ -990,7 +998,7 @@
       trackTitleSlot = slot;
       waveTrackTitle = null;
     }
-    if (slot && !waveTrackTitle) {
+    if (slot && waveTrackTitle?.parentNode !== slot) {
       waveTrackTitle = document.createElement('div');
       waveTrackTitle.dataset.ymcWaveTrackTitle = '';
       slot.append(waveTrackTitle);
@@ -1008,7 +1016,7 @@
     if (!timeline) return;
     if (timeline.dataset.ymcVibeTimeline !== layout) timeline.dataset.ymcVibeTimeline = layout;
     if (layout === 'artist' && artist) {
-      if (!timelineArtist) {
+      if (timelineArtist?.parentNode !== timeline) {
         timelineArtist = document.createElement('span');
         timelineArtist.dataset.ymcTimelineArtist = '';
         timeline.append(timelineArtist);
@@ -1033,7 +1041,7 @@
       const box = title.getBoundingClientRect();
       if (box.height && getComputedStyle(title).visibility === 'visible') titleBottom = Math.max(titleBottom, box.bottom);
     }
-    const coverFocus = theme.vibeCoverFocus && theme.vibeTrackLayout === 'native';
+    const coverFocus = theme.vibeTrackLayout === 'noArtist';
     const room = Math.floor(Math.min(coverFocus ? 560 : 352, frame.width * .66, artBottom - titleBottom - 12));
     const size = Math.max(0, Math.floor(room * theme.vibeAdaptiveCoverSize / 100));
     sizedArt.toggleAttribute('data-ymc-art-no-room', size < 16);
@@ -1064,7 +1072,7 @@
         for (const node of new Set(targets)) artObserver.observe(node);
       }
     }
-    const sizeSetting = [theme.vibeAdaptiveCoverSize, theme.vibeCoverFocus, theme.vibeTrackLayout, theme.showVibeArtist].join('/');
+    const sizeSetting = [theme.vibeAdaptiveCoverSize, theme.vibeTrackLayout, theme.showVibeHeading].join('/');
     if (art && (changedArt || changedTargets || artSizeSetting !== sizeSetting)) {
       // Measure the native anchor before applying the new dimensions on the first pass.
       artSizeSetting = sizeSetting;
@@ -1094,7 +1102,7 @@
     activeHero = hero;
     syncWaveTrackLayout(hero);
     document.documentElement.toggleAttribute('data-ymc-on-wave', Boolean(hero));
-    const enlargesArt = theme.vibeAdaptiveCover || theme.vibeCoverFocus;
+    const enlargesArt = theme.vibeAdaptiveCover;
     const adaptsArt = enlargesArt || theme.vibeHideCoverWithPortrait;
     portraitNode = hero && theme.showVibePortrait && (adaptsArt || hasBeatAura(theme)) ? [...hero.querySelectorAll(SELECTOR.portrait)]
       .find(img => img.complete && img.naturalWidth > 0 && img.getClientRects().length &&
@@ -1745,7 +1753,7 @@
     const beatPortrait = hasBeatAura(t) && t.portraitEffect !== 'bloom';
     const pulsePortrait = t.motionEnabled && t.motionAura && hasPortraitAura(t) && t.portraitEffect !== 'bloom' && !beatPortrait;
     const hiddenElements = [
-      [t.showVibePortrait, PORTRAIT], [t.showVibeArtist && !t.vibeCoverFocus, SELECTOR.vibeArtist + ':not([data-ymc-wave-title-slot])'],
+      [t.showVibePortrait, PORTRAIT], [t.vibeTrackLayout !== 'noArtist', SELECTOR.vibeArtist],
       [t.showVibeHeading, SELECTOR.vibeHeading],
       [t.showCornerAppVersion, SELECTOR.cornerVersion], [t.showCornerLoaderVersion, SELECTOR.cornerLoader],
       [t.showCornerAudioFormat, SELECTOR.cornerFormat]
@@ -5117,11 +5125,9 @@
         </div>
         <div data-pane="layout" hidden>
           ${paneIntro('layout')}
-          <section id="ymc-home-hero"><h3>Портрет и надписи</h3>
+          <section id="ymc-home-hero"><h3>Фото и заголовок «Моя волна»</h3>
             ${check('showVibePortrait', 'Показывать фото исполнителя')}
-            ${check('showVibeArtist', 'Показывать имя исполнителя')}
             ${check('showVibeHeading', 'Показывать надпись «Моя волна»')}
-            <p class="muted">Эти галочки не скрывают обложку трека, навигацию и кнопки плеера.</p>
           </section>
           <section id="ymc-home-buttons"><h3>Оформление кнопок «Моей волны»</h3>
             ${check('customVibeIcons', 'Свои цвета иконок')}
@@ -5134,10 +5140,11 @@
           </section>
           <section id="ymc-home-visibility"><h3>Видимость кнопок</h3>
             ${check('hideVibeControls', 'Скрыть все кнопки «Моей волны»')}
-            ${check('hideVibePlay', 'Скрыть воспроизведение и паузу')}
-            ${check('hideVibeSkip', 'Скрыть переключение треков')}
-            ${check('hideVibeLike', 'Скрыть лайк')}${check('hideVibeDislike', 'Скрыть дизлайк')}
-            ${check('hideVibeVolume', 'Скрыть громкость')}${check('hideVibeMenu', 'Скрыть контекстное меню')}
+            ${whenAvailable('hideVibePlay', 'hideVibeControls', `
+              ${check('hideVibePlay', 'Скрыть воспроизведение и паузу')}
+              ${check('hideVibeSkip', 'Скрыть переключение треков')}
+              ${check('hideVibeLike', 'Скрыть лайк')}${check('hideVibeDislike', 'Скрыть дизлайк')}
+              ${check('hideVibeVolume', 'Скрыть громкость')}${check('hideVibeMenu', 'Скрыть контекстное меню')}`)}
           </section>
           <section id="ymc-home-sidebar"><h3>Панель навигации</h3>
             <label>Расположение<select data-prop="sidebarDock"><option value="native">Как в Яндекс Музыке</option>
@@ -5186,11 +5193,12 @@
             <label>Характер движения<select data-prop="motionCurve"><option value="smooth">Плавный</option><option value="soft">Мягкий</option><option value="snappy">Пружинистый</option><option value="linear">Равномерный</option></select></label>
             ${check('motionCards', 'Анимировать карточки при наведении')}
             ${whenAvailable('motionCardScale', 'motionCards', range('motionCardScale', 'Увеличение карточки') + range('motionCardLift', 'Подъём карточки'))}
-            ${check('motionAura', 'Равномерное дыхание ауры')}
-            ${whenAvailable('motionAuraSpeed', 'motionAura', range('motionAuraSpeed', 'Скорость дыхания'))}
-            ${check('motionBackground', 'Медленное движение фона')}
-            ${whenAvailable('motionBackgroundSpeed', 'motionBackground', range('motionBackgroundSpeed', 'Скорость движения фона'))}
-            <p class="muted">Движение фона работает с градиентом. Для пульсации от музыки откройте «Портрет артиста».</p>`)}
+            ${whenAvailable('motionAura', 'portraitEffect', `
+              ${check('motionAura', 'Равномерное дыхание ауры')}
+              ${whenAvailable('motionAuraSpeed', 'motionAura', range('motionAuraSpeed', 'Скорость дыхания'))}`)}
+            ${whenAvailable('motionBackground', 'mode', `
+              ${check('motionBackground', 'Медленное движение градиента')}
+              ${whenAvailable('motionBackgroundSpeed', 'motionBackground', range('motionBackgroundSpeed', 'Скорость движения фона'))}`)}`)}
           </section>
           <section id="ymc-home-portrait"><h3>Портрет артиста</h3>
             <p class="muted">Эффект появляется, когда «Моя волна» показывает вырезанный портрет.</p>
@@ -5224,18 +5232,19 @@
               <p class="muted">Пульсация использует звук эквалайзера и работает даже при скрытом рисунке. Она заменяет равномерное дыхание, пока включена.</p>`)}
           </section>
           <section id="ymc-home-track"><h3>Обложка и строка трека</h3>
-            ${check('vibeCoverFocus', 'Скрыть имя артиста и увеличить обложку без портрета')}
-            ${check('vibeAdaptiveCover', 'Увеличивать обложку, если у артиста нет фото')}
-            ${whenAvailable('vibeAdaptiveCoverSize', 'vibeAdaptiveCover', range('vibeAdaptiveCoverSize', 'Размер крупной обложки'))}
-            ${check('vibeHideCoverWithPortrait', 'Скрывать обложку, когда видно фото артиста')}
-            ${range('vibeCoverOpacity', 'Непрозрачность обложки трека')}
-            ${range('vibeTrackOpacity', 'Подложка строки трека')}
-            <label>Название и время<select data-prop="vibeTrackLayout">
-              <option value="native">Штатная раскладка</option>
-              <option value="time">Название сверху · в строке только время при наведении</option>
-              <option value="artist">Название сверху · в строке артист или время при наведении</option>
+            <label>Название трека и имя исполнителя<select data-prop="vibeTrackLayout">
+              <option value="native">Как в Яндекс Музыке</option>
+              <option value="noArtist">Убрать имя исполнителя сверху</option>
+              <option value="artist">Поменять местами название и исполнителя</option>
+              <option value="time">Название сверху, пустая строка</option>
             </select></label>
+            <p class="muted">В двух последних режимах время появляется при наведении на строку или при фокусе с клавиатуры.</p>
+            ${check('vibeAdaptiveCover', 'Увеличивать обложку, когда портрет не виден')}
+            ${whenAvailable('vibeAdaptiveCoverSize', 'vibeAdaptiveCover', range('vibeAdaptiveCoverSize', 'Размер крупной обложки'))}
+            ${whenAvailable('vibeHideCoverWithPortrait', 'showVibePortrait', check('vibeHideCoverWithPortrait', 'Скрывать обложку, когда виден портрет'))}
+            ${range('vibeCoverOpacity', 'Непрозрачность обложки трека')}
             ${check('hideVibeTrack', 'Скрыть строку трека целиком')}
+            ${whenAvailable('vibeTrackOpacity', 'hideVibeTrack', range('vibeTrackOpacity', 'Подложка строки трека'))}
           </section>
           <section id="ymc-home-badges"><h3>Значки в правом нижнем углу</h3>
             ${check('showCornerAppVersion', 'Показывать версию Яндекс Музыки')}
@@ -5540,14 +5549,14 @@
     'ymc-theme-heart': ['Цвет, форма и анимация лайка', 'likedCustom'],
     'ymc-theme-bar': ['Цвет или фото для нижней панели', 'barCustom'],
     'ymc-home-buttons': ['Цвета и форма кнопок'],
-    'ymc-home-hero': ['Фото, имя исполнителя и надпись «Моя волна»'],
+    'ymc-home-hero': ['Показать или скрыть портрет и верхнюю надпись'],
     'ymc-home-visibility': ['Выбор кнопок на главном экране'],
     'ymc-home-sidebar': ['Расположение, порядок и видимость пунктов'],
     'ymc-home-animation': ['Исходное движение и настройка цвета', 'vibeAnimation'],
     'ymc-home-wave': ['Колесо выбора волны и ИИ-подсказки'],
     'ymc-home-motion': ['Скорость, карточки, аура и фон', 'motionEnabled'],
     'ymc-home-portrait': ['Мягкая аура, обводка и плотное свечение в такт'],
-    'ymc-home-track': ['Авторазмер обложки, видимость и прозрачность'],
+    'ymc-home-track': ['Расположение названия и исполнителя, размер обложки'],
     'ymc-home-badges': ['Версии приложения и мода, формат аудио'],
     'ymc-player-layout': ['Размер, расположение и полоса прогресса'],
     'ymc-player-buttons': ['Видимые элементы и их цвета'],
@@ -5809,6 +5818,8 @@
     const portraitOff = t.portraitEffect === 'off';
     const bloom = t.portraitEffect === 'bloom';
     const customWave = t.vibeAnimation && t.waveStyle !== 'native';
+    const auraMotionUnavailable = !t.motionEnabled || !hasPortraitAura(t) || bloom || hasBeatAura(t);
+    const backgroundMotionUnavailable = !t.motionEnabled || t.mode !== 'gradient' || (t.addonEnabled && t.addonPalette);
     const unavailable = {
       scale: !t.manualScale, addonEnabled: !t.addonSheets.length, addonPalette: !t.addonEnabled,
       accentHover: !t.customAccentStates, accentPress: !t.customAccentStates,
@@ -5832,8 +5843,11 @@
       sidebarAlign: t.sidebarDock === 'native', sidebarSize: t.sidebarDock === 'native',
       sidebarGap: t.sidebarDock === 'native', sidebarInset: t.sidebarDock === 'native', sidebarCompact: t.sidebarDock === 'native',
       sidebarEdgeCustom: !t.sidebarEdgeHint, sidebarEdgeColor: !t.sidebarEdgeHint || !t.sidebarEdgeCustom,
-      vibeAdaptiveCover: t.vibeCoverFocus,
-      vibeAdaptiveCoverSize: !(t.vibeAdaptiveCover || t.vibeCoverFocus),
+      vibeAdaptiveCoverSize: !t.vibeAdaptiveCover, vibeHideCoverWithPortrait: !t.showVibePortrait,
+      vibeTrackOpacity: t.hideVibeTrack,
+      hideVibePlay: t.hideVibeControls, hideVibeSkip: t.hideVibeControls,
+      hideVibeLike: t.hideVibeControls, hideVibeDislike: t.hideVibeControls,
+      hideVibeVolume: t.hideVibeControls, hideVibeMenu: t.hideVibeControls,
       sidebar: !t.separateSurfaces, player: !t.separateSurfaces,
       sidebarEnd: !t.sidebarGradient, sidebarAngle: !(t.separateSurfaces && t.sidebarGradient),
       barOpacity: !t.barCustom, barFit: !t.barWallpaper, barImagePosition: !t.barWallpaper,
@@ -5863,8 +5877,8 @@
       motionDuration: !t.motionEnabled, motionCurve: !t.motionEnabled,
       motionCards: !t.motionEnabled, motionCardScale: !t.motionEnabled || !t.motionCards,
       motionCardLift: !t.motionEnabled || !t.motionCards,
-      motionAura: !t.motionEnabled, motionAuraSpeed: !t.motionEnabled || !t.motionAura,
-      motionBackground: !t.motionEnabled, motionBackgroundSpeed: !t.motionEnabled || !t.motionBackground,
+      motionAura: auraMotionUnavailable, motionAuraSpeed: auraMotionUnavailable || !t.motionAura,
+      motionBackground: backgroundMotionUnavailable, motionBackgroundSpeed: backgroundMotionUnavailable || !t.motionBackground,
       playerOverlayDetails: !t.playerOverlay,
       contrastThreshold: !t.contrastGuard,
       barHeight: t.barLayout === 'native', barCoverSize: t.barLayout === 'native',
@@ -6046,6 +6060,7 @@
     'ymc-theme-contrast': 'невидимый черный белый читаемость',
     'ymc-home-portrait': 'человек силуэт портрет обводка аура свечение бит бас пульсация',
     'ymc-home-hero': 'заголовок моя волна скрыть артист фотография',
+    'ymc-home-track': 'имя артист исполнитель таймлайн прогресс время текст название песня',
     'ymc-home-badges': 'версия FLAC AAC MP3 качество правый нижний угол'
   };
   function settingsTools(selectTab, resetBlock) {
@@ -6350,8 +6365,8 @@
       'Выберите шрифт приложения или один из системных. Включите ручной масштаб и задайте процент. При 100% размер соответствует базовому, а отключение ручного масштаба возвращает автоматику.'],
     ['theme', 'ymc-theme-heart', 'Отметка «Нравится»',
       'Включите оформление закрашенной отметки. Выберите цвет, размер, непрозрачность и форму. Настройте пульс или мерцание и длительность цикла. Можно загрузить картинку и оставить её цвета или перекрасить цветом лайка.'],
-    ['layout', 'ymc-home-hero', 'Портрет и надписи',
-      'Три независимые галочки скрывают фото, имя исполнителя и верхнюю надпись «Моя волна». Обложка текущего трека и управление остаются на месте.'],
+    ['layout', 'ymc-home-hero', 'Фото и заголовок «Моя волна»',
+      'Здесь можно по отдельности скрыть портрет и верхнюю надпись «Моя волна». Имя исполнителя настраивается в карточке «Обложка и строка трека».'],
     ['layout', 'ymc-home-buttons', 'Оформление кнопок «Моей волны»',
       'Включите свои цвета иконок. Цвет запуска, паузы и переключения треков теперь следует настройкам транспорта. На светлом фоне умная тема приглушает штатную анимацию, чтобы она не мешала тексту и кнопкам. Своими подложками можно настроить обычные кнопки, кнопку запуска и наведение, а затем изменить непрозрачность и скругление.', 'layout'],
     ['layout', 'ymc-home-visibility', 'Видимость кнопок',
@@ -6367,7 +6382,7 @@
     ['layout', 'ymc-home-portrait', 'Портрет артиста',
       'Выберите мягкую ауру, обводку или плотное свечение. У плотного свечения мягкие края, а пульс заметнее. Цвет можно взять из темы, подобрать по фону или задать вручную. «Пульсировать в такт музыке» усиливает ауру на басовых ударах. Настройте силу, чувствительность и затухание. Силу можно поднять до 250%. Пульсация работает даже при скрытом эквалайзере.'],
     ['layout', 'ymc-home-track', 'Обложка и строка трека',
-      'Увеличьте обложку без портрета и при желании освободите место, скрыв имя артиста. В списке «Название и время» можно вынести название трека наверх. В строке останется имя артиста или пустая подложка. Время видно при наведении и фокусе с клавиатуры.'],
+      'Выберите, где показывать название и исполнителя. При перестановке название будет сверху, а исполнитель в строке. В режиме пустой строки сверху тоже будет название. В обоих режимах время видно при наведении и фокусе с клавиатуры. Увеличение обложки без портрета настраивается отдельно.'],
     ['layout', 'ymc-home-badges', 'Значки в правом нижнем углу',
       'Здесь можно по отдельности убрать номер версии Яндекс Музыки, версию загрузчика и формат аудио, например FLAC. Показать можно только значки, которые предоставляет клиент или загрузчик.'],
     ['player', 'ymc-player-layout', 'Конструктор нижнего плеера',
@@ -6446,7 +6461,11 @@
     { version: '0.8.1', notes: [
       'Обложка без портрета может занять место имени артиста. Название трека можно вынести наверх, а строку оставить пустой или показать в ней артиста до наведения.',
       'Семь сплошных линейных узоров с регулируемым размером ячеек, толщиной линий и видимостью узлов. Под бас линии изгибаются между неподвижными узлами.'
-    ], steps: ['ymc-home-track', 'ymc-theme-pattern'] }
+    ], steps: ['ymc-home-track', 'ymc-theme-pattern'] },
+    { version: '0.8.5', notes: [
+      'На экране «Моя волна» можно поменять местами название трека и исполнителя или оставить строку пустой до наведения.',
+      'Увеличение обложки настраивается отдельно. Неактивные параметры скрываются.'
+    ], steps: ['ymc-home-track', 'ymc-home-hero', 'ymc-home-visibility', 'ymc-home-motion'] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -7563,6 +7582,7 @@
       });
     };
     const nativeMountSelector = [SELECTOR.navbar, SELECTOR.profile, NAV_ENTRY, VIBE_HERO, VIBE_ALBUM,
+      SELECTOR.vibeArtist, SELECTOR.vibeTrack, VIBE_TRACK_NAME,
       PORTRAIT, SELECTOR.player, SELECTOR.fullscreen, '[class*="VibePage_vibeAnimation__"] canvas'].join(', ');
     new MutationObserver(records => {
       if (!host.isConnected || !baseStyle.isConnected || !waveFilter.isConnected ||
