@@ -105,7 +105,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.8.8';
+          const version = localStorage.getItem('test:next-version') ?? '0.8.9';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -120,7 +120,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await searchAudioSmoke(page, ui, platform);
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.8/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.9/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -128,7 +128,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.8.8'));
+      .querySelector('#ymc-update-label').textContent.includes('0.8.9'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -137,15 +137,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.8.9');
+    await nextRelease('0.8.10');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.9');
-    await nextRelease('0.8.10');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.10');
+    await nextRelease('0.8.11');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -569,6 +569,41 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.ok((await trackArt.boundingBox()).width > largeCover);
     await adaptive.uncheck();
     assert.deepEqual(await trackArt.boundingBox(), baseline);
+
+    const glow = page.locator('[data-ymc-window-glow]');
+    const clock = wave.locator('[data-ymc-wave-clock]');
+    const caption = wave.locator('[data-ymc-album-caption]');
+    await trackArt.evaluate(img => {
+      const holder = document.createElement('div');
+      holder.className = 'AlbumCover_coverContainer__fixture';
+      holder.style.cssText = '--album-cover-size:96px;display:flex;position:relative;width:100%;height:100%';
+      img.before(holder);
+      holder.append(img);
+    });
+    await trackLayout.selectOption('native');
+    await update({ edgeGlow: 'wave', waveClock: 'date', waveAlbumCard: true, barLayout: 'floating' });
+    await glow.waitFor();
+    assert.equal(await glow.evaluate(el => getComputedStyle(el).pointerEvents), 'none');
+    assert.match(await clock.locator('[data-ymc-clock-time]').textContent(), /^\d\d:\d\d$/);
+    assert.equal(await clock.locator('[data-ymc-clock-date]').isVisible(), true);
+    await caption.waitFor();
+    assert.equal(await caption.locator('strong').textContent(), 'Название песни');
+    assert.equal(await caption.locator('span').textContent(), 'Имя исполнителя');
+    const dockedPlayer = page.locator('.PlayerBarDesktop_root__demo');
+    assert.equal(await dockedPlayer.evaluate(el => getComputedStyle(el).maxWidth), '928px');
+    await update({ vibeAdaptiveCover: true, waveClock: 'time', widePlayer: true });
+    assert.equal(await clock.locator('[data-ymc-clock-date]').isVisible(), false);
+    assert.equal(await caption.evaluate(el => el.parentElement.dataset.ymcWaveAlbum), 'overlay');
+    assert.equal(await dockedPlayer.evaluate(el => getComputedStyle(el).maxWidth), 'none');
+    await trackArt.evaluate(img => {
+      const holder = img.parentElement;
+      holder.before(img);
+      holder.remove();
+    });
+    await caption.waitFor({ state: 'detached' });
+    await update({ edgeGlow: 'off', waveClock: 'off', waveAlbumCard: false, barLayout: 'native', widePlayer: false, vibeAdaptiveCover: false });
+    await glow.waitFor({ state: 'detached' });
+    await clock.waitFor({ state: 'detached' });
 
     const timecode = wave.locator('[data-test-id=VIBE_PLAYERBAR_TIMECODE]');
     const bubble = wave.locator('[data-test-id=VIBE_PLAYERBAR_TIMECODE_SLIDER]');

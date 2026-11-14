@@ -17,7 +17,7 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
-        checkUpdate: async () => ({ available: true, version: '0.8.8', notes: 'Новая версия для проверки' }),
+        checkUpdate: async () => ({ available: true, version: '0.8.9', notes: 'Новая версия для проверки' }),
         installUpdate: async () => {
           window.ymcInstallRequested = true;
           return { error: 'Тестовая установка остановлена.' };
@@ -31,7 +31,7 @@ async function run() {
         ...(platform === 'Win32' ? {} : { reportTrack: track => { window.lastDiscordTrack = track; } })
       };
       if (!localStorage.getItem('ymc:theme:v1')) {
-        localStorage.setItem('ymc:last-version', '0.8.7');
+        localStorage.setItem('ymc:last-version', '0.8.8');
         localStorage.setItem('ymc:theme:v1', JSON.stringify({ version: 1, name: 'Старая тема', round: 9, customCss: 'body{--legacy:1}' }));
       }
     }, process.env.YMC_TEST_PLATFORM);
@@ -55,7 +55,7 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
-    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.8.8').waitFor();
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.8.9').waitFor();
     assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
     await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
@@ -620,9 +620,9 @@ async function run() {
     const options = await ui.locator('[data-store-card] strong').allTextContents();
     assert.ok(options.includes('vibe.gif') && options.includes('vibe.webm'));
     await ui.locator('[data-store-group=presets]').click();
-    assert.equal(await ui.locator('[data-store-card]').count(), 24);
+    assert.equal(await ui.locator('[data-store-card]').count(), 27);
     await ui.locator('#ymc-store-category').selectOption('Неон');
-    assert.equal(await ui.locator('[data-store-card]').count(), 6);
+    assert.equal(await ui.locator('[data-store-card]').count(), 9);
     const neon = ui.locator('.store-card', { hasText: 'Киберпанк' });
     await neon.locator('[data-store-apply]').click();
     await page.waitForFunction(() => YMusicCustomizer.getTheme().name === 'Киберпанк');
@@ -671,7 +671,7 @@ async function run() {
     }
     assert.equal(await guide.isHidden(), true);
     assert.equal(await offer.isHidden(), true);
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.8.7');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.8.8');
     await page.reload();
     await launcher.click();
     assert.equal(await offer.isHidden(), true);
@@ -681,14 +681,14 @@ async function run() {
     });
     await page.reload();
     await ui.locator('#ymc-whats-new').waitFor();
-    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0\.5\.6 до v0\.8\.7/);
+    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0\.5\.6 до v0\.8\.8/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /Семь сплошных линейных узоров/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /v0.6.0/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /Светлая умная тема/);
     await ui.locator('#ymc-release-guide').click();
-    assert.match(await progress.textContent(), /Шаг 1 из 16/);
+    assert.match(await progress.textContent(), /Шаг 1 из 17/);
     const updatedSections = new Set();
-    for (let step = 1; step <= 16; step++) {
+    for (let step = 1; step <= 17; step++) {
       updatedSections.add(await ui.locator('#ymc-guide-title').textContent());
       await next.click();
     }
@@ -1015,7 +1015,7 @@ async function run() {
       await ctx.close();
     });
     assert.deepEqual(errors, []);
-    console.log('PASS: spectrum recovery and drawn cover colors, cover gradients and auras, cover retry, stable stylesheet, 35 first-run and 16 upgrade guide steps, existing controls');
+    console.log('PASS: spectrum recovery and drawn cover colors, cover gradients and auras, cover retry, stable stylesheet, 35 first-run and 17 upgrade guide steps, existing controls');
   } finally {
     await browser.close();
   }
