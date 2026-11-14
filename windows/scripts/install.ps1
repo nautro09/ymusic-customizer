@@ -3,12 +3,12 @@ $ErrorActionPreference = 'Stop'
 
 function Enable-HostRepair([string]$RepairHome, [string]$TaskName, [string]$User) {
     New-Item -ItemType Directory -Path $RepairHome -Force | Out-Null
-    foreach ($file in @('repair-host.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs')) {
+    foreach ($file in @('repair-host.js', 'repair-host.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $RepairHome -Force
     }
-    $script = Join-Path $RepairHome 'repair-host.ps1'
-    $arguments = '-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $script + '"'
-    $action = New-ScheduledTaskAction -Execute (Join-Path $PSHOME 'powershell.exe') -Argument $arguments
+    $script = Join-Path $RepairHome 'repair-host.js'
+    $arguments = '//B //Nologo //E:JScript "' + $script + '"'
+    $action = New-ScheduledTaskAction -Execute (Join-Path $env:SystemRoot 'System32\wscript.exe') -Argument $arguments
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
     $principal = New-ScheduledTaskPrincipal -UserId $User -LogonType Interactive -RunLevel Limited
     $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
@@ -103,7 +103,7 @@ try {
         foreach ($file in @($active, $disabled)) {
             if (Test-Path -LiteralPath $file -PathType Leaf) { Remove-Item -LiteralPath $file -Force }
         }
-        foreach ($file in @('repair-host.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs', 'host-repair-status.txt', 'host-repair.log')) {
+        foreach ($file in @('repair-host.js', 'repair-host.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs', 'host-repair-status.txt', 'host-repair.log')) {
             $path = Join-Path $repairHome $file
             if (Test-Path -LiteralPath $path -PathType Leaf) { Remove-Item -LiteralPath $path -Force }
         }
@@ -177,7 +177,7 @@ try {
         if (Test-Path -LiteralPath $pending -PathType Leaf) { Remove-Item -LiteralPath $pending -Force }
     }
     if ($movedDuplicate) { Write-Host ("Копия прежнего отключённого файла: " + $duplicateBackup) }
-    Write-Host 'YMusic Customizer v0.8.6 установлен.' -ForegroundColor Green
+    Write-Host 'YMusic Customizer v0.8.7 установлен.' -ForegroundColor Green
     if ($target -eq $disabled) {
         Write-Host 'Мод был отключён. Включите его в разделе «Моды», затем перезапустите приложение.'
     } else {
