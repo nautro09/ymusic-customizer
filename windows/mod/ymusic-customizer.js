@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.8.8 for Windows and macOS. MIT.
+ * YMusic Customizer v0.8.9 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.8.8';
+  const version = '0.8.9';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -86,6 +86,7 @@
     accent: '#A855F7', background: '#100C1B', panel: '#1D1730',
     text: '#F7F4FF', textSecondary: '#CDC2E0', mode: 'gradient', gradientEnd: '#392057',
     blur: 15, round: 16, panelOpacity: 83, backgroundDim: 15,
+    liquidGlass: 'off', glassBackdrop: false,
     gradientAngle: 140, font: 'native', scale: 100, manualScale: false,
     separateSurfaces: false, sidebar: '#20182F', player: '#1D1730',
     cardRound: 16, widePlayer: false, playerOverlay: true,
@@ -166,6 +167,14 @@
   const PRESETS = {
     'Purple Glass': { accent:'#B56CFF',background:'#0E0918',panel:'#211630',text:'#FBF6FF',gradientEnd:'#54247A',
       likedCustom:true,likedColor:'#FF6AAE',portraitEffect:'glow',portraitIntensity:65,panelOpacity:70,blur:22,motionEnabled:true },
+    'Liquid Glass': {
+      liquidGlass:'regular',glassBackdrop:true, accent:'#A5EEEF',background:'#071626',panel:'#172940',
+      text:'#F2FAFF',textSecondary:'#CCDDEF',gradientEnd:'#1C2242',gradientAngle:135,blur:18,round:28,cardRound:18,
+      panelOpacity:55,barLayout:'floating',barProgressMode:'always',sidebarDock:'top',sidebarAlign:'center',sidebarCompact:true,
+      sidebarSize:56,sidebarInset:14,showVibeHeading:false,waveNativeOpacity:38,
+      portraitEffect:'bloom',portraitIntensity:65,portraitSpread:30,portraitBeat:true,portraitBeatStrength:95,
+      vibeAdaptiveCover:true,vibeAdaptiveCoverSize:76,vibeHideCoverWithPortrait:true,likedCustom:true,likedColor:'#F79ECD'
+    },
     'Deep Blue': { accent:'#3CCBFF',background:'#03131F',panel:'#0D2A3B',text:'#EAF9FF',gradientEnd:'#075986',
       likedCustom:true,likedColor:'#52E0FF',spectrumStart:'#27A8FF',spectrumEnd:'#62FFE3',barSpectrum:true,spectrumStyle:'line' },
     'Forest': { accent:'#63F2A6',background:'#04150E',panel:'#102D20',text:'#EDFFF5',gradientEnd:'#0F5338',
@@ -233,7 +242,7 @@
       text:'#F6FFE7',textSecondary:'#CBDDB7',gradientEnd:'#24432C',edgeGlowStart:'#DBFF79',edgeGlowEnd:'#91F67D' }
   };
   const PRESET_CATEGORIES = {
-    'Purple Glass':'Стекло','Deep Blue':'Природа','Forest':'Природа','Pure AMOLED':'Минимализм',
+    'Purple Glass':'Стекло','Liquid Glass':'Стекло','Deep Blue':'Природа','Forest':'Природа','Pure AMOLED':'Минимализм',
     'Закат':'Природа','Северное сияние':'Динамика','Киберпанк':'Неон','Снежный день':'Светлые',
     'Сакура':'Светлые','Песок и кофе':'Тёплые','Ночной монохром':'Минимализм','Гранат':'Тёплые',
     'Неоновый лайм':'Неон','Ультрафиолет':'Неон','Лазерная волна':'Неон','Красный импульс':'Динамика',
@@ -266,6 +275,7 @@
     portraitEffect: ['off', 'glow', 'outline', 'both', 'bloom'], portraitColorSource: ['theme', 'background', 'custom'],
     vibeTrackLayout: ['native', 'noArtist', 'artist', 'time'],
     waveClock: ['off', 'time', 'date'], edgeGlow: ['off', 'app', 'wave'],
+    liquidGlass: ['off', 'regular', 'clear'],
     patternStyle: [...Object.keys(PATTERNS), ...Object.keys(LINE_PATTERNS)], patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
     patternMotion: ['still', 'drift', 'shimmer', 'both'], patternDirection: Object.keys(PATTERN_DIRECTIONS),
     patternBeatEffect: Object.keys(PATTERN_BEAT_EFFECTS),
@@ -318,7 +328,7 @@
     'vibeAnimation', 'hideVibeTrack', 'hideVibeControls', 'appMediaEnabled', 'barCustom', 'barSpectrum', 'sidebarGradient',
     'showVibePortrait', 'showVibeHeading', 'showCornerAppVersion', 'showCornerLoaderVersion',
     'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'vibeHideCoverWithPortrait',
-    'sidebarCompact', 'sidebarCollapsed', 'waveAlbumCard', 'edgeGlowCustom',
+    'sidebarCompact', 'sidebarCollapsed', 'waveAlbumCard', 'edgeGlowCustom', 'glassBackdrop',
     'sidebarEdgeHint', 'sidebarEdgeCustom',
     'customVibeIcons', 'aiTrackCards', 'showVibeWheel', 'playlistButtons', 'likedCustom', 'likedTintImage',
     'customAccentStates', 'spectrumPeaks', 'customVibeButtons', 'hideVibeVolume', 'hideVibeMenu', 'hideVibeLike',
@@ -701,20 +711,25 @@
   }
 
   function portraitFilter(t, color) {
-    if (['off', 'bloom'].includes(t.portraitEffect) || t.portraitIntensity === 0) return 'none';
-    const glow = t.portraitEffect !== 'outline' ? `
-      <feMorphology in="SourceAlpha" operator="dilate" radius="${t.portraitSpread / 6}" result="spread"/>
-      <feGaussianBlur in="spread" stdDeviation="${t.portraitSpread / 3}" result="soft"/>
-      <feComposite in="paint" in2="soft" operator="in" result="glow"/>` : '';
-    const outline = t.portraitEffect !== 'glow' ? `
-      <feMorphology in="SourceAlpha" operator="dilate" radius="${t.portraitOutline}" result="edge"/>
-      <feComposite in="paint" in2="edge" operator="in" result="outline"/>` : '';
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg"><filter id="portrait" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
-      <feFlood flood-color="${color}" flood-opacity="${t.portraitIntensity / 100}" result="paint"/>
-      ${glow}${outline}
-      <feMerge>${glow ? '<feMergeNode in="glow"/>' : ''}${outline ? '<feMergeNode in="outline"/>' : ''}<feMergeNode in="SourceGraphic"/></feMerge>
-    </filter></svg>`;
+    if (t.portraitEffect === 'off' || t.portraitIntensity === 0) return 'none';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg">${portraitFilterMarkup('portrait', t, color)}</svg>`;
     return cssUrl('data:image/svg+xml,' + encodeURIComponent(svg) + '#portrait');
+  }
+
+  function portraitFilterMarkup(id, t, color) {
+    const glow = t.portraitEffect !== 'outline';
+    const outline = ['outline', 'both'].includes(t.portraitEffect);
+    const bloom = t.portraitEffect === 'bloom';
+    return `<filter id="${id}" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      ${glow ? `<feMorphology in="SourceAlpha" operator="dilate" radius="${t.portraitSpread / (bloom ? 3 : 6)}" result="spread"/>
+      <feGaussianBlur in="spread" stdDeviation="${t.portraitSpread / (bloom ? 2.25 : 3)}" result="soft"/>
+      <feFlood flood-color="${color}" flood-opacity="${t.portraitIntensity / 100}" result="auraPaint"/>
+      <feComposite in="auraPaint" in2="soft" operator="in" result="glow"/>` : ''}
+      ${outline ? `<feMorphology in="SourceAlpha" operator="dilate" radius="${t.portraitOutline}" result="edge"/>
+      <feFlood flood-color="${color}" flood-opacity="${t.portraitIntensity / 100}" result="outlinePaint"/>
+      <feComposite in="outlinePaint" in2="edge" operator="in" result="outline"/>` : ''}
+      <feMerge>${glow ? '<feMergeNode in="glow"/>' : ''}${outline ? '<feMergeNode in="outline"/>' : ''}<feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>`;
   }
 
   const hasPortraitAura = t => t.showVibePortrait && t.portraitIntensity > 0 && ['glow', 'both', 'bloom'].includes(t.portraitEffect);
@@ -877,6 +892,68 @@
     return frame + clock + card;
   }
 
+  function liquidGlassStyles(t, sidebar, player, paint) {
+    if (t.liquidGlass === 'off') return '';
+    const clear = t.liquidGlass === 'clear';
+    const glass = (fill, opacity, radius, blur) => {
+      const bright = luminance(fill) > .44;
+      return `
+        background-color:${paint(rgba(fill, opacity))} !important;
+        background-image:
+          radial-gradient(ellipse at 3% -55%,#ffffff40,transparent 65%),
+          radial-gradient(ellipse at 98% 155%,${paint(rgba(t.accent, 26))},transparent 62%),
+          linear-gradient(158deg,#ffffff13 0%,transparent 38%,#00000013 78%,#ffffff13 100%) !important;
+        border-radius:${radius}px !important;
+        backdrop-filter:blur(${blur}px) saturate(${clear ? 150 : 126}%) !important;
+        box-shadow:inset 0 0 0 1px ${bright ? '#ffffffb0' : '#ffffff3d'},
+          inset 0 2px 1px -1px ${bright ? '#ffffff' : '#ffffff85'},
+          inset 0 -2px 2px -1px ${paint(rgba(t.accent, bright ? 48 : 39))},
+          0 5px 18px #0003;
+      `;
+    };
+    const blur = Math.min(clear ? 12 : 20, t.blur);
+    const opacity = clear ? t.panelOpacity * .39 : t.panelOpacity * .87;
+    const radius = Math.max(t.round, 18);
+    const progress = SELECTOR.vibeTrack;
+    const nav = '[data-ymc-nav-dock]';
+    const bar = SELECTOR.player;
+    const ornaments = t.panelOpacity > 0 ? `
+      ${scoped(SELECTOR.navbar + nav)} { ${glass(sidebar, opacity, radius, blur)} }
+      ${scoped(SELECTOR.navbar + ':not([data-ymc-nav-dock])')} { ${glass(sidebar, opacity, radius, blur)} }
+      ${scoped(bar)} ${t.barCustom ? '> [data-ymc-bar-backdrop]' : ''} {
+        ${glass(player, t.barCustom ? 0 : opacity, radius, blur)}
+      }
+      ${scoped(bar + ' ' + SELECTOR.barRow)} { border-radius:inherit !important; border-color:transparent !important; }
+      ${scoped(bar + ' :is(' + SELECTOR.barTitle + ',' + SELECTOR.barArtist + ')')} {
+        text-shadow:0 1px 4px ${luminance(player) > .44 ? '#fff8' : '#000b'};
+      }
+    ` : '';
+    const vibeTint = guardedInk(t, t.text, blendedFill(t.panel, Math.max(opacity, clear ? 38 : 61), t.background));
+    return `
+      ${ornaments}
+      ${t.vibeTrackOpacity ? `
+        ${scoped(progress)} {
+          ${glass(t.panel, (clear ? 36 : 62) * t.vibeTrackOpacity / 100, 36, Math.min(blur, 12))}
+          color:${paint(vibeTint)} !important; --accent-color:${paint(vibeTint)} !important;
+        }
+        ${scoped(progress + ' ' + VIBE_TRACK_NAME)} {
+          color:inherit !important; text-shadow:0 1px 5px ${paint(rgba(readableText(vibeTint, vibeTint), 70))};
+        }
+      ` : ''}
+      @media (prefers-reduced-motion:no-preference) {
+        ${scoped(nav + ' [data-ymc-nav-action]')} { transition:background-color 180ms ease, box-shadow 180ms ease; }
+      }
+      ${scoped(nav + ' [data-ymc-nav-action]:is(:hover,:focus-visible)')} {
+        box-shadow:inset 0 0 0 1px #ffffff27, inset 0 1px 1px #ffffff4d;
+      }
+      @media (prefers-reduced-transparency:reduce) {
+        ${scoped(`${nav}, ${SELECTOR.navbar}, ${bar}, ${progress}`)} {
+          backdrop-filter:none !important; background-color:${paint(t.panel)} !important;
+        }
+      }
+    `;
+  }
+
   function waveButtonInk(t, paint, ordinaryInk, playInk) {
     const controls = VIBE_TRANSPORT + ' :is(button,[role="button"])';
     const play = VIBE_TRANSPORT + ' ' + VIBE_PLAY;
@@ -896,7 +973,7 @@
 
   function waveStyles(t) {
     const wavePage = '[data-ymc-on-wave]';
-    const clear = t.waveClearRail && t.vibeAnimation;
+    const clear = t.waveClearRail && t.vibeAnimation && (t.liquidGlass === 'off' || t.addonEnabled && t.addonPalette);
     const custom = recoloredWave(t);
     const smartLight = smartLightWave(t);
     const tint = custom || smartLight ? 'url(#ymc-native-wave-tint) ' : '';
@@ -981,32 +1058,6 @@
       ` : ''}
     `;
   }
-
-  const AURA_STYLE = `
-    [data-ymc-aura-host] { position:relative; isolation:isolate; }
-    [data-ymc-portrait-aura] {
-      position:absolute; z-index:-1; overflow:clip; pointer-events:none;
-      opacity:clamp(0,calc(var(--ymc-aura-alpha,.8) * (.82 + var(--ymc-aura-beat,0) * .45)),1);
-      --ymc-aura-wide:calc(38% + var(--ymc-aura-spread,24) * .22%);
-      --ymc-aura-tall:calc(37% + var(--ymc-aura-spread,24) * .26%);
-      mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,black 55%,transparent 100%);
-    }
-    [data-ymc-portrait-aura][data-pulse-only] {
-      opacity:clamp(0,calc(var(--ymc-aura-alpha,.8) * var(--ymc-aura-beat,0) * .85),1);
-    }
-    @media (prefers-reduced-motion:no-preference) {
-      [data-ymc-portrait-aura] { transition:opacity 65ms ease-out; }
-      [data-ymc-portrait-aura]::before { transition:transform 65ms ease-out; }
-    }
-    [data-ymc-portrait-aura]::before {
-      content:""; position:absolute; inset:0;
-      background:
-        radial-gradient(ellipse var(--ymc-aura-wide) var(--ymc-aura-tall) at 50% 47%,var(--ymc-aura-color) 10%,transparent 100%),
-        radial-gradient(ellipse 30% 42% at 35% 57%,var(--ymc-aura-color),transparent 100%),
-        radial-gradient(ellipse 31% 40% at 66% 58%,var(--ymc-aura-color),transparent 100%);
-      transform:scale(calc(1 + var(--ymc-aura-beat,0) * .20));
-    }
-  `;
 
   let waveMatrix, waveSample, waveKey = '', waveAbort, waveRetry = 0, waveFailures = 0, activeHero, portraitNode;
 
@@ -1920,10 +1971,18 @@
   function makeStyles(t, cover = '', portraitBackground = '', paint = literal) {
     if (!t.enabled) return '';
     const gradient = () => `linear-gradient(${t.gradientAngle}deg,${paint(t.background)},${paint(t.gradientEnd)})`;
+    const glassBackdrop = t.liquidGlass !== 'off' && t.glassBackdrop && t.mode === 'gradient' && !(t.appMediaEnabled && vibeMedia);
+    const light = (hex, alpha) => paint(rgba(hex, alpha));
+    const reflections = glassBackdrop ? `
+      radial-gradient(ellipse 67% 82% at 103% -13%,${light(t.likedColor, 38)},transparent 73%),
+      radial-gradient(ellipse 60% 92% at -4% 31%,${light(t.accent, 47)},transparent 74%),
+      radial-gradient(ellipse 52% 66% at 77% 124%,${light(mixHex(t.accent, t.gradientEnd, .45), 43)},transparent 88%),
+      linear-gradient(152deg,transparent 34%,${light(t.text, 5)} 51%,transparent 59%),
+    ` : '';
     const image = t.mode === 'image' ? t.wallpaper : t.mode === 'cover' ? cover : '';
     const tint = image ? paint(rgba(t.background, t.backgroundDim)) : '';
     const backdrop = image ? `linear-gradient(${tint},${tint}),${assetPaint(image, paint)},${gradient()}`
-      : t.mode === 'solid' ? 'none' : gradient();
+      : t.mode === 'solid' ? 'none' : reflections + gradient();
     const surface = hex => `background-color:${paint(rgba(hex, t.panelOpacity))} !important;
       backdrop-filter:${t.panelOpacity ? `blur(${t.blur}px)` : 'none'} !important; border-radius:${t.round}px !important;`;
     const separate = t.separateSurfaces || smartOn(t, 'smartPanels');
@@ -1934,8 +1993,7 @@
     const portraitColor = portraitEffectColor(t, portraitBackground);
     const portrait = portraitFilter(t, portraitColor);
     const portraitRule = portrait === 'none' ? 'none' : paint(portrait);
-    const beatPortrait = hasBeatAura(t) && t.portraitEffect !== 'bloom';
-    const pulsePortrait = t.motionEnabled && t.motionAura && hasPortraitAura(t) && t.portraitEffect !== 'bloom' && !beatPortrait;
+    const pulsePortrait = t.motionEnabled && t.motionAura && hasPortraitAura(t) && !hasBeatAura(t);
     const hiddenElements = [
       [t.showVibePortrait, PORTRAIT], [t.vibeTrackLayout !== 'noArtist', SELECTOR.vibeArtist],
       [t.showVibeHeading, SELECTOR.vibeHeading],
@@ -2058,6 +2116,7 @@
       ${t.showVibeWheel && t.vibeWheelOpacity < 100 ? `${scoped(SELECTOR.vibeWheel)} { opacity:${t.vibeWheelOpacity / 100} !important; }` : ''}
       ${t.aiTrackCards && t.vibeAiOpacity < 100 ? `${scoped(SELECTOR.vibeAi)} { opacity:${t.vibeAiOpacity / 100} !important; }` : ''}
       ${portrait !== 'none' ? `${scoped(SELECTOR.portrait)} { filter:${portraitRule} !important; }` : ''}
+      ${hasBeatAura(t) ? `${scoped(SELECTOR.portrait + '[data-ymc-beat-portrait]')} { filter:url(#ymc-portrait-beat) !important; }` : ''}
       @media (prefers-reduced-motion:no-preference) {
         ${t.motionEnabled ? `
           ${scoped('body, .ym-dark-theme, .ym-light-theme')} { --ym-duration-transition:${t.motionDuration}ms !important; }
@@ -2184,6 +2243,7 @@
         }` : ''}
       ` : ''}
       ${barLayoutStyles(t, player, paint)}
+      ${useCustomizerPalette ? liquidGlassStyles(t, sidebar, player, paint) : ''}
       ${t.widePlayer ? `${ACTIVE} [data-ymc-wide] { grid-template-areas:var(--ymc-wide-areas) !important; }` : ''}
     `;
   }
@@ -2490,7 +2550,7 @@
       }
     }
     paintCustomWave(styledTheme);
-    if (portraitAura) paintAura(styledTheme, portraitEffectColor(styledTheme, portraitBackground));
+    if (beatPortrait && hasBeatAura(styledTheme)) syncPortraitFilter(styledTheme, portraitEffectColor(styledTheme, portraitBackground));
     if (theme.patternEnabled) paintPattern(patternLayer, styledTheme, !colorOnly, 1, duration);
     if (previewSession?.kind === 'pattern') paintPattern($('ymc-pattern-sample'), previewVisual('pattern'), !colorOnly, .56);
     if (!colorOnly) {
@@ -4142,61 +4202,35 @@
   const previewLevels = new Float32Array(120);
   const previewPeaks = new Float32Array(120);
   const demoLevels = new Float32Array(120);
-  let portraitAura, auraImage, auraHost, auraObserver;
+  let beatPortrait, beatFilter, beatFlood, beatBlur, beatShape, beatValue = 0, waveBeatValue = 0;
 
-  function paintAura(t, color, layer = portraitAura) {
-    if (!layer) return;
-    layer.style.setProperty('--ymc-aura-color', color);
-    layer.style.setProperty('--ymc-aura-alpha', String(t.portraitIntensity / 100));
-    layer.style.setProperty('--ymc-aura-spread', String(t.portraitSpread));
-  }
-
-  function sizeAura() {
-    if (!auraImage || !portraitAura?.isConnected) return;
-    const host = auraHost.getBoundingClientRect();
-    const image = auraImage.getBoundingClientRect();
-    if (!(image.width && image.height && host.width && host.height)) return;
-    const pad = Math.min(image.width, image.height) * .13;
-    const left = Math.max(0, image.left - host.left - pad);
-    const top = Math.max(0, image.top - host.top);
-    const width = Math.min(host.width - left, image.right - host.left + pad - left);
-    const height = Math.min(host.height - top, image.height);
-    Object.assign(portraitAura.style, {
-      left: left.toFixed(1) + 'px', top: top.toFixed(1) + 'px',
-      width: width.toFixed(1) + 'px', height: height.toFixed(1) + 'px'
-    });
-  }
-
-  function syncPortraitAura(portrait) {
-    const bloom = theme.portraitEffect === 'bloom';
-    const image = hasPortraitAura(theme) && (bloom || hasBeatAura(theme) && !reducedMotion()) ? portrait : null;
-    if (image === auraImage) {
-      portraitAura?.toggleAttribute('data-pulse-only', !bloom);
-      return;
+  function syncPortraitFilter(t, color) {
+    const shape = [t.portraitEffect, t.portraitSpread, t.portraitOutline, t.portraitIntensity].join('/');
+    if (shape !== beatShape || !beatFilter?.isConnected) {
+      beatFilter?.remove();
+      const defs = waveFilter.firstElementChild;
+      defs.insertAdjacentHTML('beforeend', portraitFilterMarkup('ymc-portrait-beat', t, color));
+      beatFilter = defs.lastElementChild;
+      beatFlood = beatFilter.querySelector('[result="auraPaint"]');
+      beatBlur = beatFilter.querySelector('feGaussianBlur');
+      beatShape = shape;
+      renderPortraitBeat(t, beatValue);
     }
-    auraObserver?.disconnect();
-    auraHost?.removeAttribute('data-ymc-aura-host');
-    portraitAura?.remove();
-    portraitAura = null;
-    auraImage = image;
-    auraHost = image?.closest(PORTRAIT);
-    resetBeat();
-    if (!auraHost) return;
-    auraHost.setAttribute('data-ymc-aura-host', '');
-    portraitAura = document.createElement('div');
-    portraitAura.setAttribute('data-ymc-portrait-aura', '');
-    portraitAura.toggleAttribute('data-pulse-only', !bloom);
-    portraitAura.setAttribute('aria-hidden', 'true');
-    auraHost.prepend(portraitAura);
-    auraObserver ||= new ResizeObserver(sizeAura);
-    auraObserver.observe(auraHost);
-    auraObserver.observe(image);
-    const t = visualTheme();
-    paintAura(t, portraitEffectColor(t, portraitBackgroundColor()));
-    sizeAura();
+    for (const paint of beatFilter.querySelectorAll('feFlood')) {
+      if (paint.getAttribute('flood-color') !== color) paint.setAttribute('flood-color', color);
+    }
   }
 
-  let beatPortrait, beatValue = 0, waveBeatValue = 0;
+  function renderPortraitBeat(t, value) {
+    if (!beatFlood || !beatBlur) return;
+    const bloom = t.portraitEffect === 'bloom';
+    const beat = 1 - Math.exp(-value / 80);
+    const intensity = t.portraitIntensity / 100;
+    const width = t.portraitSpread / (bloom ? 2.25 : 3);
+    beatFlood.setAttribute('flood-opacity', Math.min(1, intensity * (1 + beat * .8)).toFixed(2));
+    beatBlur.setAttribute('stdDeviation', (width * (1 + beat * .65)).toFixed(2));
+  }
+
   const beatEnvelope = () => ({ source: undefined, average: 0, recent: 0, impulse: 0, level: 0, cooldown: 0 });
   const portraitBeatState = beatEnvelope(), patternBeatState = beatEnvelope(), waveBeatState = beatEnvelope();
   const patternPreviewBeatState = beatEnvelope();
@@ -4246,8 +4280,10 @@
   }
 
   function resetBeat() {
-    portraitAura?.style.removeProperty('--ymc-aura-beat');
-    beatValue = 0;
+    if (beatValue) {
+      beatValue = 0;
+      renderPortraitBeat(theme, 0);
+    }
     resetBeatEnvelope(portraitBeatState);
   }
 
@@ -4256,7 +4292,16 @@
     const next = enabled ? portraitNode : undefined;
     if (next !== beatPortrait) {
       resetBeat();
+      beatPortrait?.removeAttribute('data-ymc-beat-portrait');
       beatPortrait = next;
+      if (next) {
+        const t = visualTheme();
+        syncPortraitFilter(t, portraitEffectColor(t, portraitBackgroundColor()));
+        next.setAttribute('data-ymc-beat-portrait', '');
+      } else {
+        beatFilter?.remove();
+        beatFilter = beatFlood = beatBlur = null;
+      }
       spectrumCheckAt = 0;
     }
   }
@@ -4265,9 +4310,8 @@
     const level = followBeat(portraitBeatState, input, bass, dt, t.portraitBeatSensitivity, t.portraitBeatRelease);
     const value = Math.round(level * t.portraitBeatStrength);
     if (value !== beatValue) {
-      if (value) portraitAura?.style.setProperty('--ymc-aura-beat', (value / 100).toFixed(2));
-      else portraitAura?.style.removeProperty('--ymc-aura-beat');
       beatValue = value;
+      renderPortraitBeat(t, value);
     }
     return level > 0;
   }
@@ -4968,9 +5012,7 @@
     .store-save label{flex:1;min-width:min(100%,210px)}
     .head-actions .btn{text-decoration:none}
     .buttons a.btn{text-decoration:none}
-    ${AURA_STYLE}
     .portrait-preview-art{position:relative;isolation:isolate;flex:none;width:108px;height:108px}
-    #ymc-aura-preview{inset:0}
     .sidebar-items{display:grid;gap:6px;list-style:none;padding:0;margin:10px 0}
     .sidebar-items li{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:5px}
     .sidebar-items li span{overflow-wrap:anywhere}
@@ -5227,6 +5269,11 @@
             `)}
             ${range('panelOpacity', 'Непрозрачность панелей')}${range('blur', 'Размытие панелей')}
             ${range('round', 'Скругление панелей')}${range('cardRound', 'Скругление карточек')}
+            <label>Liquid Glass<select data-prop="liquidGlass">
+              <option value="off">Выключен</option><option value="regular">Стекло</option>
+              <option value="clear">Прозрачное стекло</option>
+            </select></label>
+            ${whenAvailable('glassBackdrop', 'liquidGlass', check('glassBackdrop', 'Цветные блики на градиентном фоне'))}
             ${range('glowIntensity', 'Неоновое свечение акцентных кнопок')}
             <label>Светящаяся рамка<select data-prop="edgeGlow">
               <option value="off">Выключена</option><option value="app">Во всём приложении</option>
@@ -5401,7 +5448,7 @@
             <p class="muted">Эффект появляется, когда «Моя волна» показывает вырезанный портрет.</p>
             <div class="buttons">${previewButton('portrait', 'ymc-portrait-sample')}</div>
             <div id="ymc-portrait-sample" class="portrait-preview" hidden>
-              <div class="portrait-preview-art"><div id="ymc-aura-preview" data-ymc-portrait-aura hidden></div>
+              <div class="portrait-preview-art">
               <svg id="ymc-portrait-preview" viewBox="0 0 108 108" aria-hidden="true">
                 <path fill="#bdc6d7" d="M54 20c-11 0-19 9-19 21 0 9 4 16 10 20v7c-11 4-22 9-25 24h68c-3-15-14-20-25-24v-7c6-4 10-11 10-20 0-12-8-21-19-21Z"/>
                 <path fill="#7886a0" d="M20 92c2-11 10-17 21-22l13 11 13-11c11 5 19 11 21 22Z"/>
@@ -5426,7 +5473,7 @@
               ${check('portraitBeat', 'Пульсировать в такт музыке')}
               ${whenAvailable('portraitBeatStrength', 'portraitBeat', range('portraitBeatStrength', 'Сила пульсации') +
                 range('portraitBeatSensitivity', 'Чувствительность к басу') + range('portraitBeatRelease', 'Затухание пульсации'))}
-              <p class="muted">Пульсация использует звук эквалайзера и работает даже при скрытом рисунке. Она заменяет равномерное дыхание, пока включена.</p>`)}
+              <p class="muted">На басовых ударах свечение вокруг силуэта становится шире и ярче. Эквалайзер можно оставить скрытым.</p>`)}
           </section>
           <section id="ymc-home-track"><h3>Обложка и строка трека</h3>
             ${check('waveAlbumCard', 'Показывать обложку как карточку трека')}
@@ -5741,7 +5788,7 @@
     'ymc-theme-background': ['Градиент, сплошной цвет или обложка'],
     'ymc-theme-media': ['Свои фото, GIF и видео', 'appMediaEnabled'],
     'ymc-theme-pattern': ['Звёзды, геометрия, ноты и свои символы', 'patternEnabled'],
-    'ymc-theme-surfaces': ['Прозрачность, скругления и светящаяся рамка'],
+    'ymc-theme-surfaces': ['Liquid Glass, прозрачность и светящаяся рамка'],
     'ymc-theme-contrast': ['Проверка текста и иконок', 'contrastGuard'],
     'ymc-theme-fonts': ['Шрифт и размер интерфейса'],
     'ymc-theme-heart': ['Цвет, форма и анимация лайка', 'likedCustom'],
@@ -5961,9 +6008,6 @@
   function syncPortraitPreview(backgroundColor, displayTheme = theme) {
     const color = portraitEffectColor(displayTheme, backgroundColor);
     $('ymc-portrait-preview').style.filter = portraitFilter(displayTheme, color);
-    const aura = $('ymc-aura-preview');
-    aura.hidden = displayTheme.portraitEffect !== 'bloom' || displayTheme.portraitIntensity === 0;
-    if (!aura.hidden) paintAura(displayTheme, color, aura);
     $('ymc-portrait-chip').style.backgroundColor = color;
     setText($('ymc-portrait-color'), color.toUpperCase());
     const hint = displayTheme.portraitEffect === 'off' ? 'Выберите эффект, чтобы настроить цвет и силу свечения.'
@@ -6016,7 +6060,7 @@
     const portraitOff = t.portraitEffect === 'off';
     const bloom = t.portraitEffect === 'bloom';
     const customWave = t.vibeAnimation && t.waveStyle !== 'native';
-    const auraMotionUnavailable = !t.motionEnabled || !hasPortraitAura(t) || bloom || hasBeatAura(t);
+    const auraMotionUnavailable = !t.motionEnabled || !hasPortraitAura(t) || hasBeatAura(t);
     const backgroundMotionUnavailable = !t.motionEnabled || t.mode !== 'gradient' || (t.addonEnabled && t.addonPalette);
     const unavailable = {
       scale: !t.manualScale, addonEnabled: !t.addonSheets.length, addonPalette: !t.addonEnabled,
@@ -6079,6 +6123,7 @@
       motionBackground: backgroundMotionUnavailable, motionBackgroundSpeed: backgroundMotionUnavailable || !t.motionBackground,
       playerOverlayDetails: !t.playerOverlay,
       contrastThreshold: !t.contrastGuard,
+      glassBackdrop: t.liquidGlass === 'off' || t.mode !== 'gradient' || withMedia || (t.addonEnabled && t.addonPalette),
       edgeGlowStrength: t.edgeGlow === 'off', edgeGlowStart: t.edgeGlow === 'off' || !t.edgeGlowCustom,
       waveClockSize: t.waveClock === 'off',
       barHeight: t.barLayout === 'native', barCoverSize: t.barLayout === 'native',
@@ -6558,7 +6603,7 @@
     ['theme', 'ymc-theme-pattern', 'Узоры на фоне',
       'Выберите звёзды, геометрию, ноты или свои символы. Размер, поворот и положение значков случайны, а «Перемешать» создаёт новую раскладку. Цвета, плотность, дрейф и мерцание настраиваются отдельно. В «Реакции на музыку» есть пульс, вибрация, эхо и изгиб линий. Настройте силу, чувствительность и затухание. Предпросмотр без трека использует пробный ритм.'],
     ['theme', 'ymc-theme-surfaces', 'Панели и карточки',
-      'Общий цвет используется для панелей. Включите отдельные цвета, чтобы изменить боковую панель и плеер по отдельности. Для боковой панели можно задать второй цвет и угол. На 0% заливка исчезает. Светящуюся рамку можно включить во всём окне или только в «Моей волне», выбрать свои цвета и яркость.'],
+      'Выберите обычное или прозрачное стекло Liquid Glass. Для градиентного фона можно добавить цветные блики. Непрозрачность и размытие регулируются отдельно. Светящуюся рамку можно включить во всём окне или только в «Моей волне».'],
     ['theme', 'ymc-theme-contrast', 'Читаемость и стрелки',
       'Выберите порог и посмотрите, какие пары цветов не проходят проверку. Автозащита подбирает видимый цвет во время оформления. «Исправить слабый контраст» записывает улучшенные цвета в тему. Настройки стрелок находятся во вкладке «Плейлисты».'],
     ['theme', 'ymc-theme-fonts', 'Шрифты и масштаб',
@@ -6670,7 +6715,11 @@
     { version: '0.8.8', notes: [
       'Светящаяся рамка с двумя цветами и настройкой яркости, крупные часы с датой и карточка трека в «Моей волне».',
       'Плавающая компоновка нижнего плеера и три темы в категории «Неон».'
-    ], steps: ['ymc-theme-surfaces', 'ymc-home-hero', 'ymc-home-track', 'ymc-player-layout'] }
+    ], steps: ['ymc-theme-surfaces', 'ymc-home-hero', 'ymc-home-track', 'ymc-player-layout'] },
+    { version: '0.8.9', notes: [
+      'Тема Liquid Glass и два режима стекла для навигации, нижнего плеера и строки трека.',
+      'Пульсация меняет яркость и радиус ауры по силуэту портрета.'
+    ], steps: ['ymc-theme-surfaces', 'ymc-home-portrait'] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -7206,7 +7255,6 @@
     syncAppBackground();
     syncSidebar(desktopNavbar(), fullscreen);
     syncWaveMount(fullscreen);
-    syncPortraitAura(fullscreen ? null : portraitNode);
     syncPatternMount(fullscreen);
     syncBeatPortrait(fullscreen);
     syncBottomBar(fullscreen);
@@ -7869,7 +7917,6 @@
       [data-ymc-app-backdrop] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-3; pointer-events:none; overflow:hidden; }
       [data-ymc-backdrop-fade] { position:fixed; inset:0; z-index:-3; pointer-events:none; }
       [data-ymc-pattern] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-2; pointer-events:none; overflow:hidden; }
-      ${AURA_STYLE}
       ${NAV_STYLES}
       ${patternRules('[data-ymc-pattern]')}
       [data-ymc-page-spectrum] { position:fixed; inset:auto var(--ymc-reserved-width) 0 0; height:var(--ymc-spectrum-height); z-index:-1; pointer-events:none; }
