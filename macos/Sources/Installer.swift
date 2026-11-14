@@ -11,7 +11,7 @@ struct MusicInstall {
     static let officialID = "ru.yandex.desktop.music"
     static let customID = "local.ymusic.customizer.music"
     static let name = "Яндекс Музыка с Customizer"
-    static let release = "0.8.5-mac.1"
+    static let release = "0.8.6-mac.1"
     static let suggestedSource = URL(fileURLWithPath: "/Applications/Яндекс Музыка.app", isDirectory: true)
 
     let directory: URL
@@ -36,6 +36,37 @@ struct MusicInstall {
         return info["CFBundleShortVersionString"] as? String
     }
 
+    static func clientBuild(_ info: [String: Any]) -> String {
+        let integrity = info["ElectronAsarIntegrity"] as? [String: [String: String]]
+        return [info["CFBundleShortVersionString"] as? String, info["CFBundleVersion"] as? String,
+                integrity?["Resources/app.asar"]?["hash"]].compactMap { $0 }.joined(separator: "/")
+    }
+
+    static func sourceBuild(at url: URL) throws -> String { clientBuild(try info(at: url)) }
+
+    func updateSource() throws -> URL {
+        guard try existingManagedApp(at: application) else { throw CustomizerError("Копия Customizer не установлена.") }
+        let installed = try Self.info(at: application)
+        let saved = (installed["YMusicCustomizerSource"] as? String).map { URL(fileURLWithPath: $0, isDirectory: true) }
+        let source = saved.flatMap { Self.sourceVersion($0) == nil ? nil : $0 } ?? Self.findSource()
+        guard let current = installed["CFBundleShortVersionString"] as? String,
+              let candidate = Self.sourceVersion(source), candidate.compare(current, options: .numeric) != .orderedAscending else {
+            throw CustomizerError("Установите официальную Яндекс Музыку той же или более новой версии.")
+        }
+        return source
+    }
+
+    func hostUpdateSource() throws -> URL? {
+        let source = try updateSource()
+        let info = try Self.info(at: source)
+        let installed = try Self.info(at: application)
+        guard installed["YMusicCustomizerSourceBuild"] as? String != Self.clientBuild(info) else { return nil }
+        if let current = installed["CFBundleVersion"] as? String, let candidate = info["CFBundleVersion"] as? String,
+           installed["CFBundleShortVersionString"] as? String == info["CFBundleShortVersionString"] as? String,
+           candidate.compare(current, options: .numeric) == .orderedAscending { return nil }
+        return source
+    }
+
     func install(from source: URL) throws -> String {
         try withLock {
             try requireClosed()
@@ -58,31 +89,11 @@ struct MusicInstall {
             let contents = stagedApp.appendingPathComponent("Contents", isDirectory: true)
             let frameworks = contents.appendingPathComponent("Frameworks", isDirectory: true)
             let resources = contents.appendingPathComponent("Resources", isDirectory: true)
-            let electronInfo = frameworks.appendingPathComponent("Electron Framework.framework/Resources/Info.plist")
-            guard let electron = try Self.plist(electronInfo)["CFBundleVersion"] as? String,
-                  let major = electron.split(separator: ".").first.flatMap({ Int($0) }), major >= 35 else {
-                throw CustomizerError("Для этого загрузчика нужна Яндекс Музыка на Electron 35 или новее.")
-            }
-
             let asarFile = resources.appendingPathComponent("app.asar")
-            let asar = try Asar(asarFile)
+            let (asar, originalPackage) = try Self.compatibleArchive(in: contents, info: info)
+            var package = originalPackage
             var integrity = info["ElectronAsarIntegrity"] as? [String: Any] ?? [:]
-            if let expected = integrity["Resources/app.asar"] as? [String: String],
-               expected["algorithm"] != "SHA256" || expected["hash"] != asar.headerHash {
-                throw CustomizerError("Заголовок app.asar отличается от указанного в Info.plist.")
-            }
-            let packageData = try asar.read("package.json")
-            guard var package = try JSONSerialization.jsonObject(with: packageData) as? [String: Any],
-                  let entry = package["main"] as? String, ["./index.js", "index.js"].contains(entry),
-                  package["name"] as? String == "YandexMusic" else {
-                throw CustomizerError("Структура этой версии Яндекс Музыки пока не поддерживается.")
-            }
-            let hostMain = try asar.read("index.js")
-            let hostPreload = try asar.read("preload.js")
-            guard hostMain.range(of: Data("music-application".utf8)) != nil,
-                  hostPreload.range(of: Data("musicDesktop".utf8)) != nil else {
-                throw CustomizerError("В клиенте изменился интерфейс загрузки мода.")
-            }
+            let sourceBuild = Self.clientBuild(info)
 
             package["main"] = "./ymc-bootstrap.cjs"
             let preloadTemplate = try String(contentsOf: assets.appendingPathComponent("preload.cjs"), encoding: .utf8)
@@ -98,6 +109,8 @@ struct MusicInstall {
             ])
             try fm.removeItem(at: asarFile)
             try fm.moveItem(at: patchedAsar, to: asarFile)
+            try fm.copyItem(at: Bundle.main.bundleURL,
+                            to: resources.appendingPathComponent("YMusic Customizer.app", isDirectory: true))
 
             integrity["Resources/app.asar"] = ["algorithm": "SHA256", "hash": hash]
             info["ElectronAsarIntegrity"] = integrity
@@ -106,6 +119,8 @@ struct MusicInstall {
             info["CFBundleDisplayName"] = Self.name
             info["LSHasLocalizedDisplayName"] = false
             info["YMusicCustomizerVersion"] = Self.release
+            info["YMusicCustomizerSource"] = source.standardizedFileURL.path
+            info["YMusicCustomizerSourceBuild"] = sourceBuild
             info.removeValue(forKey: "CFBundleURLTypes")
             let newPlist = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
             try newPlist.write(to: contents.appendingPathComponent("Info.plist"), options: .atomic)
@@ -126,6 +141,34 @@ struct MusicInstall {
             }
             return "Готово · Яндекс Музыка \(hostVersion) · Customizer \(Self.release)"
         }
+    }
+
+    static func checkSource(_ source: URL) throws {
+        _ = try compatibleArchive(in: source.appendingPathComponent("Contents"), info: info(at: source))
+    }
+
+    private static func compatibleArchive(in contents: URL, info: [String: Any]) throws -> (Asar, [String: Any]) {
+        let electronInfo = contents.appendingPathComponent("Frameworks/Electron Framework.framework/Resources/Info.plist")
+        guard let version = try Self.plist(electronInfo)["CFBundleVersion"] as? String,
+              let major = version.split(separator: ".").first.flatMap({ Int($0) }), major >= 35 else {
+            throw CustomizerError("Для этого загрузчика нужна Яндекс Музыка на Electron 35 или новее.")
+        }
+        let asar = try Asar(contents.appendingPathComponent("Resources/app.asar"))
+        let integrity = info["ElectronAsarIntegrity"] as? [String: Any]
+        if let expected = integrity?["Resources/app.asar"] as? [String: String],
+           expected["algorithm"] != "SHA256" || expected["hash"] != asar.headerHash {
+            throw CustomizerError("Заголовок app.asar отличается от указанного в Info.plist.")
+        }
+        guard let package = try JSONSerialization.jsonObject(with: asar.read("package.json")) as? [String: Any],
+              let entry = package["main"] as? String, ["./index.js", "index.js"].contains(entry),
+              package["name"] as? String == "YandexMusic" else {
+            throw CustomizerError("Структура этой версии Яндекс Музыки пока не поддерживается.")
+        }
+        guard try asar.read("index.js").range(of: Data("music-application".utf8)) != nil,
+              try asar.read("preload.js").range(of: Data("musicDesktop".utf8)) != nil else {
+            throw CustomizerError("В клиенте изменился интерфейс загрузки мода.")
+        }
+        return (asar, package)
     }
 
     func restore() throws -> String {

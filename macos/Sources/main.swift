@@ -205,13 +205,19 @@ if let operation = arguments.first {
             guard arguments.count == 2 else { throw CustomizerError("Укажите установленную копию Customizer.") }
             let bundle = URL(fileURLWithPath: arguments[1], isDirectory: true).standardizedFileURL
             let update = MusicInstall(directory: bundle.deletingLastPathComponent(), assets: assets)
-            let source = MusicInstall.findSource()
-            guard bundle.path == update.application.path, update.version != nil,
-                  let installed = Bundle(url: bundle)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
-                  MusicInstall.sourceVersion(source) == installed else {
-                throw CustomizerError("Официальный клиент и копия Customizer должны быть одной версии Яндекс Музыки. Используйте установщик для перехода на новую версию клиента.")
+            guard bundle.path == update.application.path else {
+                throw CustomizerError("Укажите установленную копию Customizer.")
             }
+            let source = try update.updateSource()
+            try MusicInstall.checkSource(source)
             if operation == "--online-update" { print(try update.install(from: source)) }
+        case "--host-update-build":
+            if let source = try install.hostUpdateSource() {
+                try MusicInstall.checkSource(source)
+                print(try MusicInstall.sourceBuild(at: source))
+            }
+        case "--host-update":
+            if let source = try install.hostUpdateSource() { print(try install.install(from: source)) }
         case "--install":
             print(try install.install(from: sourceArgument.map { URL(fileURLWithPath: $0, isDirectory: true) } ?? MusicInstall.findSource()))
         case "--status":

@@ -7,7 +7,7 @@ const path = require('node:path');
 const { promisify } = require('node:util');
 
 const run = promisify(execFile);
-const VERSION = '0.8.5';
+const VERSION = '0.8.6';
 const RELEASES = 'https://github.com/nautro09/ymusic-customizer/releases';
 const LATEST = RELEASES + '/latest/download/';
 const KEY = '__YMC_UPDATE_PUBLIC_KEY__';
@@ -41,24 +41,27 @@ function readManifest(payload, signature) {
   return { version, sha256, available: difference > 0, notes: typeof manifest.notes === 'string' ? manifest.notes.slice(0, 1200) : '' };
 }
 
-const quitAndInstallMac = async (app, installer, stage) => {
+const quitAndInstallMac = async (app, installer, stage, hostUpdate = false) => {
   const bundle = path.resolve(process.execPath, '../../..');
+  const profile = app.commandLine?.getSwitchValue('user-data-dir') || '';
   const log = path.join(app.getPath('userData'), 'ymc-update.log');
   const handle = await fs.open(log, 'a', 0o600);
   try {
     const worker = spawn('/bin/bash', ['-c', `
 stage="$1"
-trap 'rm -rf -- "$stage"' EXIT
+if [[ -n "$stage" ]]; then trap 'rm -rf -- "$stage"' EXIT; fi
 for ((attempt=0; attempt<40; attempt++)); do
   if ! kill -0 "$2" 2>/dev/null; then
-    "$3" --online-update "$4"
-    /usr/bin/open "$4"
+    "$3" "$5" "$6"
+    if [[ -n "$7" ]]; then /usr/bin/open "$4" --args "--user-data-dir=$7"
+    else /usr/bin/open "$4"; fi
     exit
   fi
   sleep 1
 done
 echo 'Яндекс Музыка не завершилась. Установка отложена.'
-`, 'ymc-update', stage, String(process.pid), installer, bundle], {
+`, 'ymc-update', stage, String(process.pid), installer, bundle,
+      hostUpdate ? '--host-update' : '--online-update', hostUpdate ? path.dirname(bundle) : bundle, profile], {
       detached: true, stdio: ['ignore', handle.fd, handle.fd]
     });
     await new Promise((resolve, reject) => {
@@ -72,6 +75,25 @@ echo 'Яндекс Музыка не завершилась. Установка 
   setTimeout(() => app.quit(), 250);
 };
 
+async function updateMacHost(app) {
+  const bundle = path.resolve(process.execPath, '../../..');
+  const installer = path.join(bundle, 'Contents', 'Resources', 'YMusic Customizer.app', 'Contents', 'MacOS', 'YMusicCustomizer');
+  const attempt = path.join(app.getPath('userData'), 'ymc-host-update-attempt');
+  try {
+    const { stdout } = await run(installer, ['--host-update-build', path.dirname(bundle)], { timeout: 15000 });
+    const build = stdout.trim();
+    if (!build) return;
+    // A failed rebuild may reopen the old bundle. Retry later, or immediately for a different client build.
+    const stamp = await fs.stat(attempt).catch(() => null);
+    if (stamp && Date.now() - stamp.mtimeMs < 60 * 60 * 1000 && await fs.readFile(attempt, 'utf8') === build) return;
+    await fs.writeFile(attempt, build, { mode: 0o600 });
+    await quitAndInstallMac(app, installer, '', true);
+  } catch (error) {
+    await fs.appendFile(path.join(app.getPath('userData'), 'ymc-update.log'),
+      'Проверка версии Яндекс Музыки: ' + String(error.stderr || error.message).trim() + '\n', { mode: 0o600 }).catch(() => {});
+  }
+}
+
 function powershell(script, args, extraEnv = {}) {
   const exe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
   return run(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', script, ...args],
@@ -84,6 +106,14 @@ function attachUpdater(app, ipcMain, trusted) {
   let request;
   let installing = false;
   let selected;
+  if (process.platform === 'darwin') {
+    app.once('ready', async () => {
+      if (installing) return;
+      installing = true;
+      try { await updateMacHost(app); }
+      finally { installing = false; }
+    });
+  }
   async function check() {
     if (!request) {
       request = Promise.all([

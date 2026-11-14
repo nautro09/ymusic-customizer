@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.8.5 for Windows and macOS. MIT.
+ * YMusic Customizer v0.8.6 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.8.5';
+  const version = '0.8.6';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -6465,7 +6465,8 @@
     { version: '0.8.5', notes: [
       'На экране «Моя волна» можно поменять местами название трека и исполнителя или оставить строку пустой до наведения.',
       'Увеличение обложки настраивается отдельно. Неактивные параметры скрываются.'
-    ], steps: ['ymc-home-track', 'ymc-home-hero', 'ymc-home-visibility', 'ymc-home-motion'] }
+    ], steps: ['ymc-home-track', 'ymc-home-hero', 'ymc-home-visibility', 'ymc-home-motion'] },
+    { version: '0.8.6', notes: ['Customizer восстанавливается после обновления Яндекс Музыки.'], steps: [] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -6502,6 +6503,7 @@
     if (!releases.length) return;
     try { if (localStorage.getItem('ymc:whats-new:seen') === version) return; } catch {}
     const dialog = $('ymc-whats-new');
+    $('ymc-release-guide').hidden = upgradeSteps().length === 0;
     setText($('ymc-release-version'), 'Customizer v' + version);
     setText($('ymc-release-range'), 'Обновлено с v' + upgradeFrom + ' до v' + version + '.');
     $('ymc-release-notes').replaceChildren(...releases.flatMap(({ version: release, notes }) => notes.map(note => {

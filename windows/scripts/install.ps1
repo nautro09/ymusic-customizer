@@ -1,6 +1,20 @@
 ﻿param([ValidateSet('Install','Uninstall','Status')][string]$Mode = 'Install')
 $ErrorActionPreference = 'Stop'
 
+function Enable-HostRepair([string]$RepairHome, [string]$TaskName, [string]$User) {
+    New-Item -ItemType Directory -Path $RepairHome -Force | Out-Null
+    foreach ($file in @('repair-host.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs')) {
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $RepairHome -Force
+    }
+    $script = Join-Path $RepairHome 'repair-host.ps1'
+    $arguments = '-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $script + '"'
+    $action = New-ScheduledTaskAction -Execute (Join-Path $PSHOME 'powershell.exe') -Argument $arguments
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
+    $principal = New-ScheduledTaskPrincipal -UserId $User -LogonType Interactive -RunLevel Limited
+    $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+}
+
 function Install-Loader([string]$MusicHome, [string]$Loader, [string]$PendingLoader) {
     $url = 'https://github.com/nersuga/ymusic_mod/releases/download/v1.5.0/YandexMusicMods-Setup-1.5.0.exe'
     $expectedHash = '1EDD5ACD7729B8579FCA7C67E5D17DEEFC5295F9E07AC11D4FD02CA688BB8C31'
@@ -53,6 +67,9 @@ try {
     $pendingLoader = Join-Path $musicHome '.ymusic-customizer-loader-pending'
     $active = Join-Path $mods 'ymusic-customizer.js'
     $disabled = Join-Path $mods '_ymusic-customizer.js'
+    $repairHome = Join-Path $musicHome 'customizer-repair'
+    $user = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $repairTask = 'YMusic Customizer Host Repair ' + $user.User.Value
     $hasActive = Test-Path -LiteralPath $active -PathType Leaf
     $hasDisabled = Test-Path -LiteralPath $disabled -PathType Leaf
     $hasLoader = (Test-Path -LiteralPath $loader -PathType Leaf) -and -not (Test-Path -LiteralPath $pendingLoader -PathType Leaf)
@@ -65,6 +82,8 @@ try {
         exit 0
     }
     if ($Mode -eq 'Uninstall') {
+        $task = Get-ScheduledTask -TaskName $repairTask -ErrorAction SilentlyContinue
+        if ($task) { $task | Unregister-ScheduledTask -Confirm:$false }
         if ($hasLoader) {
             . (Join-Path $PSScriptRoot 'discord-loader.ps1')
             $loaderText = [IO.File]::ReadAllText($loader)
@@ -83,6 +102,10 @@ try {
         }
         foreach ($file in @($active, $disabled)) {
             if (Test-Path -LiteralPath $file -PathType Leaf) { Remove-Item -LiteralPath $file -Force }
+        }
+        foreach ($file in @('repair-host.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs', 'host-repair-status.txt', 'host-repair.log')) {
+            $path = Join-Path $repairHome $file
+            if (Test-Path -LiteralPath $path -PathType Leaf) { Remove-Item -LiteralPath $path -Force }
         }
         Write-Host 'Customizer удалён. Перезапустите Яндекс Музыку.'
         Write-Host 'Резервные копии и локальные настройки сохранены.'
@@ -114,6 +137,7 @@ try {
     $movedDuplicate = $false
     try {
         Copy-Item -LiteralPath $source -Destination $pending
+        Enable-HostRepair $repairHome $repairTask $user.Name
         if ($patchedLoader -cne $loaderText) {
             Set-DiscordLoader $loader $loaderText $patchedLoader $loaderBackup
             $loaderChanged = $true
@@ -153,7 +177,7 @@ try {
         if (Test-Path -LiteralPath $pending -PathType Leaf) { Remove-Item -LiteralPath $pending -Force }
     }
     if ($movedDuplicate) { Write-Host ("Копия прежнего отключённого файла: " + $duplicateBackup) }
-    Write-Host 'YMusic Customizer v0.8.5 установлен.' -ForegroundColor Green
+    Write-Host 'YMusic Customizer v0.8.6 установлен.' -ForegroundColor Green
     if ($target -eq $disabled) {
         Write-Host 'Мод был отключён. Включите его в разделе «Моды», затем перезапустите приложение.'
     } else {
