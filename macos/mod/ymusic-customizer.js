@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.8.10 for Windows and macOS. MIT.
+ * YMusic Customizer v0.8.11 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.8.10';
+  const version = '0.8.11';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -73,7 +73,7 @@
     smartSpectrum: { label: 'Эквалайзер', fields: ['spectrumStart', 'spectrumMid', 'spectrumEnd'] },
     smartPlaylist: { label: 'Шапка плейлиста', fields: ['playlistStart', 'playlistEnd'] },
     smartGlass: { label: 'Оттенок и блики Liquid Glass', fields: ['glassTint', 'glassLight'] },
-    smartClock: { label: 'Часы и их подложка', fields: ['clockColor', 'clockFill'] },
+    smartClock: { label: 'Часы и их подложка', fields: ['clockColor', 'clockFill', 'clockAccent'] },
     smartFrame: { label: 'Светящаяся рамка', fields: ['edgeGlowStart', 'edgeGlowEnd'] },
     smartButtons: { label: 'Кнопки и стрелки', fields: [
       'vibeIcon', 'vibeTransport', 'vibeFill', 'vibeHover', 'vibePlayFill',
@@ -93,6 +93,10 @@
     glassNav: true, glassPlayer: true, glassTrack: true, glassCustom: false,
     glassTint: '#46738B', glassLight: '#BBEBFF', glassTintAmount: 24, glassOpacity: 74,
     glassBlur: 13, glassSaturation: 122, glassShine: 42, glassRim: 34, glassDepth: 26, glassRadius: 25, glassAngle: 145,
+    glassReflection: 'soft', glassRimWidth: 1, glassSeparate: false,
+    glassNavMaterial: 'regular', glassPlayerMaterial: 'regular', glassTrackMaterial: 'regular',
+    glassNavOpacity: 74, glassPlayerOpacity: 74, glassTrackOpacity: 74,
+    glassNavBlur: 13, glassPlayerBlur: 13, glassTrackBlur: 13,
     gradientAngle: 140, font: 'native', scale: 100, manualScale: false,
     separateSurfaces: false, sidebar: '#20182F', player: '#1D1730',
     cardRound: 16, widePlayer: false, playerOverlay: true,
@@ -104,7 +108,9 @@
     clockFont: 'system', clockWeight: 400, clockSpacing: -2, clockPosition: 'topRight',
     clockX: 20, clockY: 18, clockFormat: '24', clockSeconds: false,
     clockDatePosition: 'below', clockDateSize: 28, clockCustom: false,
-    clockColor: '#E4F3FF', clockFill: '#101C30', clockOpacity: 100, clockPlate: 0, clockRadius: 22, clockGlow: 10,
+    clockColor: '#E4F3FF', clockFill: '#101C30', clockAccent: '#A5EEEF',
+    clockOpacity: 100, clockPlate: 0, clockRadius: 22, clockGlow: 10,
+    clockStyle: 'digital', clockMarks: 'hours',
     edgeGlow: 'off', edgeGlowStrength: 65, edgeGlowCustom: false,
     edgeGlowStart: '#FF8A78', edgeGlowEnd: '#FF61B6',
     edgeGlowStyle: 'full', edgeGlowInset: 4, edgeGlowRadius: 16, edgeGlowWidth: 2,
@@ -284,6 +290,18 @@
     georgia: 'Georgia, serif', mono: mac ? 'Menlo, monospace' : 'Consolas, monospace',
     arial: 'Arial, sans-serif', verdana: 'Verdana, sans-serif'
   };
+  const GLASS_MATERIALS = Object.freeze({
+    regular: { label:'Мягкое стекло', opacity:.58, blur:1, shine:1 },
+    clear: { label:'Прозрачное стекло', opacity:.24, blur:.55, shine:.85 },
+    frosted: { label:'Матовое стекло', opacity:.84, blur:1.35, shine:.65 },
+    crystal: { label:'Хрусталь', opacity:.18, blur:.25, shine:1.45 },
+    smoked: { label:'Дымчатое стекло', opacity:.76, blur:.8, shine:.75, smoke:true }
+  });
+  const GLASS_SURFACES = [
+    ['Nav', 'Навигация'], ['Player', 'Нижний плеер'], ['Track', 'Строка трека']
+  ];
+  const glassMaterialOptions = Object.entries(GLASS_MATERIALS)
+    .map(([key, { label }]) => `<option value="${key}">${label}</option>`).join('');
   const CHOICE = {
     waveStyle: ['native', 'custom'], wavePalette: ['auto', 'cover', 'custom'],
     sidebarDock: ['native', 'left', 'right', 'top', 'bottom'], sidebarAlign: ['start', 'center', 'end'],
@@ -298,10 +316,13 @@
     portraitEffect: ['off', 'glow', 'outline', 'both', 'bloom'], portraitColorSource: ['theme', 'background', 'custom'],
     vibeTrackLayout: ['native', 'noArtist', 'artist', 'time'],
     waveClock: ['off', 'time', 'date'], edgeGlow: ['off', 'app', 'wave'],
-    liquidGlass: ['off', 'regular', 'clear', 'frosted'],
+    liquidGlass: ['off', ...Object.keys(GLASS_MATERIALS)],
+    glassNavMaterial: Object.keys(GLASS_MATERIALS), glassPlayerMaterial: Object.keys(GLASS_MATERIALS),
+    glassTrackMaterial: Object.keys(GLASS_MATERIALS), glassReflection: ['soft', 'diagonal', 'top', 'off'],
     edgeGlowStyle: ['full', 'horizontal', 'vertical', 'corners'],
     clockPosition: ['topLeft', 'topCenter', 'topRight', 'bottomLeft', 'bottomCenter', 'bottomRight'],
     clockFont: ['system', 'rounded', 'mono', 'serif'], clockFormat: ['24', '12'], clockDatePosition: ['above', 'below'],
+    clockStyle: ['digital', 'tiles', 'stacked', 'outline', 'analog'], clockMarks: ['none', 'hours', 'minutes'],
     navBrand: ['native', 'vkusno'],
     patternStyle: [...Object.keys(PATTERNS), ...Object.keys(LINE_PATTERNS)], patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
     patternMotion: ['still', 'drift', 'shimmer', 'both'], patternDirection: Object.keys(PATTERN_DIRECTIONS),
@@ -316,7 +337,7 @@
     'playlistSecondary', 'playlistSecondaryText', 'playlistFilter', 'playlistFilterText', 'playlistFilterBorder', 'playlistSelected',
     'playlistButtonHover', 'playlistSearchFill', 'playlistSearchText', 'barButtonFill', 'barButtonText', 'barButtonHover',
     'portraitColor', 'navigationFill', 'navigationText', 'patternPrimary', 'patternSecondary', 'sidebarEdgeColor',
-    'edgeGlowStart', 'edgeGlowEnd', 'glassTint', 'glassLight', 'clockColor', 'clockFill'];
+    'edgeGlowStart', 'edgeGlowEnd', 'glassTint', 'glassLight', 'clockColor', 'clockFill', 'clockAccent'];
   const RANGES = {
     waveNativeOpacity: [0, 100, '%'], waveOpacity: [0, 100, '%'], waveTone: [10, 100, '%'], waveBeat: [0, 180, '%'],
     vibeAdaptiveCoverSize: [35, 100, '%'], sidebarSize: [44, 120, 'px'], sidebarGap: [0, 28, 'px'], sidebarInset: [0, 36, 'px'],
@@ -328,6 +349,9 @@
     edgeGlowWidth: [0, 12, 'px'], edgeGlowHalo: [0, 100, '%'], edgeGlowSpread: [0, 80, 'px'], edgeGlowAngle: [0, 360, '°'],
     glassTintAmount: [0, 100, '%'], glassOpacity: [0, 100, '%'], glassBlur: [0, 24, 'px'], glassSaturation: [75, 180, '%'],
     glassShine: [0, 100, '%'], glassRim: [0, 100, '%'], glassDepth: [0, 100, '%'], glassRadius: [0, 48, 'px'], glassAngle: [0, 360, '°'],
+    glassRimWidth: [0, 5, 'px'],
+    ...Object.fromEntries(GLASS_SURFACES.flatMap(([part]) =>
+      [['glass' + part + 'Opacity', [0, 100, '%']], ['glass' + part + 'Blur', [0, 24, 'px']]])),
     blur: [0, 40, 'px'], round: [0, 40, 'px'], panelOpacity: [0, 100, '%'], barOpacity: [0, 100, '%'],
     backgroundDim: [0, 80, '%'], gradientAngle: [0, 360, '°'], cardRound: [0, 40, 'px'], scale: [85, 125, '%'],
     vibeCoverOpacity: [0, 100, '%'], vibeTrackOpacity: [0, 100, '%'], vibeControlsOpacity: [0, 100, '%'],
@@ -362,7 +386,7 @@
     'showVibePortrait', 'showVibeHeading', 'showCornerAppVersion', 'showCornerLoaderVersion',
     'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'vibeHideCoverWithPortrait',
     'sidebarCompact', 'sidebarCollapsed', 'waveAlbumCard', 'edgeGlowCustom', 'glassBackdrop', 'glassCustom',
-    'glassNav', 'glassPlayer', 'glassTrack', 'clockCustom', 'clockSeconds',
+    'glassNav', 'glassPlayer', 'glassTrack', 'glassSeparate', 'clockCustom', 'clockSeconds',
     'sidebarEdgeHint', 'sidebarEdgeCustom',
     'customVibeIcons', 'aiTrackCards', 'showVibeWheel', 'playlistButtons', 'likedCustom', 'likedTintImage',
     'customAccentStates', 'spectrumPeaks', 'customVibeButtons', 'hideVibeVolume', 'hideVibeMenu', 'hideVibeLike',
@@ -455,7 +479,6 @@
   const SEARCH_BOX = '[class*="AnimatedSearchInput_root__"]';
   const SEARCH_INPUT = 'input[data-test-id="SEARCH_PAGE_SEARCH_INPUT"]';
   const SEARCH_PAGE = ':is([data-test-id="SEARCH_PAGE"],[class*="SearchPage_root__"])';
-  const SEARCH_HOME = ':is([data-test-id="NAVBAR_NAVIGATION_ITEM_HOME"],[class*="NavbarDesktop_logoWrapper__"] a)';
   const SEARCH_TRACK = '[class*="CommonTrack_root__"]:not([class*="CommonTrack_root_disabled__"],[aria-disabled="true"])';
   const BUNDLED_SEARCH_AUDIO = /* YMC_SEARCH_AUDIO */ {};
   const SEARCH_SURPRISES = new Map([
@@ -914,6 +937,7 @@
     const behindClock = t.clockPlate ? blendedFill(clockFill, t.clockPlate, t.background) : t.background;
     const clockSurfaces = !t.clockPlate && t.mode === 'gradient' ? [behindClock, t.gradientEnd] : [behindClock];
     const clockInk = t.waveClock !== 'off' ? textInk(clockColors ? t.clockColor : t.text, clockSurfaces) : '';
+    const clockAccent = clockInk && textInk(clockColors ? t.clockAccent : t.accent, clockSurfaces);
     const end = t.clockPosition.endsWith('Right'), center = t.clockPosition.endsWith('Center');
     const vertical = t.clockPosition.startsWith('bottom') ? 'end' : 'start';
     const offset = `min(${t.clockX}px,12%)`;
@@ -928,6 +952,7 @@
         font-size:clamp(23px,calc(min(${t.clockSeconds ? 5.5 : 7.5}cqw,11cqh) * ${t.waveClockSize / 100}),164px);
         max-width:calc(100% - 2 * ${offset}); pointer-events:none; box-sizing:border-box;
         color:${paint(clockInk)}; opacity:${t.clockOpacity / 100}; font-family:${clockFonts[t.clockFont]};
+        --ymc-clock-accent:${paint(clockAccent)};
         ${t.clockPlate ? `padding:.13em .25em; border-radius:${t.clockRadius}px; background-color:${paint(rgba(clockFill, t.clockPlate))};` : ''}
         ${t.clockGlow ? `text-shadow:0 1px 4px ${paint(rgba(readableText(clockInk, clockInk), 67))},
           0 0 ${t.clockGlow}px ${paint(rgba(clockInk, 34))};` : ''}
@@ -942,6 +967,48 @@
         font-weight:550; letter-spacing:.01em; text-align:${center ? 'center' : end ? 'right' : 'left'};
       }
       ${scoped('[data-ymc-clock-date][hidden]')} { display:none; }
+      ${t.clockStyle === 'tiles' ? `
+        ${scoped('[data-ymc-clock-time]')} { display:flex; align-items:center; gap:.08em; }
+        ${scoped('[data-ymc-clock-number]')} {
+          padding:.14em .13em; border-radius:.19em;
+          background-image:linear-gradient(180deg,${paint(rgba(clockFill, 88))} 49%,${paint(rgba(clockAccent, 26))} 50%,${paint(rgba(clockFill, 68))} 51%);
+          box-shadow:inset 0 0 0 1px ${paint(rgba(clockAccent, 18))},0 2px 6px #0002;
+        }` : ''}
+      ${t.clockStyle === 'stacked' ? `
+        ${scoped('[data-ymc-clock-time]')} { display:grid; justify-items:center; gap:.03em; }
+        ${scoped('[data-ymc-clock-time] [data-ymc-clock-number="minute"]')} { color:var(--ymc-clock-accent); }
+        ${scoped('[data-ymc-clock-time] [data-ymc-clock-number="second"], [data-ymc-clock-period]')} { font-size:.42em; }
+        ${scoped('[data-ymc-clock-separator]')} { position:absolute; clip-path:inset(50%); }` : ''}
+      ${t.clockStyle === 'outline' ? `${scoped('[data-ymc-clock-time]')} {
+        -webkit-text-fill-color:transparent; -webkit-text-stroke:max(1px,.018em) currentColor;
+        text-shadow:none;
+      }` : ''}
+      ${t.clockStyle === 'analog' ? `
+        ${scoped('[data-ymc-clock-time]')} { position:absolute; clip-path:inset(50%); }
+        ${scoped('[data-ymc-clock-face]')} {
+          display:block; position:relative; inline-size:2.05em; block-size:2.05em;
+          border:1px solid ${paint(rgba(clockInk, 55))}; border-radius:50%;
+          background:radial-gradient(circle,${paint(rgba(clockFill, 52))},${paint(rgba(clockFill, 22))});
+        }
+        ${t.clockMarks !== 'none' ? `
+          ${scoped('[data-ymc-clock-face]::before')} {
+            content:""; position:absolute; inset:5%; border-radius:inherit;
+            background:repeating-conic-gradient(from -1deg,currentColor 0 2deg,transparent 2deg ${t.clockMarks === 'hours' ? 30 : 6}deg);
+            mask:radial-gradient(transparent 61%,#000 62%); opacity:.62;
+          }` : ''}
+        ${scoped('[data-ymc-clock-face]::after')} {
+          content:""; position:absolute; inset:47%; border-radius:50%; background:var(--ymc-clock-accent);
+        }
+        ${scoped('[data-ymc-clock-hand]')} {
+          position:absolute; bottom:50%; left:calc(50% - var(--hand-width) / 2); width:var(--hand-width);
+          border-radius:10px; transform-origin:bottom center; background:currentColor;
+        }
+        ${scoped('[data-ymc-clock-hand="hour"]')} { --hand-width:max(2px,.08em); height:27%; rotate:var(--ymc-clock-hour); }
+        ${scoped('[data-ymc-clock-hand="minute"]')} { --hand-width:max(2px,.052em); height:37%; rotate:var(--ymc-clock-minute); }
+        ${scoped('[data-ymc-clock-hand="second"]')} {
+          --hand-width:max(1px,.027em); height:39%; rotate:var(--ymc-clock-second); background:var(--ymc-clock-accent);
+          ${t.clockSeconds ? '' : 'display:none;'}
+        }` : ''}
     ` : '';
     const card = t.waveAlbumCard ? `
       ${scoped('[data-ymc-wave-album]')} {
@@ -979,28 +1046,38 @@
 
   function liquidGlassStyles(t, sidebar, player, paint) {
     if (t.liquidGlass === 'off') return '';
-    const material = {
-      clear: { opacity:.24, blur:.55, shine:.85 },
-      regular: { opacity:.58, blur:1, shine:1 },
-      frosted: { opacity:.84, blur:1.35, shine:.65 }
-    }[t.liquidGlass];
     const usesTint = t.glassCustom || smartOn(t, 'smartGlass');
     const tint = usesTint ? t.glassTint : t.accent;
     const highlight = usesTint ? t.glassLight : mixHex(t.accent, '#FFFFFF', .78);
-    const glass = (base, surfaceOpacity, customBackground = false) => {
-      const fill = mixHex(base, tint, t.glassTintAmount / 100);
+    const settings = part => ({
+      material: GLASS_MATERIALS[t.glassSeparate ? t['glass' + part + 'Material'] : t.liquidGlass],
+      opacity: t.glassSeparate ? t['glass' + part + 'Opacity'] : t.glassOpacity,
+      blur: t.glassSeparate ? t['glass' + part + 'Blur'] : t.glassBlur
+    });
+    const surfaceColor = (base, material) => {
+      const tinted = mixHex(base, tint, t.glassTintAmount / 100);
+      return material.smoke ? mixHex(tinted, '#101116', .38) : tinted;
+    };
+    const glass = (base, surfaceOpacity, { material, opacity, blur }, customBackground) => {
+      const fill = surfaceColor(base, material);
       const bright = luminance(fill) > .44;
       const shine = t.glassShine * material.shine;
       const rim = t.glassRim;
+      const reflections = {
+        soft: () => `linear-gradient(${t.glassAngle + 35}deg,${paint(rgba(highlight, shine * .4))},transparent 32% 70%,${paint(rgba(tint, shine * .24))}),
+          linear-gradient(${t.glassAngle}deg,transparent 10%,${paint(rgba(highlight, shine * .26))} 30%,transparent 54% 76%,${paint(rgba(highlight, shine * .18))})`,
+        diagonal: () => `linear-gradient(${t.glassAngle}deg,transparent 24%,${paint(rgba(highlight, shine * .12))} 35%,
+          ${paint(rgba(highlight, shine * .56))} 46%,transparent 48% 64%,${paint(rgba(tint, shine * .22))} 85%,transparent)`,
+        top: () => `linear-gradient(180deg,${paint(rgba(highlight, shine * .57))},transparent 45%,${paint(rgba(tint, shine * .09))})`
+      };
       return `
-        background-color:${paint(rgba(fill, customBackground ? 0 : t.glassOpacity * material.opacity * surfaceOpacity))} !important;
-        background-image:
-          linear-gradient(${t.glassAngle + 35}deg,${paint(rgba(highlight, shine * .4))},transparent 32% 70%,${paint(rgba(tint, shine * .24))}),
-          linear-gradient(${t.glassAngle}deg,transparent 10%,${paint(rgba(highlight, shine * .26))} 30%,transparent 54% 76%,${paint(rgba(highlight, shine * .18))}) !important;
+        background-color:${paint(rgba(fill, customBackground ? 0 : opacity * material.opacity * surfaceOpacity))} !important;
+        background-image:${reflections[t.glassReflection]?.() ?? 'none'} !important;
         border-radius:${t.glassRadius}px !important;
-        backdrop-filter:blur(${Math.min(24, t.glassBlur * material.blur)}px) saturate(${t.glassSaturation}%) !important;
-        box-shadow:inset 0 0 0 1px ${paint(rgba(highlight, rim))},
+        backdrop-filter:blur(${Math.min(24, blur * material.blur)}px) saturate(${t.glassSaturation}%) !important;
+        box-shadow:${t.glassRimWidth ? `inset 0 0 0 ${t.glassRimWidth}px ${paint(rgba(highlight, rim))},
           inset 0 2px 2px -1px ${paint(rgba(highlight, rim * .84))},
+          ` : ''}
           inset 0 -3px 4px -2px ${paint(rgba(bright ? tint : '#000000', t.glassDepth))},
           0 ${t.glassDepth / 4}px ${t.glassDepth / 2}px rgba(0,0,0,${t.glassDepth / 170});
       `;
@@ -1009,23 +1086,24 @@
     const nav = SELECTOR.navbar;
     const bar = SELECTOR.player;
     const painted = [];
-    const surface = (selector, base, opacity, custom = false) => {
+    const surface = (selector, base, opacity, part, custom = false) => {
       painted.push(selector);
-      return `${scoped(selector)} { ${glass(base, opacity, custom)} }`;
+      return `${scoped(selector)} { ${glass(base, opacity, settings(part), custom)} }`;
     };
     const navRules = t.glassNav && t.panelOpacity > 0
-      ? ['[data-ymc-nav-dock]', ':not([data-ymc-nav-dock])']
-        .map(dock => surface(nav + dock, sidebar, t.panelOpacity / 100)).join('') : '';
+      ? surface(nav, sidebar, t.panelOpacity / 100, 'Nav') : '';
     const barRules = t.glassPlayer && (t.barCustom ? t.barOpacity > 0 : t.panelOpacity > 0) ? `
-      ${surface(t.barCustom ? bar + ' > [data-ymc-bar-backdrop]' : bar, player, t.panelOpacity / 100, t.barCustom)}
+      ${surface(t.barCustom ? bar + ' > [data-ymc-bar-backdrop]' : bar, player, t.panelOpacity / 100, 'Player', t.barCustom)}
       ${scoped(bar)} { border-radius:${t.glassRadius}px !important; }
       ${scoped(bar + ' ' + SELECTOR.barRow)} { border-radius:inherit !important; border-color:transparent !important; }
       ${scoped(bar + ' :is(' + SELECTOR.barTitle + ',' + SELECTOR.barArtist + ')')} {
         text-shadow:0 1px 4px ${luminance(player) > .44 ? '#fff8' : '#000b'};
       }` : '';
-    const vibeTint = guardedInk(t, t.text, blendedFill(t.panel, Math.max(35, t.glassOpacity * material.opacity), t.background));
+    const track = settings('Track');
+    const vibeTint = guardedInk(t, t.text, blendedFill(surfaceColor(t.panel, track.material),
+      Math.max(35, track.opacity * track.material.opacity), t.background));
     const trackRules = t.glassTrack && t.vibeTrackOpacity ? `
-      ${surface(progress, t.panel, t.vibeTrackOpacity / 100)}
+      ${surface(progress, t.panel, t.vibeTrackOpacity / 100, 'Track')}
       ${scoped(progress)} { color:${paint(vibeTint)} !important; --accent-color:${paint(vibeTint)} !important; }
       ${scoped(progress + ' ' + VIBE_TRACK_NAME)} {
         color:inherit !important; text-shadow:0 1px 5px ${paint(rgba(readableText(vibeTint, vibeTint), 70))};
@@ -1299,14 +1377,16 @@
     if (!waveClock) {
       waveClock = document.createElement('time');
       waveClock.dataset.ymcWaveClock = '';
-      waveClock.innerHTML = '<span data-ymc-clock-time></span><span data-ymc-clock-date></span>';
+      waveClock.innerHTML = '<span data-ymc-clock-time></span><span data-ymc-clock-face aria-hidden="true" hidden>'
+        + '<i data-ymc-clock-hand="hour"></i><i data-ymc-clock-hand="minute"></i><i data-ymc-clock-hand="second"></i></span>'
+        + '<span data-ymc-clock-date></span>';
     }
     if (waveClock.parentElement !== host) {
       host.dataset.ymcClockHost = '';
       host.append(waveClock);
     }
     const locale = document.documentElement.lang || navigator.language;
-    const formatKey = [locale, theme.clockFormat, theme.clockSeconds].join('/');
+    const formatKey = [locale, theme.clockFormat, theme.clockSeconds, theme.clockStyle].join('/');
     if (clockFormatKey !== formatKey) {
       clockFormatKey = formatKey;
       clockFormat = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit',
@@ -1321,7 +1401,26 @@
     clockShowDate = showDate;
     const now = new Date();
     waveClock.dateTime = now.toISOString();
-    setText(waveClock.firstElementChild, clockFormat.format(now));
+    const digits = waveClock.firstElementChild;
+    if (theme.clockStyle === 'tiles' || theme.clockStyle === 'stacked') {
+      digits.replaceChildren(...clockFormat.formatToParts(now).map(({ type, value }) => {
+        const part = document.createElement('span');
+        if (type === 'dayPeriod') part.dataset.ymcClockPeriod = '';
+        else if (type === 'literal') part.dataset.ymcClockSeparator = '';
+        else part.dataset.ymcClockNumber = type;
+        part.textContent = value;
+        return part;
+      }));
+    } else if (digits.childElementCount) digits.textContent = clockFormat.format(now);
+    else setText(digits, clockFormat.format(now));
+    const dial = digits.nextElementSibling;
+    dial.hidden = theme.clockStyle !== 'analog';
+    if (!dial.hidden) {
+      const minute = now.getMinutes() + (theme.clockSeconds ? now.getSeconds() / 60 : 0);
+      dial.style.setProperty('--ymc-clock-hour', (now.getHours() + minute / 60) * 30 + 'deg');
+      dial.style.setProperty('--ymc-clock-minute', minute * 6 + 'deg');
+      dial.style.setProperty('--ymc-clock-second', now.getSeconds() * 6 + 'deg');
+    }
     waveClock.lastElementChild.hidden = !showDate;
     if (showDate) setText(waveClock.lastElementChild, dateFormat.format(now));
   }
@@ -1460,7 +1559,8 @@
     if (!hero && waveKey) syncWavePalette(null);
   }
 
-  const NAV_ENTRY = '[data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[data-test-id="PIN_ITEM"],[class*="PinItem_root__"],[class*="NavbarDesktop_logoWrapper__"],[class*="NavbarDesktop_disabledNavigationItem__"]';
+  const NAV_ROUTE = '[data-test-id^="NAVBAR_NAVIGATION_ITEM_"],[class*="NavbarDesktop_disabledNavigationItem__"]';
+  const NAV_ENTRY = NAV_ROUTE + ',[data-test-id="PIN_ITEM"],[class*="PinItem_root__"],[class*="NavbarDesktop_logoWrapper__"]';
   const NAV_SLOT = '[class*="DefaultLayout_navbar__"]';
   const NAV_AVATAR = '[data-test-id="USER_PROFILE_AVATAR_CONTAINER"],[class*="UserProfile_avatarContainer__"]';
   const NAV_STYLES = `
@@ -1471,13 +1571,13 @@
     }
 
     [data-ymc-nav-dock] {
-      --ymc-nav-top:max(32px,var(--ymc-nav-inset)); --ymc-nav-bottom:var(--ymc-nav-inset);
+      --ymc-nav-top:max(var(--ymc-native-titlebar-height),var(--ymc-nav-inset)); --ymc-nav-bottom:var(--ymc-nav-inset);
       --ymc-icon-box:calc(var(--ymc-nav-icon-size) + 8px);
       --ymc-cell-height:calc(var(--ymc-icon-box) + 34px);
       position:fixed !important; z-index:12; box-sizing:border-box !important; margin:0 !important;
       display:grid !important; gap:var(--ymc-nav-gap) !important; reading-flow:grid-rows;
       padding:6px !important; overflow:auto !important; scrollbar-width:none; overscroll-behavior:contain;
-      border-radius:var(--ym-radius-size-m,16px); backdrop-filter:none !important;
+      border-radius:var(--ym-radius-size-m,16px); backdrop-filter:none !important; -webkit-app-region:no-drag;
     }
     [data-ymc-nav-dock]::-webkit-scrollbar { display:none; }
     [data-ymc-nav-dock] [data-ymc-nav-path] { display:contents !important; }
@@ -1540,7 +1640,7 @@
       box-sizing:border-box !important; padding:3px 4px !important; margin:0 !important;
       min-inline-size:0 !important; max-inline-size:none !important;
       min-block-size:0 !important; overflow:visible !important; font-size:0 !important; line-height:0 !important;
-      text-align:center !important; border-radius:10px !important;
+      text-align:center !important; border-radius:10px !important; -webkit-app-region:no-drag;
     }
     [data-ymc-nav-dock] [data-ymc-nav-action]:not([data-ymc-nav-cell]) { inline-size:100% !important; block-size:100% !important; }
     :is([data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])[data-ymc-nav-compact] [data-ymc-nav-action] {
@@ -1590,7 +1690,7 @@
     [data-ymc-nav-dock] [data-ymc-nav-cell="brand"] [class*="NavbarDesktop_collapseButton__"] { display:none !important; }
     [data-ymc-nav-dock] [data-ymc-nav-brand-link] {
       display:grid !important; place-items:center !important; inline-size:100% !important; min-inline-size:0 !important;
-      padding:0 !important; margin:0 !important; overflow:visible !important;
+      padding:0 !important; margin:0 !important; overflow:visible !important; -webkit-app-region:no-drag;
     }
     :is([data-ymc-nav-dock="top"],[data-ymc-nav-dock="bottom"]) [data-ymc-nav-brand-link] {
       place-self:start center !important; block-size:var(--ymc-icon-box) !important; margin-block-start:3px !important;
@@ -1651,7 +1751,9 @@
     [data-ymc-nav-dock] [data-ymc-nav-brand-link]:focus-visible { outline:2px solid currentColor; outline-offset:-2px; }
 
     [data-ymc-nav-slot] { width:0 !important; min-width:0 !important; margin:0 !important; }
-    [data-ymc-search-nav] { position:relative; z-index:40 !important; }
+    [data-ymc-search-nav] { position:relative; z-index:12 !important; overflow:visible !important; }
+    [data-ymc-search-content] { isolation:isolate; z-index:0 !important; }
+    [data-ymc-search-nav] :is(a,button,[role="link"],[role="button"]) { -webkit-app-region:no-drag; }
     [data-ymc-nav-layout] { box-sizing:border-box; }
     [data-ymc-nav-layout]:has([data-ymc-nav-slot]) { grid-template-columns:0 minmax(0,1fr) !important; }
     @media (max-width:600px) {
@@ -1659,7 +1761,9 @@
     }
     [data-ymc-nav-layout="left"] { padding-inline-start:var(--ymc-nav-reserve) !important; }
     [data-ymc-nav-layout="right"] { padding-inline-end:var(--ymc-nav-reserve) !important; }
-    [data-ymc-nav-layout="top"] { padding-block-start:calc(var(--ymc-nav-safe-top,32px) + var(--ymc-nav-reserve)) !important; }
+    [data-ymc-nav-layout="top"] {
+      padding-block-start:calc(max(var(--ymc-native-titlebar-height),var(--ymc-nav-inset,0px)) + var(--ymc-nav-reserve)) !important;
+    }
     [data-ymc-nav-layout="bottom"] { padding-block-end:var(--ymc-nav-reserve) !important; }
 
     [data-ymc-nav-dock], [data-ymc-nav-collapsed] { transition:opacity .18s ease,transform .18s ease,visibility .18s; }
@@ -1832,7 +1936,8 @@
   function navCell(nav, entry) {
     if (entry.kind !== 'route') return entry.node;
     const row = entry.node.closest('li');
-    return row && nav.contains(row) ? row : entry.node;
+    return row && nav.contains(row) && [...row.querySelectorAll(NAV_ROUTE)].every(node =>
+      entry.node.contains(node) || node.contains(entry.node)) ? row : entry.node;
   }
 
   function planDockCell(next, nav, cell, kind, order) {
@@ -1949,7 +2054,6 @@
     const collapsed = navRoot.hasAttribute('data-ymc-nav-collapsed');
     const { sidebarInset } = theme;
     if (horizontalDock(dock)) {
-      navLayout?.style.setProperty('--ymc-nav-safe-top', Math.max(32, sidebarInset) + 'px');
       navLayout?.style.setProperty('--ymc-nav-reserve', collapsed ? '0px' : Math.ceil(rect.height + 6) + 'px');
     } else if (dock) {
       navLayout?.style.setProperty('--ymc-nav-reserve', collapsed ? '0px' : Math.ceil(rect.width + sidebarInset * 2) + 'px');
@@ -1975,20 +2079,34 @@
     dock.scrollLeft += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? dock.clientWidth : 1);
   }
 
-  function desktopNavbar() {
-    const nodes = [...document.querySelectorAll(SELECTOR.navbar)];
-    return nodes.find(node => node.getClientRects().length) || nodes[0];
+  function activeSearchPage() {
+    if (!isStyled()) return null;
+    const input = [...document.querySelectorAll(SEARCH_INPUT)]
+      .find(node => node.getClientRects().length && !node.closest('[aria-hidden="true"],[hidden],[inert]'));
+    return input?.closest(SEARCH_PAGE) || null;
   }
 
-  function syncSidebar(nav, fullscreen) {
+  function desktopNavbar(search = activeSearchPage()) {
+    const nodes = [...document.querySelectorAll(SELECTOR.navbar)].filter(node => {
+      const suppressed = node.closest('[hidden],[aria-hidden="true"],[inert]:not([data-ymc-nav-collapsed])');
+      return !suppressed && node.getClientRects().length;
+    });
+    const visible = nodes.filter(node => node === collapsedNav || getComputedStyle(node).visibility === 'visible');
+    const layout = search?.closest(SELECTOR.layout);
+    return (layout && visible.find(node => node.closest(SELECTOR.layout) === layout)) ||
+      (visible.includes(navRoot) ? navRoot : visible[0]) || (nodes.includes(navRoot) ? navRoot : undefined);
+  }
+
+  function syncSidebar(nav, fullscreen, search = activeSearchPage()) {
     const profile = nav?.querySelector(SELECTOR.profile);
-    const available = Boolean(isStyled() && !fullscreen && nav && (theme.sidebarDock !== 'native' || nav.getClientRects().length));
+    const available = Boolean(isStyled() && !fullscreen && nav);
     const move = available && theme.sidebarDock !== 'native';
     const collapsed = available && theme.sidebarCollapsed;
     const edit = available && Boolean(move || theme.sidebarOrder || theme.sidebarHidden);
     const edge = move ? theme.sidebarDock : 'left';
     const layout = move || collapsed ? nav.closest(SELECTOR.layout) : null;
     const slot = move || collapsed ? nav.closest(NAV_SLOT) : null;
+    syncSearchNavigation(nav, available ? nav.closest(SELECTOR.layout) : null, search);
     if (!collapsed) cancelNavReveal();
     if (navRoot !== nav) {
       navRoot?.removeAttribute('data-ymc-nav-dock');
@@ -2007,10 +2125,13 @@
     if (navLayout !== layout) {
       navLayout?.removeAttribute('data-ymc-nav-layout');
       navLayout?.style.removeProperty('--ymc-nav-reserve');
-      navLayout?.style.removeProperty('--ymc-nav-safe-top');
+      navLayout?.style.removeProperty('--ymc-nav-inset');
     }
     if (navSlot !== slot) navSlot?.removeAttribute('data-ymc-nav-slot');
     navLayout = layout;
+    if (layout && layout.style.getPropertyValue('--ymc-nav-inset') !== theme.sidebarInset + 'px') {
+      layout.style.setProperty('--ymc-nav-inset', theme.sidebarInset + 'px');
+    }
     navSlot = slot;
     if (slot && !slot.hasAttribute('data-ymc-nav-slot')) slot.setAttribute('data-ymc-nav-slot', '');
     setNavCollapsed(collapsed ? nav : null, edge);
@@ -2060,61 +2181,26 @@
     renderNavMenu();
   }
 
-  let searchExit, searchNavSlot, searchHomeURL;
-  const desktopSearchHome = () => location.protocol === 'music-application:' && location.host === 'desktop'
-    ? 'music-application://desktop/' : '';
-  function searchHome() {
-    const target = navRoot?.querySelector('[data-test-id="NAVBAR_NAVIGATION_ITEM_HOME"]') ||
-      navRoot?.querySelector(SEARCH_HOME);
-    return target?.matches('a,button') ? target : target?.querySelector('a[href],button');
-  }
-
-  function leaveSearch() {
-    const link = searchHome();
-    if (link) link.click();
-    else {
-      const destination = searchHomeURL || desktopSearchHome();
-      if (destination) location.assign(destination);
+  let searchNavBranch, searchContentBranch;
+  function syncSearchNavigation(nav, layout, search) {
+    const branchInLayout = node => {
+      while (node && node !== layout && node.parentElement !== layout) node = node.parentElement;
+      return node?.parentElement === layout ? node : null;
+    };
+    const content = search && layout?.contains(search) ? branchInLayout(search) : null;
+    const branch = content && branchInLayout(nav);
+    const nextNav = branch && branch !== content ? branch : null;
+    const nextContent = nextNav ? content : null;
+    if (searchNavBranch !== nextNav) {
+      searchNavBranch?.removeAttribute('data-ymc-search-nav');
+      nextNav?.setAttribute('data-ymc-search-nav', '');
+      searchNavBranch = nextNav;
     }
-  }
-
-  function syncSearchExit() {
-    const home = searchHome();
-    if (home instanceof HTMLAnchorElement && home.hasAttribute('href')) {
-      const href = URL.parse(home.href);
-      if (href?.protocol === location.protocol && href.host === location.host && href.pathname !== location.pathname) {
-        searchHomeURL = href.href;
-      }
+    if (searchContentBranch !== nextContent) {
+      searchContentBranch?.removeAttribute('data-ymc-search-content');
+      nextContent?.setAttribute('data-ymc-search-content', '');
+      searchContentBranch = nextContent;
     }
-    const search = isStyled() && document.querySelector(SEARCH_INPUT)?.closest(SEARCH_PAGE);
-    const visible = search && search.getClientRects().length && !search.closest('[aria-hidden="true"],[hidden]');
-    const slot = visible && !theme.sidebarCollapsed ? navSlot : null;
-    if (searchNavSlot !== slot) {
-      searchNavSlot?.removeAttribute('data-ymc-search-nav');
-      slot?.setAttribute('data-ymc-search-nav', '');
-      searchNavSlot = slot;
-    }
-    if (!visible || (!home && !searchHomeURL && !desktopSearchHome())) {
-      searchExit?.remove();
-      return;
-    }
-    if (!searchExit) {
-      searchExit = document.createElement('button');
-      searchExit.type = 'button';
-      searchExit.dataset.ymcSearchExit = '';
-      searchExit.textContent = '← Выйти из поиска';
-      searchExit.setAttribute('aria-keyshortcuts', 'Escape');
-      searchExit.addEventListener('click', leaveSearch);
-    }
-    const dock = !theme.sidebarCollapsed && navRoot?.getBoundingClientRect();
-    const top = theme.sidebarDock === 'top' && dock?.height ? Math.max(34, Math.ceil(dock.bottom + 8)) : 34;
-    const editor = activeDialog === 'editor' ? host.getBoundingClientRect().right - $('ymc-editor').getBoundingClientRect().left : 0;
-    const right = theme.sidebarDock === 'right' && dock?.width ? Math.ceil(innerWidth - dock.left + 10) : editor + 14;
-    const topValue = top + 'px', rightValue = right + 'px';
-    if (searchExit.style.top !== topValue) searchExit.style.top = topValue;
-    if (searchExit.style.right !== rightValue) searchExit.style.right = rightValue;
-    const container = document.fullscreenElement || document.body;
-    if (searchExit.parentElement !== container) container.append(searchExit);
   }
 
   function makeStyles(t, cover = '', portraitBackground = '', paint = literal) {
@@ -4073,6 +4159,7 @@
       glassLight: t.glassCustom ? t.glassLight : mixHex(t.accent, '#FFFFFF', .78),
       clockColor: t.clockCustom ? t.clockColor : t.text,
       clockFill: t.clockCustom ? t.clockFill : t.panel,
+      clockAccent: t.clockCustom ? t.clockAccent : t.accent,
       edgeGlowStart: t.edgeGlowCustom ? t.edgeGlowStart : t.accent,
       edgeGlowEnd: t.edgeGlowCustom ? t.edgeGlowEnd : t.textSecondary,
       playlistStart: t.playlistGradient === 'palette' ? t.panel : t.playlistStart,
@@ -4098,7 +4185,7 @@
       accentPress: mixHex(palette.accent, '#000000', .2),
       portraitColor: palette.portraitAccent,
       glassTint: palette.accent, glassLight: mixHex(palette.accent, '#FFFFFF', .67),
-      clockColor: palette.text, clockFill: palette.panel,
+      clockColor: palette.text, clockFill: palette.panel, clockAccent: palette.accent,
       edgeGlowStart: palette.accent, edgeGlowEnd: palette.portraitAccent,
       vibeIcon: palette.vibeIcon, vibeTransport: palette.vibeTransport,
       vibeFill: palette.panel, vibeHover: palette.gradientEnd, vibePlayFill: palette.accent,
@@ -5432,15 +5519,25 @@
             ${range('glowIntensity', 'Свечение акцентных кнопок')}
             <details class="settings-more"><summary>Liquid Glass</summary>
               <label>Материал<select data-prop="liquidGlass"><option value="off">Выключен</option>
-                <option value="regular">Мягкое стекло</option><option value="clear">Прозрачное стекло</option>
-                <option value="frosted">Матовое стекло</option></select></label>
+                ${glassMaterialOptions}</select></label>
               ${whenAvailable('glassOpacity', 'liquidGlass', `
                 ${check('glassNav', 'Стекло на панели навигации')}${check('glassPlayer', 'На нижнем плеере')}
                 ${check('glassTrack', 'На строке трека «Моей волны»')}
-                ${range('glassOpacity', 'Плотность стекла')}${range('glassBlur', 'Размытие за стеклом')}
+                ${check('glassSeparate', 'Настраивать поверхности отдельно')}
+                ${whenAvailable('glassCommon', 'glassSeparate', range('glassOpacity', 'Плотность стекла') + range('glassBlur', 'Размытие за стеклом'))}
+                ${GLASS_SURFACES.map(([part, label]) => whenAvailable('glass' + part + 'Material', 'glassSeparate', `
+                  <details class="settings-more"><summary>${label}</summary>
+                    <label>Материал<select data-prop="glass${part}Material">${glassMaterialOptions}</select></label>
+                    ${range('glass' + part + 'Opacity', 'Плотность')}${range('glass' + part + 'Blur', 'Размытие')}
+                  </details>`)).join('')}
                 ${range('glassSaturation', 'Насыщенность за стеклом')}${range('glassRadius', 'Скругление стекла')}
-                ${range('glassShine', 'Яркость блика')}${range('glassAngle', 'Направление блика')}
-                ${range('glassRim', 'Чёткость кромки')}${range('glassDepth', 'Глубина тени')}
+                <label>Рисунок блика<select data-prop="glassReflection"><option value="soft">Мягкий</option>
+                  <option value="diagonal">Диагональный</option><option value="top">По верхнему краю</option>
+                  <option value="off">Без блика</option></select></label>
+                ${whenAvailable('glassShine', 'glassReflection', range('glassShine', 'Яркость блика') +
+                  whenAvailable('glassAngle', 'glassReflection', range('glassAngle', 'Направление блика')))}
+                ${range('glassRimWidth', 'Толщина кромки')}${whenAvailable('glassRim', 'glassRimWidth', range('glassRim', 'Чёткость кромки'))}
+                ${range('glassDepth', 'Глубина тени')}
                 ${range('glassTintAmount', 'Сила оттенка')}${check('glassCustom', 'Свои оттенок и блик')}
                 ${whenAvailable('glassTint', 'glassCustom', `<div class="grid">${swatch('glassTint', 'Оттенок стекла')}${swatch('glassLight', 'Цвет блика')}</div>`)}
                 ${whenAvailable('glassBackdrop', 'liquidGlass', check('glassBackdrop', 'Цветные блики на градиентном фоне'))}
@@ -5553,6 +5650,9 @@
               </select></label>
               ${whenAvailable('waveClockSize', 'waveClock', `
                 <div class="grid">
+                  <label>Вид часов<select data-prop="clockStyle"><option value="digital">Цифровые</option>
+                    <option value="tiles">Табло с секциями</option><option value="stacked">Цифры в столбик</option>
+                    <option value="outline">Контурные цифры</option><option value="analog">Стрелочные</option></select></label>
                   <label>Положение<select data-prop="clockPosition"><option value="topLeft">Сверху слева</option>
                     <option value="topCenter">Сверху по центру</option><option value="topRight">Сверху справа</option>
                     <option value="bottomLeft">Снизу слева</option><option value="bottomCenter">Снизу по центру</option>
@@ -5561,8 +5661,12 @@
                     <option value="rounded">Скруглённый</option><option value="mono">Моноширинный</option><option value="serif">С засечками</option></select></label>
                   <label>Формат<select data-prop="clockFormat"><option value="24">24 часа</option><option value="12">12 часов</option></select></label>
                 </div>
+                ${whenAvailable('clockMarks', 'clockStyle', `<label>Деления на циферблате<select data-prop="clockMarks">
+                  <option value="none">Без делений</option><option value="hours">Часовые</option>
+                  <option value="minutes">Минутные</option></select></label>`)}
                 ${check('clockSeconds', 'Показывать секунды')}
-                ${range('waveClockSize', 'Размер часов')}${range('clockWeight', 'Толщина цифр')}${range('clockSpacing', 'Расстояние между цифрами')}
+                ${range('waveClockSize', 'Размер часов')}
+                ${whenAvailable('clockWeight', 'clockStyle', range('clockWeight', 'Толщина цифр') + range('clockSpacing', 'Расстояние между цифрами'))}
                 ${range('clockX', 'Отступ по горизонтали')}${range('clockY', 'Отступ по вертикали')}
                 ${whenAvailable('clockDatePosition', 'waveClock', `<label>Положение даты<select data-prop="clockDatePosition">
                   <option value="above">Над часами</option><option value="below">Под часами</option></select></label>
@@ -5572,6 +5676,7 @@
                 ${whenAvailable('clockRadius', 'clockPlate', range('clockRadius', 'Скругление подложки'))}
                 ${check('clockCustom', 'Свои цвета часов')}
                 ${whenAvailable('clockColor', 'clockCustom', `<div class="grid">${swatch('clockColor', 'Цвет часов')}
+                  ${whenAvailable('clockAccent', 'clockStyle', swatch('clockAccent', 'Цвет деталей часов'))}
                   ${whenAvailable('clockFill', 'clockPlate', swatch('clockFill', 'Цвет подложки часов'))}</div>`)}
               `)}
             </details>
@@ -6331,9 +6436,16 @@
       playerOverlayDetails: !t.playerOverlay,
       contrastThreshold: !t.contrastGuard,
       glassOpacity: t.liquidGlass === 'off', glassTint: t.liquidGlass === 'off' || !t.glassCustom,
+      glassCommon: t.glassSeparate, glassShine: t.glassReflection === 'off',
+      glassAngle: !['soft', 'diagonal'].includes(t.glassReflection), glassRim: !t.glassRimWidth,
+      ...Object.fromEntries(GLASS_SURFACES.map(([part]) => [
+        'glass' + part + 'Material', !t.glassSeparate || !t['glass' + part]
+      ])),
       glassBackdrop: t.liquidGlass === 'off' || t.mode !== 'gradient' || withMedia || (t.addonEnabled && t.addonPalette),
       edgeGlowStrength: t.edgeGlow === 'off', edgeGlowStart: t.edgeGlow === 'off' || !t.edgeGlowCustom,
       waveClockSize: t.waveClock === 'off', clockX: t.clockPosition.endsWith('Center'),
+      clockMarks: t.clockStyle !== 'analog', clockWeight: t.clockStyle === 'analog',
+      clockAccent: !['tiles', 'stacked', 'analog'].includes(t.clockStyle),
       clockDatePosition: t.waveClock !== 'date', clockRadius: !t.clockPlate,
       clockColor: !t.clockCustom, clockFill: !t.clockCustom || !t.clockPlate,
       barHeight: t.barLayout === 'native', barCoverSize: t.barLayout === 'native',
@@ -6932,7 +7044,11 @@
     ], steps: ['ymc-theme-surfaces', 'ymc-home-portrait'] },
     { version: '0.8.10', notes: [
       'Liquid Glass, часы и рамка получили отдельные настройки и могут менять цвета вместе с умной темой.',
-      'Из поиска можно выйти отдельной кнопкой или клавишей Escape. В магазине появилась тема «Вкусно — и точка» с фирменным логотипом.'
+      'В магазине появилась тема «Вкусно — и точка» с фирменным логотипом.'
+    ], steps: ['ymc-theme-surfaces', 'ymc-home-hero', 'ymc-theme-smart', 'ymc-home-sidebar'] },
+    { version: '0.8.11', notes: [
+      'Штатные кнопки навигации остаются доступны на странице поиска.',
+      'Пять видов часов, хрустальное и дымчатое стекло, отдельные материалы и размытие для поверхностей.'
     ], steps: ['ymc-theme-surfaces', 'ymc-home-hero', 'ymc-theme-smart', 'ymc-home-sidebar'] }
   ];
 
@@ -7467,8 +7583,8 @@
     const fullscreen = Boolean(document.fullscreenElement) ||
       [...document.querySelectorAll(SELECTOR.fullscreen)].some(el => el.getClientRects().length && !el.closest('[aria-hidden="true"]'));
     syncAppBackground();
-    syncSidebar(desktopNavbar(), fullscreen);
-    syncSearchExit();
+    const search = activeSearchPage();
+    syncSidebar(desktopNavbar(search), fullscreen, search);
     syncWaveMount(fullscreen);
     syncPatternMount(fullscreen);
     syncBeatPortrait(fullscreen);
@@ -7629,15 +7745,7 @@
         if (!e.repeat) showDialog(activeDialog === 'editor' ? '' : 'editor', activeDialog ? null : launcher);
         return;
       }
-      if (!activeDialog) {
-        if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented && searchExit?.isConnected &&
-            !target.closest?.('[role="dialog"],dialog[open]')) {
-          e.preventDefault();
-          e.stopPropagation();
-          searchExit.click();
-        }
-        return;
-      }
+      if (!activeDialog) return;
       if (e.key === 'Escape') {
         if ($('ymc-update-toast').contains(target)) return;
         e.preventDefault();
@@ -8061,11 +8169,13 @@
     const nativeMountSelector = [SELECTOR.navbar, SELECTOR.profile, NAV_ENTRY, SEARCH_PAGE, SEARCH_INPUT, VIBE_HERO, VIBE_ALBUM,
       SELECTOR.vibeArtist, SELECTOR.vibeTrack, VIBE_TRACK_NAME,
       PORTRAIT, SELECTOR.player, SELECTOR.fullscreen, '[class*="VibePage_vibeAnimation__"] canvas'].join(', ');
+    const routeVisibility = [SELECTOR.layout, SELECTOR.navbar, SEARCH_PAGE, SEARCH_INPUT].join(', ');
     new MutationObserver(records => {
       if (!host.isConnected || !baseStyle.isConnected || !waveFilter.isConnected ||
-          records.some(record => [...record.addedNodes, ...record.removedNodes].some(node =>
+          records.some(record => record.type === 'attributes' ? record.target.matches(routeVisibility) :
+            [...record.addedNodes, ...record.removedNodes].some(node =>
             node.nodeType === 1 && (node.matches(nativeMountSelector) || node.querySelector(nativeMountSelector))))) scheduleMounts();
-    }).observe(document, { childList: true, subtree: true });
+    }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-hidden', 'hidden', 'inert'] });
     for (const event of ['load', 'error']) {
       document.addEventListener(event, ({ target }) => {
         if (target instanceof HTMLImageElement && target.matches(SELECTOR.portrait)) scheduleMounts();
@@ -8131,7 +8241,8 @@
         width:2.75rem; justify-content:center; padding:0;
       }
       ${SELECTOR.navbar}:has([class*="NavbarDesktopUserWidget_userMeta_collapsed__"]) [data-ymc-launcher] span { display:none; }
-      :root { --ymc-dock:0px; --ymc-reserved-width:0px; }
+      :root { --ymc-dock:0px; --ymc-reserved-width:0px; --ymc-native-titlebar-height:32px; }
+      body:has([class*="TitleBar_root__"]) { --ymc-native-titlebar-height:max(32px,var(--ym-spacer-size-xxxl,32px)); }
       html[data-ymc-editor-open] { --ymc-reserved-width:var(--ymc-dock); }
       html[data-ymc-editor-open] ${SELECTOR.layout} { width:calc(100% - var(--ymc-dock)) !important; min-width:0 !important; }
       body:has(> [data-ymc-app-backdrop],> [data-ymc-pattern],> [data-ymc-page-spectrum],> [data-ymc-backdrop-fade]) { isolation:isolate; }
@@ -8141,12 +8252,6 @@
       [data-ymc-backdrop-fade] { position:fixed; inset:0; z-index:-3; pointer-events:none; }
       [data-ymc-pattern] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-2; pointer-events:none; overflow:hidden; }
       ${NAV_STYLES}
-      [data-ymc-search-exit] {
-        position:fixed; z-index:2147483638; cursor:pointer; border:1px solid color-mix(in srgb,currentColor 30%,transparent);
-        border-radius:999px; padding:7px 12px; font:600 12px/1.2 system-ui,sans-serif;
-        background:var(--ym-background-color-primary-enabled-popover,#21242b); color:var(--ym-controls-color-primary-text-enabled,#fff);
-      }
-      [data-ymc-search-exit]:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
       ${patternRules('[data-ymc-pattern]')}
       [data-ymc-page-spectrum] { position:fixed; inset:auto var(--ymc-reserved-width) 0 0; height:var(--ymc-spectrum-height); z-index:-1; pointer-events:none; }
       [data-ymc-page-spectrum] canvas { display:block; width:100%; height:100%; opacity:var(--ymc-spectrum-alpha); }
