@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.8.9 for Windows and macOS. MIT.
+ * YMusic Customizer v0.8.10 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.8.9';
+  const version = '0.8.10';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -72,6 +72,9 @@
     smartPortrait: { label: 'Аура портрета', fields: ['portraitColor'] },
     smartSpectrum: { label: 'Эквалайзер', fields: ['spectrumStart', 'spectrumMid', 'spectrumEnd'] },
     smartPlaylist: { label: 'Шапка плейлиста', fields: ['playlistStart', 'playlistEnd'] },
+    smartGlass: { label: 'Оттенок и блики Liquid Glass', fields: ['glassTint', 'glassLight'] },
+    smartClock: { label: 'Часы и их подложка', fields: ['clockColor', 'clockFill'] },
+    smartFrame: { label: 'Светящаяся рамка', fields: ['edgeGlowStart', 'edgeGlowEnd'] },
     smartButtons: { label: 'Кнопки и стрелки', fields: [
       'vibeIcon', 'vibeTransport', 'vibeFill', 'vibeHover', 'vibePlayFill',
       'barButtonFill', 'barButtonText', 'barButtonHover', 'playlistPrimary', 'playlistPrimaryText',
@@ -87,6 +90,9 @@
     text: '#F7F4FF', textSecondary: '#CDC2E0', mode: 'gradient', gradientEnd: '#392057',
     blur: 15, round: 16, panelOpacity: 83, backgroundDim: 15,
     liquidGlass: 'off', glassBackdrop: false,
+    glassNav: true, glassPlayer: true, glassTrack: true, glassCustom: false,
+    glassTint: '#46738B', glassLight: '#BBEBFF', glassTintAmount: 24, glassOpacity: 74,
+    glassBlur: 13, glassSaturation: 122, glassShine: 42, glassRim: 34, glassDepth: 26, glassRadius: 25, glassAngle: 145,
     gradientAngle: 140, font: 'native', scale: 100, manualScale: false,
     separateSurfaces: false, sidebar: '#20182F', player: '#1D1730',
     cardRound: 16, widePlayer: false, playerOverlay: true,
@@ -94,9 +100,16 @@
     vibeCoverOpacity: 100, vibeTrackOpacity: 100, vibeControlsOpacity: 100,
     vibeAnimation: true, hideVibeTrack: false, hideVibeControls: false, appMediaEnabled: true,
     showVibePortrait: true, showVibeHeading: true,
-    waveClock: 'off', waveClockSize: 100, waveAlbumCard: false,
+    waveClock: 'off', waveClockSize: 82, waveAlbumCard: false,
+    clockFont: 'system', clockWeight: 400, clockSpacing: -2, clockPosition: 'topRight',
+    clockX: 20, clockY: 18, clockFormat: '24', clockSeconds: false,
+    clockDatePosition: 'below', clockDateSize: 28, clockCustom: false,
+    clockColor: '#E4F3FF', clockFill: '#101C30', clockOpacity: 100, clockPlate: 0, clockRadius: 22, clockGlow: 10,
     edgeGlow: 'off', edgeGlowStrength: 65, edgeGlowCustom: false,
     edgeGlowStart: '#FF8A78', edgeGlowEnd: '#FF61B6',
+    edgeGlowStyle: 'full', edgeGlowInset: 4, edgeGlowRadius: 16, edgeGlowWidth: 2,
+    edgeGlowHalo: 36, edgeGlowSpread: 18, edgeGlowAngle: 135,
+    navBrand: 'native',
     waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 72, waveTone: 60, waveBeat: 70,
     waveClearRail: true, waveNativeOpacity: 100, vibeAdaptiveCover: false, vibeHideCoverWithPortrait: false, vibeAdaptiveCoverSize: 78,
     vibeTrackLayout: 'native',
@@ -168,12 +181,22 @@
     'Purple Glass': { accent:'#B56CFF',background:'#0E0918',panel:'#211630',text:'#FBF6FF',gradientEnd:'#54247A',
       likedCustom:true,likedColor:'#FF6AAE',portraitEffect:'glow',portraitIntensity:65,panelOpacity:70,blur:22,motionEnabled:true },
     'Liquid Glass': {
-      liquidGlass:'regular',glassBackdrop:true, accent:'#A5EEEF',background:'#071626',panel:'#172940',
-      text:'#F2FAFF',textSecondary:'#CCDDEF',gradientEnd:'#1C2242',gradientAngle:135,blur:18,round:28,cardRound:18,
+      liquidGlass:'regular',glassBackdrop:true,glassOpacity:62,glassCustom:true,glassTint:'#567C8E',glassLight:'#E2F4FF',
+      accent:'#B6E8F1',background:'#101927',panel:'#202D3D',
+      text:'#F4F8FB',textSecondary:'#C7D8E7',gradientEnd:'#25213B',gradientAngle:145,blur:18,round:26,cardRound:20,
       panelOpacity:55,barLayout:'floating',barProgressMode:'always',sidebarDock:'top',sidebarAlign:'center',sidebarCompact:true,
       sidebarSize:56,sidebarInset:14,showVibeHeading:false,waveNativeOpacity:38,
       portraitEffect:'bloom',portraitIntensity:65,portraitSpread:30,portraitBeat:true,portraitBeatStrength:95,
       vibeAdaptiveCover:true,vibeAdaptiveCoverSize:76,vibeHideCoverWithPortrait:true,likedCustom:true,likedColor:'#F79ECD'
+    },
+    'Вкусно — и точка': {
+      navBrand:'vkusno',accent:'#FF9A40',background:'#13271C',gradientEnd:'#264F36',panel:'#203D2B',
+      text:'#FFF6E9',textSecondary:'#DECDB6',likedCustom:true,likedColor:'#FB471F',
+      liquidGlass:'regular',glassCustom:true,glassTint:'#264F36',glassLight:'#FFD4AA',
+      glassOpacity:62,glassShine:28,glassRim:26,barLayout:'floating',barProgressMode:'always',
+      sidebarDock:'top',sidebarAlign:'center',sidebarSize:56,sidebarInset:12,sidebarCompact:false,waveNativeOpacity:30,
+      edgeGlow:'wave',edgeGlowStyle:'corners',edgeGlowStrength:46,edgeGlowCustom:true,edgeGlowStart:'#EE7203',
+      edgeGlowEnd:'#FB471F',edgeGlowHalo:24,edgeGlowWidth:1,cardRound:18,portraitEffect:'glow'
     },
     'Deep Blue': { accent:'#3CCBFF',background:'#03131F',panel:'#0D2A3B',text:'#EAF9FF',gradientEnd:'#075986',
       likedCustom:true,likedColor:'#52E0FF',spectrumStart:'#27A8FF',spectrumEnd:'#62FFE3',barSpectrum:true,spectrumStyle:'line' },
@@ -242,7 +265,7 @@
       text:'#F6FFE7',textSecondary:'#CBDDB7',gradientEnd:'#24432C',edgeGlowStart:'#DBFF79',edgeGlowEnd:'#91F67D' }
   };
   const PRESET_CATEGORIES = {
-    'Purple Glass':'Стекло','Liquid Glass':'Стекло','Deep Blue':'Природа','Forest':'Природа','Pure AMOLED':'Минимализм',
+    'Purple Glass':'Стекло','Liquid Glass':'Стекло','Вкусно — и точка':'Тёплые','Deep Blue':'Природа','Forest':'Природа','Pure AMOLED':'Минимализм',
     'Закат':'Природа','Северное сияние':'Динамика','Киберпанк':'Неон','Снежный день':'Светлые',
     'Сакура':'Светлые','Песок и кофе':'Тёплые','Ночной монохром':'Минимализм','Гранат':'Тёплые',
     'Неоновый лайм':'Неон','Ультрафиолет':'Неон','Лазерная волна':'Неон','Красный импульс':'Динамика',
@@ -275,7 +298,11 @@
     portraitEffect: ['off', 'glow', 'outline', 'both', 'bloom'], portraitColorSource: ['theme', 'background', 'custom'],
     vibeTrackLayout: ['native', 'noArtist', 'artist', 'time'],
     waveClock: ['off', 'time', 'date'], edgeGlow: ['off', 'app', 'wave'],
-    liquidGlass: ['off', 'regular', 'clear'],
+    liquidGlass: ['off', 'regular', 'clear', 'frosted'],
+    edgeGlowStyle: ['full', 'horizontal', 'vertical', 'corners'],
+    clockPosition: ['topLeft', 'topCenter', 'topRight', 'bottomLeft', 'bottomCenter', 'bottomRight'],
+    clockFont: ['system', 'rounded', 'mono', 'serif'], clockFormat: ['24', '12'], clockDatePosition: ['above', 'below'],
+    navBrand: ['native', 'vkusno'],
     patternStyle: [...Object.keys(PATTERNS), ...Object.keys(LINE_PATTERNS)], patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
     patternMotion: ['still', 'drift', 'shimmer', 'both'], patternDirection: Object.keys(PATTERN_DIRECTIONS),
     patternBeatEffect: Object.keys(PATTERN_BEAT_EFFECTS),
@@ -289,12 +316,18 @@
     'playlistSecondary', 'playlistSecondaryText', 'playlistFilter', 'playlistFilterText', 'playlistFilterBorder', 'playlistSelected',
     'playlistButtonHover', 'playlistSearchFill', 'playlistSearchText', 'barButtonFill', 'barButtonText', 'barButtonHover',
     'portraitColor', 'navigationFill', 'navigationText', 'patternPrimary', 'patternSecondary', 'sidebarEdgeColor',
-    'edgeGlowStart', 'edgeGlowEnd'];
+    'edgeGlowStart', 'edgeGlowEnd', 'glassTint', 'glassLight', 'clockColor', 'clockFill'];
   const RANGES = {
     waveNativeOpacity: [0, 100, '%'], waveOpacity: [0, 100, '%'], waveTone: [10, 100, '%'], waveBeat: [0, 180, '%'],
     vibeAdaptiveCoverSize: [35, 100, '%'], sidebarSize: [44, 120, 'px'], sidebarGap: [0, 28, 'px'], sidebarInset: [0, 36, 'px'],
     sidebarIconSize: [14, 38, 'px'],
-    waveClockSize: [55, 140, '%'], edgeGlowStrength: [0, 100, '%'],
+    waveClockSize: [35, 190, '%'], clockWeight: [200, 850, ''], clockSpacing: [-8, 18, '%'],
+    clockX: [0, 100, 'px'], clockY: [0, 120, 'px'], clockDateSize: [12, 62, '%'],
+    clockOpacity: [10, 100, '%'], clockPlate: [0, 100, '%'], clockRadius: [0, 48, 'px'], clockGlow: [0, 40, 'px'],
+    edgeGlowStrength: [0, 100, '%'], edgeGlowInset: [0, 40, 'px'], edgeGlowRadius: [0, 60, 'px'],
+    edgeGlowWidth: [0, 12, 'px'], edgeGlowHalo: [0, 100, '%'], edgeGlowSpread: [0, 80, 'px'], edgeGlowAngle: [0, 360, '°'],
+    glassTintAmount: [0, 100, '%'], glassOpacity: [0, 100, '%'], glassBlur: [0, 24, 'px'], glassSaturation: [75, 180, '%'],
+    glassShine: [0, 100, '%'], glassRim: [0, 100, '%'], glassDepth: [0, 100, '%'], glassRadius: [0, 48, 'px'], glassAngle: [0, 360, '°'],
     blur: [0, 40, 'px'], round: [0, 40, 'px'], panelOpacity: [0, 100, '%'], barOpacity: [0, 100, '%'],
     backgroundDim: [0, 80, '%'], gradientAngle: [0, 360, '°'], cardRound: [0, 40, 'px'], scale: [85, 125, '%'],
     vibeCoverOpacity: [0, 100, '%'], vibeTrackOpacity: [0, 100, '%'], vibeControlsOpacity: [0, 100, '%'],
@@ -328,7 +361,8 @@
     'vibeAnimation', 'hideVibeTrack', 'hideVibeControls', 'appMediaEnabled', 'barCustom', 'barSpectrum', 'sidebarGradient',
     'showVibePortrait', 'showVibeHeading', 'showCornerAppVersion', 'showCornerLoaderVersion',
     'showCornerAudioFormat', 'patternEnabled', 'portraitBeat', 'waveClearRail', 'vibeAdaptiveCover', 'vibeHideCoverWithPortrait',
-    'sidebarCompact', 'sidebarCollapsed', 'waveAlbumCard', 'edgeGlowCustom', 'glassBackdrop',
+    'sidebarCompact', 'sidebarCollapsed', 'waveAlbumCard', 'edgeGlowCustom', 'glassBackdrop', 'glassCustom',
+    'glassNav', 'glassPlayer', 'glassTrack', 'clockCustom', 'clockSeconds',
     'sidebarEdgeHint', 'sidebarEdgeCustom',
     'customVibeIcons', 'aiTrackCards', 'showVibeWheel', 'playlistButtons', 'likedCustom', 'likedTintImage',
     'customAccentStates', 'spectrumPeaks', 'customVibeButtons', 'hideVibeVolume', 'hideVibeMenu', 'hideVibeLike',
@@ -421,6 +455,7 @@
   const SEARCH_BOX = '[class*="AnimatedSearchInput_root__"]';
   const SEARCH_INPUT = 'input[data-test-id="SEARCH_PAGE_SEARCH_INPUT"]';
   const SEARCH_PAGE = ':is([data-test-id="SEARCH_PAGE"],[class*="SearchPage_root__"])';
+  const SEARCH_HOME = ':is([data-test-id="NAVBAR_NAVIGATION_ITEM_HOME"],[class*="NavbarDesktop_logoWrapper__"] a)';
   const SEARCH_TRACK = '[class*="CommonTrack_root__"]:not([class*="CommonTrack_root_disabled__"],[aria-disabled="true"])';
   const BUNDLED_SEARCH_AUDIO = /* YMC_SEARCH_AUDIO */ {};
   const SEARCH_SURPRISES = new Map([
@@ -821,40 +856,90 @@
     `;
   }
 
+  // Official wordmark from https://vkusnoitochka.ru/. The lettering changes ink on dark surfaces.
+  const VKUSNO_MARK = `<path fill="#EE7203" d="M22.63.091c-2.735 1.854-3.602 5.48-1.908 8.347l10.77 18.24c.146.248.48.316.72.152 2.735-1.855 3.602-5.48 1.907-8.349L23.35.243a.51.51 0 0 0-.72-.153M11.86.091c-2.734 1.854-3.6 5.48-1.906 8.347l10.77 18.24c.146.248.48.316.72.152 2.735-1.855 3.601-5.48 1.906-8.349L12.582.243A.51.51 0 0 0 11.86.09"/>
+    <path fill="#FB471F" d="M12.892 20.623c0-3.478-2.886-6.297-6.446-6.297S0 17.146 0 20.623s2.886 6.298 6.446 6.298 6.446-2.82 6.446-6.298"/>`;
+  const VKUSNO_WORDMARK = `<path fill="#264F36" d="M60.65 8.213h3.805l-.02 5.06h.69l4.155-5.06h4.546l-5.7 6.5 5.978 6.924h-4.7l-4.27-5.143h-.688l.02 5.143H60.66V8.213z"/>
+    <path fill="#264F36" d="m76.315 21.626 2.625-4.528-5.288-8.895h4.33l3.056 5.403 2.86-5.403h4.257l-7.58 13.423zm-19.153-7.074c1.1-.563 1.851-1.68 1.851-2.978 0-1.852-1.542-3.361-3.436-3.361h-8.229v13.424h8.54c2.067 0 3.733-1.64 3.733-3.653 0-1.57-1.019-2.908-2.448-3.432zm-6.12-3.35h3.004c.667 0 1.203.523 1.203 1.177s-.536 1.177-1.203 1.177h-3.004zm3.497 7.436h-3.497V16.16h3.497c.7 0 1.266.554 1.266 1.238s-.567 1.239-1.266 1.239m46.629-10.425h3.807v5.02h5.245v-5.02h3.807v13.424h-3.807v-5.102h-5.245v5.102h-3.807zm33.215 5.152h14.69v3.11h-14.69zm28.247 8.26v-7.647l-5.843 7.648h-3.312V8.203h3.807v7.365l5.647-7.365h3.507v13.423zm14.906-10.152h-4.094v-3.26h12.014v3.26h-4.115v10.164h-3.805zm-54.88-3.713c-4.042 0-7.323 3.21-7.323 7.165s3.28 7.164 7.323 7.164c4.042 0 7.325-3.21 7.325-7.164 0-3.955-3.283-7.165-7.325-7.165m0 10.606c-1.944 0-3.518-1.54-3.518-3.441 0-1.903 1.574-3.442 3.518-3.442s3.518 1.54 3.518 3.442c0 1.9-1.574 3.44-3.518 3.44m87.364-.785c-.935.17-1.903.292-2.746.292-3.59 0-5.473-1.801-5.473-4.971V8.2h3.807v4.197c0 1.479.71 2.093 2.231 2.093.762 0 1.492-.08 2.182-.252V8.203h3.805v13.423h-3.805zm5.153-9.368h3.807l-.02 5.06h.688l4.157-5.06h4.546l-5.7 6.5 5.978 6.924h-4.702l-4.268-5.143h-.69l.02 5.143h-3.805V8.213zm-21.775-.453c-4.043 0-7.325 3.21-7.325 7.165s3.282 7.164 7.325 7.164 7.322-3.21 7.322-7.164c0-3.955-3.28-7.165-7.322-7.165m0 10.606c-1.945 0-3.518-1.54-3.518-3.441 0-1.903 1.573-3.442 3.518-3.442s3.517 1.54 3.517 3.442c0 1.9-1.573 3.44-3.517 3.44m-96.56-1.45a3.55 3.55 0 0 1-2.87 1.45c-1.945 0-3.519-1.54-3.519-3.441 0-1.903 1.574-3.442 3.518-3.442 1.183 0 2.233.574 2.871 1.45l3.003-2.275a7.35 7.35 0 0 0-5.874-2.898c-4.042 0-7.323 3.21-7.323 7.165s3.28 7.164 7.323 7.164a7.36 7.36 0 0 0 5.874-2.898z"/>
+    <path fill="#264F36" d="M238.02 8.213h-3.743l-5.783 13.424h3.981l.979-2.416h5.306l.979 2.416h4.072l-5.802-13.424zm-3.456 8.11 1.553-3.793 1.533 3.793h-3.086"/>`;
+  const vkusnoLogo = (wordmark, ink) => cssUrl('data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + (wordmark ? 244 : 35) + ' 27">' +
+    VKUSNO_MARK + (wordmark ? VKUSNO_WORDMARK.replaceAll('#264F36', ink) : '') + '</svg>'));
+  function brandStyles(t, sidebar) {
+    if (t.navBrand !== 'vkusno') return '';
+    const logo = '[class*="NavbarDesktop_logoWrapper__"] a';
+    const holder = logo + ' [class*="NavbarDesktop_logo__"]';
+    const compact = ':is([data-ymc-nav-compact],[data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])';
+    const nativeCompact = '[class*="NavbarDesktop_root__"]:not([data-ymc-nav-dock]):has([class*="UserProfile_userMeta_collapsed__"])';
+    return `
+      ${scoped(holder)} { position:relative; }
+      ${scoped(holder + ' svg')} { visibility:hidden !important; }
+      ${scoped(holder + '::after')} {
+        content:""; position:absolute; inset:0; min-width:28px; pointer-events:none;
+        background:${vkusnoLogo(true, luminance(sidebar) > .44 ? '#264F36' : '#FFF6E9')} center / contain no-repeat;
+      }
+      ${scoped(compact + ' ' + holder + '::after, ' + nativeCompact + ' ' + holder + '::after')} {
+        background-image:${vkusnoLogo(false, '#264F36')}; background-size:min(90%,28px) auto;
+      }
+      ${scoped('[data-ymc-nav-dock] ' + holder)} { width:100% !important; min-height:30px; }
+    `;
+  }
+
   function cinemaStyles(t, paint, textInk) {
-    const colorStart = t.edgeGlowCustom ? t.edgeGlowStart : t.accent;
-    const colorEnd = t.edgeGlowCustom ? t.edgeGlowEnd : t.textSecondary;
-    const strength = t.edgeGlowStrength / 100;
-    const frame = t.edgeGlow !== 'off' && strength ? `
+    const colorStart = t.edgeGlowCustom || smartOn(t, 'smartFrame') ? t.edgeGlowStart : t.accent;
+    const colorEnd = t.edgeGlowCustom || smartOn(t, 'smartFrame') ? t.edgeGlowEnd : t.textSecondary;
+    const frameMask = {
+      horizontal: 'linear-gradient(#000 0 6%,transparent 19% 81%,#000 94%)',
+      vertical: 'linear-gradient(90deg,#000 0 6%,transparent 18% 82%,#000 94%)',
+      corners: 'linear-gradient(#000 0 6%,transparent 20% 80%,#000 94%),linear-gradient(90deg,#000 0 8%,transparent 24% 76%,#000 92%)'
+    }[t.edgeGlowStyle];
+    const frame = t.edgeGlow !== 'off' && t.edgeGlowStrength ? `
       ${scoped('[data-ymc-window-glow]')} {
-        position:fixed; inset:2px calc(var(--ymc-reserved-width) + 2px) 2px 2px; z-index:11;
-        pointer-events:none; border-radius:13px;
-        box-shadow:inset 4px 2px 18px -8px ${paint(rgba(colorStart, 100 * strength))},
-          inset -4px -2px 18px -8px ${paint(rgba(colorEnd, 100 * strength))};
+        position:fixed; inset:${t.edgeGlowInset}px calc(var(--ymc-reserved-width) + ${t.edgeGlowInset}px) ${t.edgeGlowInset}px ${t.edgeGlowInset}px;
+        z-index:11; pointer-events:none; border-radius:${t.edgeGlowRadius}px;
+        ${frameMask ? `mask-image:${frameMask}; mask-composite:intersect;` : ''}
+        ${t.edgeGlowHalo && t.edgeGlowSpread ? `
+          box-shadow:inset 2px 1px ${t.edgeGlowSpread}px -4px ${paint(rgba(colorStart, t.edgeGlowStrength * t.edgeGlowHalo / 100))},
+            inset -2px -1px ${t.edgeGlowSpread}px -4px ${paint(rgba(colorEnd, t.edgeGlowStrength * t.edgeGlowHalo / 100))};
+        ` : ''}
       }
-      ${scoped('[data-ymc-window-glow]::before')} {
-        content:""; position:absolute; inset:0; box-sizing:border-box; border-radius:inherit; padding:2px;
-        background:linear-gradient(135deg,${paint(rgba(colorStart, 100 * strength))},${paint(rgba(colorEnd, 100 * strength))});
+      ${t.edgeGlowWidth ? `${scoped('[data-ymc-window-glow]::before')} {
+        content:""; position:absolute; inset:0; box-sizing:border-box; border-radius:inherit; padding:${t.edgeGlowWidth}px;
+        background:linear-gradient(${t.edgeGlowAngle}deg,${paint(rgba(colorStart, t.edgeGlowStrength))},${paint(rgba(colorEnd, t.edgeGlowStrength))});
         mask:linear-gradient(white 0 0) content-box,linear-gradient(white 0 0); mask-composite:exclude;
-      }
+      }` : ''}
     ` : '';
-    const clockInk = t.waveClock !== 'off' ? textInk(t.accent, [t.background]) : '';
+    const clockColors = t.clockCustom || smartOn(t, 'smartClock');
+    const clockFill = clockColors ? t.clockFill : t.panel;
+    const behindClock = t.clockPlate ? blendedFill(clockFill, t.clockPlate, t.background) : t.background;
+    const clockSurfaces = !t.clockPlate && t.mode === 'gradient' ? [behindClock, t.gradientEnd] : [behindClock];
+    const clockInk = t.waveClock !== 'off' ? textInk(clockColors ? t.clockColor : t.text, clockSurfaces) : '';
+    const end = t.clockPosition.endsWith('Right'), center = t.clockPosition.endsWith('Center');
+    const vertical = t.clockPosition.startsWith('bottom') ? 'end' : 'start';
+    const offset = `min(${t.clockX}px,12%)`;
+    const clockFonts = { system:'system-ui,sans-serif', rounded:'ui-rounded,"Arial Rounded MT Bold",system-ui,sans-serif',
+      mono:'ui-monospace,monospace', serif:'Georgia,serif' };
     const clock = clockInk ? `
-      ${scoped('[data-ymc-clock-host]')} { position:relative; }
+      ${scoped(':where([data-ymc-clock-host])')} { position:relative; }
       ${scoped('[data-ymc-wave-clock]')} {
-        position:absolute; inset-block-start:clamp(16px,3cqh,42px); inset-inline-end:clamp(14px,3cqw,44px);
-        z-index:2; display:grid; justify-items:end; max-width:42%; pointer-events:none;
-        color:${paint(clockInk)};
-        text-shadow:0 1px 5px ${paint(rgba(readableText(clockInk, clockInk), 65))};
-        font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;
+        position:absolute; inset-block-${vertical}:min(${t.clockY}px,20%);
+        ${center ? 'inset-inline:0; margin-inline:auto; width:max-content;' : `inset-inline-${end ? 'end' : 'start'}:${offset};`}
+        z-index:2; display:grid; justify-items:${center ? 'center' : end ? 'end' : 'start'};
+        font-size:clamp(23px,calc(min(${t.clockSeconds ? 5.5 : 7.5}cqw,11cqh) * ${t.waveClockSize / 100}),164px);
+        max-width:calc(100% - 2 * ${offset}); pointer-events:none; box-sizing:border-box;
+        color:${paint(clockInk)}; opacity:${t.clockOpacity / 100}; font-family:${clockFonts[t.clockFont]};
+        ${t.clockPlate ? `padding:.13em .25em; border-radius:${t.clockRadius}px; background-color:${paint(rgba(clockFill, t.clockPlate))};` : ''}
+        ${t.clockGlow ? `text-shadow:0 1px 4px ${paint(rgba(readableText(clockInk, clockInk), 67))},
+          0 0 ${t.clockGlow}px ${paint(rgba(clockInk, 34))};` : ''}
       }
       ${scoped('[data-ymc-clock-time]')} {
-        font-size:clamp(34px,calc(min(9cqw,10cqh) * ${t.waveClockSize / 100}),132px);
-        font-weight:200; line-height:.95; letter-spacing:-.025em; font-variant-numeric:tabular-nums;
-        transform:scaleX(.82); transform-origin:right center;
+        font-weight:${t.clockWeight}; line-height:1.04; letter-spacing:${t.clockSpacing / 100}em;
+        font-variant-numeric:tabular-nums; white-space:nowrap;
       }
       ${scoped('[data-ymc-clock-date]')} {
-        grid-row:1; margin-block-end:.42em; font-size:clamp(10px,1.5cqw,15px); text-align:end;
+        ${t.clockDatePosition === 'above' ? 'grid-row:1; margin-block-end:.35em;' : 'margin-block-start:.35em;'}
+        font-size:clamp(10px,${t.clockDateSize / 100}em,32px);
+        font-weight:550; letter-spacing:.01em; text-align:${center ? 'center' : end ? 'right' : 'left'};
       }
       ${scoped('[data-ymc-clock-date][hidden]')} { display:none; }
     ` : '';
@@ -894,64 +979,64 @@
 
   function liquidGlassStyles(t, sidebar, player, paint) {
     if (t.liquidGlass === 'off') return '';
-    const clear = t.liquidGlass === 'clear';
-    const glass = (fill, opacity, radius, blur) => {
+    const material = {
+      clear: { opacity:.24, blur:.55, shine:.85 },
+      regular: { opacity:.58, blur:1, shine:1 },
+      frosted: { opacity:.84, blur:1.35, shine:.65 }
+    }[t.liquidGlass];
+    const usesTint = t.glassCustom || smartOn(t, 'smartGlass');
+    const tint = usesTint ? t.glassTint : t.accent;
+    const highlight = usesTint ? t.glassLight : mixHex(t.accent, '#FFFFFF', .78);
+    const glass = (base, surfaceOpacity, customBackground = false) => {
+      const fill = mixHex(base, tint, t.glassTintAmount / 100);
       const bright = luminance(fill) > .44;
+      const shine = t.glassShine * material.shine;
+      const rim = t.glassRim;
       return `
-        background-color:${paint(rgba(fill, opacity))} !important;
+        background-color:${paint(rgba(fill, customBackground ? 0 : t.glassOpacity * material.opacity * surfaceOpacity))} !important;
         background-image:
-          radial-gradient(ellipse at 3% -55%,#ffffff40,transparent 65%),
-          radial-gradient(ellipse at 98% 155%,${paint(rgba(t.accent, 26))},transparent 62%),
-          linear-gradient(158deg,#ffffff13 0%,transparent 38%,#00000013 78%,#ffffff13 100%) !important;
-        border-radius:${radius}px !important;
-        backdrop-filter:blur(${blur}px) saturate(${clear ? 150 : 126}%) !important;
-        box-shadow:inset 0 0 0 1px ${bright ? '#ffffffb0' : '#ffffff3d'},
-          inset 0 2px 1px -1px ${bright ? '#ffffff' : '#ffffff85'},
-          inset 0 -2px 2px -1px ${paint(rgba(t.accent, bright ? 48 : 39))},
-          0 5px 18px #0003;
+          linear-gradient(${t.glassAngle + 35}deg,${paint(rgba(highlight, shine * .4))},transparent 32% 70%,${paint(rgba(tint, shine * .24))}),
+          linear-gradient(${t.glassAngle}deg,transparent 10%,${paint(rgba(highlight, shine * .26))} 30%,transparent 54% 76%,${paint(rgba(highlight, shine * .18))}) !important;
+        border-radius:${t.glassRadius}px !important;
+        backdrop-filter:blur(${Math.min(24, t.glassBlur * material.blur)}px) saturate(${t.glassSaturation}%) !important;
+        box-shadow:inset 0 0 0 1px ${paint(rgba(highlight, rim))},
+          inset 0 2px 2px -1px ${paint(rgba(highlight, rim * .84))},
+          inset 0 -3px 4px -2px ${paint(rgba(bright ? tint : '#000000', t.glassDepth))},
+          0 ${t.glassDepth / 4}px ${t.glassDepth / 2}px rgba(0,0,0,${t.glassDepth / 170});
       `;
     };
-    const blur = Math.min(clear ? 12 : 20, t.blur);
-    const opacity = clear ? t.panelOpacity * .39 : t.panelOpacity * .87;
-    const radius = Math.max(t.round, 18);
     const progress = SELECTOR.vibeTrack;
-    const nav = '[data-ymc-nav-dock]';
+    const nav = SELECTOR.navbar;
     const bar = SELECTOR.player;
-    const ornaments = t.panelOpacity > 0 ? `
-      ${scoped(SELECTOR.navbar + nav)} { ${glass(sidebar, opacity, radius, blur)} }
-      ${scoped(SELECTOR.navbar + ':not([data-ymc-nav-dock])')} { ${glass(sidebar, opacity, radius, blur)} }
-      ${scoped(bar)} ${t.barCustom ? '> [data-ymc-bar-backdrop]' : ''} {
-        ${glass(player, t.barCustom ? 0 : opacity, radius, blur)}
-      }
+    const painted = [];
+    const surface = (selector, base, opacity, custom = false) => {
+      painted.push(selector);
+      return `${scoped(selector)} { ${glass(base, opacity, custom)} }`;
+    };
+    const navRules = t.glassNav && t.panelOpacity > 0
+      ? ['[data-ymc-nav-dock]', ':not([data-ymc-nav-dock])']
+        .map(dock => surface(nav + dock, sidebar, t.panelOpacity / 100)).join('') : '';
+    const barRules = t.glassPlayer && (t.barCustom ? t.barOpacity > 0 : t.panelOpacity > 0) ? `
+      ${surface(t.barCustom ? bar + ' > [data-ymc-bar-backdrop]' : bar, player, t.panelOpacity / 100, t.barCustom)}
+      ${scoped(bar)} { border-radius:${t.glassRadius}px !important; }
       ${scoped(bar + ' ' + SELECTOR.barRow)} { border-radius:inherit !important; border-color:transparent !important; }
       ${scoped(bar + ' :is(' + SELECTOR.barTitle + ',' + SELECTOR.barArtist + ')')} {
         text-shadow:0 1px 4px ${luminance(player) > .44 ? '#fff8' : '#000b'};
-      }
-    ` : '';
-    const vibeTint = guardedInk(t, t.text, blendedFill(t.panel, Math.max(opacity, clear ? 38 : 61), t.background));
-    return `
-      ${ornaments}
-      ${t.vibeTrackOpacity ? `
-        ${scoped(progress)} {
-          ${glass(t.panel, (clear ? 36 : 62) * t.vibeTrackOpacity / 100, 36, Math.min(blur, 12))}
-          color:${paint(vibeTint)} !important; --accent-color:${paint(vibeTint)} !important;
-        }
-        ${scoped(progress + ' ' + VIBE_TRACK_NAME)} {
-          color:inherit !important; text-shadow:0 1px 5px ${paint(rgba(readableText(vibeTint, vibeTint), 70))};
-        }
-      ` : ''}
-      @media (prefers-reduced-motion:no-preference) {
-        ${scoped(nav + ' [data-ymc-nav-action]')} { transition:background-color 180ms ease, box-shadow 180ms ease; }
-      }
-      ${scoped(nav + ' [data-ymc-nav-action]:is(:hover,:focus-visible)')} {
-        box-shadow:inset 0 0 0 1px #ffffff27, inset 0 1px 1px #ffffff4d;
-      }
+      }` : '';
+    const vibeTint = guardedInk(t, t.text, blendedFill(t.panel, Math.max(35, t.glassOpacity * material.opacity), t.background));
+    const trackRules = t.glassTrack && t.vibeTrackOpacity ? `
+      ${surface(progress, t.panel, t.vibeTrackOpacity / 100)}
+      ${scoped(progress)} { color:${paint(vibeTint)} !important; --accent-color:${paint(vibeTint)} !important; }
+      ${scoped(progress + ' ' + VIBE_TRACK_NAME)} {
+        color:inherit !important; text-shadow:0 1px 5px ${paint(rgba(readableText(vibeTint, vibeTint), 70))};
+      }` : '';
+    return navRules + barRules + trackRules + (painted.length ? `
       @media (prefers-reduced-transparency:reduce) {
-        ${scoped(`${nav}, ${SELECTOR.navbar}, ${bar}, ${progress}`)} {
+        ${scoped(painted.join(', '))} {
           backdrop-filter:none !important; background-color:${paint(t.panel)} !important;
         }
       }
-    `;
+    ` : '');
   }
 
   function waveButtonInk(t, paint, ordinaryInk, playInk) {
@@ -973,7 +1058,7 @@
 
   function waveStyles(t) {
     const wavePage = '[data-ymc-on-wave]';
-    const clear = t.waveClearRail && t.vibeAnimation && (t.liquidGlass === 'off' || t.addonEnabled && t.addonPalette);
+    const clear = t.waveClearRail && t.vibeAnimation && (t.liquidGlass === 'off' || !t.glassNav || t.addonEnabled && t.addonPalette);
     const custom = recoloredWave(t);
     const smartLight = smartLightWave(t);
     const tint = custom || smartLight ? 'url(#ymc-native-wave-tint) ' : '';
@@ -1192,7 +1277,7 @@
     return { title, artist };
   }
 
-  let windowGlow, waveClock, clockHost, clockMinute, clockShowDate, clockFormat, dateFormat;
+  let windowGlow, waveClock, clockHost, clockTick, clockShowDate, clockFormatKey, clockFormat, dateFormat;
   function syncCinemaDecor(hero, fullscreen) {
     const showGlow = !fullscreen && isStyled() && theme.edgeGlowStrength > 0 &&
       (theme.edgeGlow === 'app' || (theme.edgeGlow === 'wave' && hero));
@@ -1215,18 +1300,24 @@
       waveClock = document.createElement('time');
       waveClock.dataset.ymcWaveClock = '';
       waveClock.innerHTML = '<span data-ymc-clock-time></span><span data-ymc-clock-date></span>';
-      const locale = document.documentElement.lang || navigator.language;
-      clockFormat = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-      dateFormat = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'long' });
     }
     if (waveClock.parentElement !== host) {
       host.dataset.ymcClockHost = '';
       host.append(waveClock);
     }
-    const minute = Math.floor(Date.now() / 60000);
+    const locale = document.documentElement.lang || navigator.language;
+    const formatKey = [locale, theme.clockFormat, theme.clockSeconds].join('/');
+    if (clockFormatKey !== formatKey) {
+      clockFormatKey = formatKey;
+      clockFormat = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit',
+        second: theme.clockSeconds ? '2-digit' : undefined, hourCycle: theme.clockFormat === '12' ? 'h12' : 'h23' });
+      dateFormat = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'long' });
+      clockTick = undefined;
+    }
+    const tick = Math.floor(Date.now() / (theme.clockSeconds ? 1000 : 60000));
     const showDate = theme.waveClock === 'date';
-    if (clockMinute === minute && clockShowDate === showDate) return;
-    clockMinute = minute;
+    if (clockTick === tick && clockShowDate === showDate) return;
+    clockTick = tick;
     clockShowDate = showDate;
     const now = new Date();
     waveClock.dateTime = now.toISOString();
@@ -1560,6 +1651,7 @@
     [data-ymc-nav-dock] [data-ymc-nav-brand-link]:focus-visible { outline:2px solid currentColor; outline-offset:-2px; }
 
     [data-ymc-nav-slot] { width:0 !important; min-width:0 !important; margin:0 !important; }
+    [data-ymc-search-nav] { position:relative; z-index:40 !important; }
     [data-ymc-nav-layout] { box-sizing:border-box; }
     [data-ymc-nav-layout]:has([data-ymc-nav-slot]) { grid-template-columns:0 minmax(0,1fr) !important; }
     @media (max-width:600px) {
@@ -1652,7 +1744,7 @@
       const control = pinned ? node.querySelector('[class*="Pin_link__"]') || node :
         node.matches('a,button') ? node : node.querySelector('a[href],button') || node;
       const pinTitle = pinned ? node.querySelector('[class*="Pin_title__"]')?.textContent.trim() : '';
-      const label = (brand ? 'Логотип Яндекс Музыки' : pinTitle || control?.getAttribute('aria-label') ||
+      const label = (brand ? (theme.navBrand === 'vkusno' ? 'Логотип «Вкусно — и точка»' : 'Логотип Яндекс Музыки') : pinTitle || control?.getAttribute('aria-label') ||
         node.getAttribute('aria-label') || node.getAttribute('title') || node.textContent.trim() ||
         control?.getAttribute('title') || '').slice(0, 100);
       const test = node.dataset.testId;
@@ -1968,14 +2060,72 @@
     renderNavMenu();
   }
 
+  let searchExit, searchNavSlot, searchHomeURL;
+  const desktopSearchHome = () => location.protocol === 'music-application:' && location.host === 'desktop'
+    ? 'music-application://desktop/' : '';
+  function searchHome() {
+    const target = navRoot?.querySelector('[data-test-id="NAVBAR_NAVIGATION_ITEM_HOME"]') ||
+      navRoot?.querySelector(SEARCH_HOME);
+    return target?.matches('a,button') ? target : target?.querySelector('a[href],button');
+  }
+
+  function leaveSearch() {
+    const link = searchHome();
+    if (link) link.click();
+    else {
+      const destination = searchHomeURL || desktopSearchHome();
+      if (destination) location.assign(destination);
+    }
+  }
+
+  function syncSearchExit() {
+    const home = searchHome();
+    if (home instanceof HTMLAnchorElement && home.hasAttribute('href')) {
+      const href = URL.parse(home.href);
+      if (href?.protocol === location.protocol && href.host === location.host && href.pathname !== location.pathname) {
+        searchHomeURL = href.href;
+      }
+    }
+    const search = isStyled() && document.querySelector(SEARCH_INPUT)?.closest(SEARCH_PAGE);
+    const visible = search && search.getClientRects().length && !search.closest('[aria-hidden="true"],[hidden]');
+    const slot = visible && !theme.sidebarCollapsed ? navSlot : null;
+    if (searchNavSlot !== slot) {
+      searchNavSlot?.removeAttribute('data-ymc-search-nav');
+      slot?.setAttribute('data-ymc-search-nav', '');
+      searchNavSlot = slot;
+    }
+    if (!visible || (!home && !searchHomeURL && !desktopSearchHome())) {
+      searchExit?.remove();
+      return;
+    }
+    if (!searchExit) {
+      searchExit = document.createElement('button');
+      searchExit.type = 'button';
+      searchExit.dataset.ymcSearchExit = '';
+      searchExit.textContent = '← Выйти из поиска';
+      searchExit.setAttribute('aria-keyshortcuts', 'Escape');
+      searchExit.addEventListener('click', leaveSearch);
+    }
+    const dock = !theme.sidebarCollapsed && navRoot?.getBoundingClientRect();
+    const top = theme.sidebarDock === 'top' && dock?.height ? Math.max(34, Math.ceil(dock.bottom + 8)) : 34;
+    const editor = activeDialog === 'editor' ? host.getBoundingClientRect().right - $('ymc-editor').getBoundingClientRect().left : 0;
+    const right = theme.sidebarDock === 'right' && dock?.width ? Math.ceil(innerWidth - dock.left + 10) : editor + 14;
+    const topValue = top + 'px', rightValue = right + 'px';
+    if (searchExit.style.top !== topValue) searchExit.style.top = topValue;
+    if (searchExit.style.right !== rightValue) searchExit.style.right = rightValue;
+    const container = document.fullscreenElement || document.body;
+    if (searchExit.parentElement !== container) container.append(searchExit);
+  }
+
   function makeStyles(t, cover = '', portraitBackground = '', paint = literal) {
     if (!t.enabled) return '';
     const gradient = () => `linear-gradient(${t.gradientAngle}deg,${paint(t.background)},${paint(t.gradientEnd)})`;
     const glassBackdrop = t.liquidGlass !== 'off' && t.glassBackdrop && t.mode === 'gradient' && !(t.appMediaEnabled && vibeMedia);
+    const smartGlass = smartOn(t, 'smartGlass');
     const light = (hex, alpha) => paint(rgba(hex, alpha));
     const reflections = glassBackdrop ? `
-      radial-gradient(ellipse 67% 82% at 103% -13%,${light(t.likedColor, 38)},transparent 73%),
-      radial-gradient(ellipse 60% 92% at -4% 31%,${light(t.accent, 47)},transparent 74%),
+      radial-gradient(ellipse 67% 82% at 103% -13%,${light(smartGlass ? t.glassLight : t.likedColor, 23)},transparent 73%),
+      radial-gradient(ellipse 60% 92% at -4% 31%,${light(smartGlass ? t.glassTint : t.accent, 31)},transparent 74%),
       radial-gradient(ellipse 52% 66% at 77% 124%,${light(mixHex(t.accent, t.gradientEnd, .45), 43)},transparent 88%),
       linear-gradient(152deg,transparent 34%,${light(t.text, 5)} 51%,transparent 59%),
     ` : '';
@@ -2166,6 +2316,7 @@
       }, paint) : ''}
       ${waveStyles(t)}
       ${cinemaStyles(t, paint, textInk)}
+      ${brandStyles(t, sidebar)}
       ${playlistStyles(t, useCustomizerPalette, paint)}
       ${t.playlistButtons && useCustomizerPalette ? `
         ${scoped(SELECTOR.hoverButtons)} {
@@ -3918,6 +4069,12 @@
       sidebar: t.separateSurfaces ? t.sidebar : t.panel,
       player: t.separateSurfaces ? t.player : t.panel,
       portraitColor: portraitEffectColor(t, portraitBackgroundColor()),
+      glassTint: t.glassCustom ? t.glassTint : t.accent,
+      glassLight: t.glassCustom ? t.glassLight : mixHex(t.accent, '#FFFFFF', .78),
+      clockColor: t.clockCustom ? t.clockColor : t.text,
+      clockFill: t.clockCustom ? t.clockFill : t.panel,
+      edgeGlowStart: t.edgeGlowCustom ? t.edgeGlowStart : t.accent,
+      edgeGlowEnd: t.edgeGlowCustom ? t.edgeGlowEnd : t.textSecondary,
       playlistStart: t.playlistGradient === 'palette' ? t.panel : t.playlistStart,
       playlistEnd: t.playlistGradient === 'palette' ? t.background : t.playlistEnd,
       playlistPrimary: playlist.primary, playlistPrimaryText: playlist.primaryText,
@@ -3940,6 +4097,9 @@
       accentHover: mixHex(palette.accent, '#FFFFFF', .15),
       accentPress: mixHex(palette.accent, '#000000', .2),
       portraitColor: palette.portraitAccent,
+      glassTint: palette.accent, glassLight: mixHex(palette.accent, '#FFFFFF', .67),
+      clockColor: palette.text, clockFill: palette.panel,
+      edgeGlowStart: palette.accent, edgeGlowEnd: palette.portraitAccent,
       vibeIcon: palette.vibeIcon, vibeTransport: palette.vibeTransport,
       vibeFill: palette.panel, vibeHover: palette.gradientEnd, vibePlayFill: palette.accent,
       barButtonFill: palette.player, barButtonText: palette.text, barButtonHover: palette.gradientEnd,
@@ -5269,19 +5429,38 @@
             `)}
             ${range('panelOpacity', 'Непрозрачность панелей')}${range('blur', 'Размытие панелей')}
             ${range('round', 'Скругление панелей')}${range('cardRound', 'Скругление карточек')}
-            <label>Liquid Glass<select data-prop="liquidGlass">
-              <option value="off">Выключен</option><option value="regular">Стекло</option>
-              <option value="clear">Прозрачное стекло</option>
-            </select></label>
-            ${whenAvailable('glassBackdrop', 'liquidGlass', check('glassBackdrop', 'Цветные блики на градиентном фоне'))}
-            ${range('glowIntensity', 'Неоновое свечение акцентных кнопок')}
-            <label>Светящаяся рамка<select data-prop="edgeGlow">
-              <option value="off">Выключена</option><option value="app">Во всём приложении</option>
-              <option value="wave">Только в «Моей волне»</option>
-            </select></label>
-            ${whenAvailable('edgeGlowStrength', 'edgeGlow', range('edgeGlowStrength', 'Яркость рамки') +
-              check('edgeGlowCustom', 'Свои цвета рамки') +
-              whenAvailable('edgeGlowStart', 'edgeGlowCustom', `<div class="grid">${swatch('edgeGlowStart', 'Первый цвет рамки')}${swatch('edgeGlowEnd', 'Второй цвет рамки')}</div>`))}
+            ${range('glowIntensity', 'Свечение акцентных кнопок')}
+            <details class="settings-more"><summary>Liquid Glass</summary>
+              <label>Материал<select data-prop="liquidGlass"><option value="off">Выключен</option>
+                <option value="regular">Мягкое стекло</option><option value="clear">Прозрачное стекло</option>
+                <option value="frosted">Матовое стекло</option></select></label>
+              ${whenAvailable('glassOpacity', 'liquidGlass', `
+                ${check('glassNav', 'Стекло на панели навигации')}${check('glassPlayer', 'На нижнем плеере')}
+                ${check('glassTrack', 'На строке трека «Моей волны»')}
+                ${range('glassOpacity', 'Плотность стекла')}${range('glassBlur', 'Размытие за стеклом')}
+                ${range('glassSaturation', 'Насыщенность за стеклом')}${range('glassRadius', 'Скругление стекла')}
+                ${range('glassShine', 'Яркость блика')}${range('glassAngle', 'Направление блика')}
+                ${range('glassRim', 'Чёткость кромки')}${range('glassDepth', 'Глубина тени')}
+                ${range('glassTintAmount', 'Сила оттенка')}${check('glassCustom', 'Свои оттенок и блик')}
+                ${whenAvailable('glassTint', 'glassCustom', `<div class="grid">${swatch('glassTint', 'Оттенок стекла')}${swatch('glassLight', 'Цвет блика')}</div>`)}
+                ${whenAvailable('glassBackdrop', 'liquidGlass', check('glassBackdrop', 'Цветные блики на градиентном фоне'))}
+              `)}
+            </details>
+            <details class="settings-more"><summary>Светящаяся рамка</summary>
+              <label>Где показывать<select data-prop="edgeGlow">
+                <option value="off">Выключена</option><option value="app">Во всём приложении</option>
+                <option value="wave">Только в «Моей волне»</option>
+              </select></label>
+              ${whenAvailable('edgeGlowStrength', 'edgeGlow', `
+                <label>Вид рамки<select data-prop="edgeGlowStyle"><option value="full">Весь контур</option>
+                  <option value="horizontal">Верх и низ</option><option value="vertical">Боковые края</option><option value="corners">Углы</option></select></label>
+                ${range('edgeGlowStrength', 'Яркость рамки')}${range('edgeGlowWidth', 'Толщина линии')}
+                ${range('edgeGlowHalo', 'Сила рассеянного света')}${range('edgeGlowSpread', 'Ширина рассеянного света')}
+                ${range('edgeGlowInset', 'Отступ от края окна')}${range('edgeGlowRadius', 'Скругление рамки')}
+                ${range('edgeGlowAngle', 'Угол градиента рамки')}${check('edgeGlowCustom', 'Свои цвета рамки')}
+                ${whenAvailable('edgeGlowStart', 'edgeGlowCustom', `<div class="grid">${swatch('edgeGlowStart', 'Первый цвет рамки')}${swatch('edgeGlowEnd', 'Второй цвет рамки')}</div>`)}
+              `)}
+            </details>
           </section>
           <section id="ymc-theme-contrast"><h3>Читаемость и скрытые элементы</h3>
             ${check('contrastGuard', 'Автоматически защищать контраст текста и иконок')}
@@ -5367,11 +5546,35 @@
           <section id="ymc-home-hero"><h3>Фото и заголовок «Моя волна»</h3>
             ${check('showVibePortrait', 'Показывать фото исполнителя')}
             ${check('showVibeHeading', 'Показывать надпись «Моя волна»')}
-            <label>Часы на экране «Моя волна»<select data-prop="waveClock">
-              <option value="off">Выключены</option><option value="time">Только время</option>
-              <option value="date">Время и дата</option>
-            </select></label>
-            ${whenAvailable('waveClockSize', 'waveClock', range('waveClockSize', 'Размер часов'))}
+            <details class="settings-more"><summary>Часы</summary>
+              <label>Часы на «Моей волне»<select data-prop="waveClock">
+                <option value="off">Выключены</option><option value="time">Только время</option>
+                <option value="date">Время и дата</option>
+              </select></label>
+              ${whenAvailable('waveClockSize', 'waveClock', `
+                <div class="grid">
+                  <label>Положение<select data-prop="clockPosition"><option value="topLeft">Сверху слева</option>
+                    <option value="topCenter">Сверху по центру</option><option value="topRight">Сверху справа</option>
+                    <option value="bottomLeft">Снизу слева</option><option value="bottomCenter">Снизу по центру</option>
+                    <option value="bottomRight">Снизу справа</option></select></label>
+                  <label>Шрифт<select data-prop="clockFont"><option value="system">Системный</option>
+                    <option value="rounded">Скруглённый</option><option value="mono">Моноширинный</option><option value="serif">С засечками</option></select></label>
+                  <label>Формат<select data-prop="clockFormat"><option value="24">24 часа</option><option value="12">12 часов</option></select></label>
+                </div>
+                ${check('clockSeconds', 'Показывать секунды')}
+                ${range('waveClockSize', 'Размер часов')}${range('clockWeight', 'Толщина цифр')}${range('clockSpacing', 'Расстояние между цифрами')}
+                ${range('clockX', 'Отступ по горизонтали')}${range('clockY', 'Отступ по вертикали')}
+                ${whenAvailable('clockDatePosition', 'waveClock', `<label>Положение даты<select data-prop="clockDatePosition">
+                  <option value="above">Над часами</option><option value="below">Под часами</option></select></label>
+                  ${range('clockDateSize', 'Размер даты')}`)}
+                ${range('clockOpacity', 'Непрозрачность часов')}${range('clockGlow', 'Свечение цифр')}
+                ${range('clockPlate', 'Непрозрачность подложки')}
+                ${whenAvailable('clockRadius', 'clockPlate', range('clockRadius', 'Скругление подложки'))}
+                ${check('clockCustom', 'Свои цвета часов')}
+                ${whenAvailable('clockColor', 'clockCustom', `<div class="grid">${swatch('clockColor', 'Цвет часов')}
+                  ${whenAvailable('clockFill', 'clockPlate', swatch('clockFill', 'Цвет подложки часов'))}</div>`)}
+              `)}
+            </details>
           </section>
           <section id="ymc-home-buttons"><h3>Оформление кнопок «Моей волны»</h3>
             ${check('customVibeIcons', 'Свои цвета иконок')}
@@ -5391,6 +5594,7 @@
               ${check('hideVibeVolume', 'Скрыть громкость')}${check('hideVibeMenu', 'Скрыть контекстное меню')}`)}
           </section>
           <section id="ymc-home-sidebar"><h3>Панель навигации</h3>
+            <label>Логотип<select data-prop="navBrand"><option value="native">Яндекс Музыка</option><option value="vkusno">Вкусно — и точка</option></select></label>
             <label>Расположение<select data-prop="sidebarDock"><option value="native">Как в Яндекс Музыке</option>
               <option value="left">Слева</option><option value="right">Справа</option><option value="top">Сверху, горизонтально</option>
               <option value="bottom">Снизу, горизонтально</option></select></label>
@@ -6030,6 +6234,9 @@
     }
     if (smartGroupEnabled(t, 'smartAccent')) lockedManualFields.add('customAccentStates');
     if (smartGroupEnabled(t, 'smartPortrait')) lockedManualFields.add('portraitColorSource');
+    for (const [group, toggle] of [['smartGlass','glassCustom'], ['smartClock','clockCustom'], ['smartFrame','edgeGlowCustom']]) {
+      if (smartGroupEnabled(t, group)) lockedManualFields.add(toggle);
+    }
     if (smartOwnsBackdrop(t)) {
       for (const key of ['mode','wallpaper','gradientAngle','backgroundDim','appMediaEnabled','vibeMedia',
         'appMediaFile','mediaFit','mediaX','mediaY','mediaBlur','mediaOpacity']) lockedManualFields.add(key);
@@ -6123,9 +6330,12 @@
       motionBackground: backgroundMotionUnavailable, motionBackgroundSpeed: backgroundMotionUnavailable || !t.motionBackground,
       playerOverlayDetails: !t.playerOverlay,
       contrastThreshold: !t.contrastGuard,
+      glassOpacity: t.liquidGlass === 'off', glassTint: t.liquidGlass === 'off' || !t.glassCustom,
       glassBackdrop: t.liquidGlass === 'off' || t.mode !== 'gradient' || withMedia || (t.addonEnabled && t.addonPalette),
       edgeGlowStrength: t.edgeGlow === 'off', edgeGlowStart: t.edgeGlow === 'off' || !t.edgeGlowCustom,
-      waveClockSize: t.waveClock === 'off',
+      waveClockSize: t.waveClock === 'off', clockX: t.clockPosition.endsWith('Center'),
+      clockDatePosition: t.waveClock !== 'date', clockRadius: !t.clockPlate,
+      clockColor: !t.clockCustom, clockFill: !t.clockCustom || !t.clockPlate,
       barHeight: t.barLayout === 'native', barCoverSize: t.barLayout === 'native',
       barControlsSize: t.barLayout === 'native', barTextScale: t.barLayout === 'native',
       barGap: t.barLayout === 'native', barProgressSize: t.barLayout === 'native' && t.barProgressMode === 'native',
@@ -6719,7 +6929,11 @@
     { version: '0.8.9', notes: [
       'Тема Liquid Glass и два режима стекла для навигации, нижнего плеера и строки трека.',
       'Пульсация меняет яркость и радиус ауры по силуэту портрета.'
-    ], steps: ['ymc-theme-surfaces', 'ymc-home-portrait'] }
+    ], steps: ['ymc-theme-surfaces', 'ymc-home-portrait'] },
+    { version: '0.8.10', notes: [
+      'Liquid Glass, часы и рамка получили отдельные настройки и могут менять цвета вместе с умной темой.',
+      'Из поиска можно выйти отдельной кнопкой или клавишей Escape. В магазине появилась тема «Вкусно — и точка» с фирменным логотипом.'
+    ], steps: ['ymc-theme-surfaces', 'ymc-home-hero', 'ymc-theme-smart', 'ymc-home-sidebar'] }
   ];
 
   const validVersion = value => typeof value === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value);
@@ -7254,6 +7468,7 @@
       [...document.querySelectorAll(SELECTOR.fullscreen)].some(el => el.getClientRects().length && !el.closest('[aria-hidden="true"]'));
     syncAppBackground();
     syncSidebar(desktopNavbar(), fullscreen);
+    syncSearchExit();
     syncWaveMount(fullscreen);
     syncPatternMount(fullscreen);
     syncBeatPortrait(fullscreen);
@@ -7414,7 +7629,15 @@
         if (!e.repeat) showDialog(activeDialog === 'editor' ? '' : 'editor', activeDialog ? null : launcher);
         return;
       }
-      if (!activeDialog) return;
+      if (!activeDialog) {
+        if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented && searchExit?.isConnected &&
+            !target.closest?.('[role="dialog"],dialog[open]')) {
+          e.preventDefault();
+          e.stopPropagation();
+          searchExit.click();
+        }
+        return;
+      }
       if (e.key === 'Escape') {
         if ($('ymc-update-toast').contains(target)) return;
         e.preventDefault();
@@ -7835,7 +8058,7 @@
         syncNativeMounts();
       });
     };
-    const nativeMountSelector = [SELECTOR.navbar, SELECTOR.profile, NAV_ENTRY, VIBE_HERO, VIBE_ALBUM,
+    const nativeMountSelector = [SELECTOR.navbar, SELECTOR.profile, NAV_ENTRY, SEARCH_PAGE, SEARCH_INPUT, VIBE_HERO, VIBE_ALBUM,
       SELECTOR.vibeArtist, SELECTOR.vibeTrack, VIBE_TRACK_NAME,
       PORTRAIT, SELECTOR.player, SELECTOR.fullscreen, '[class*="VibePage_vibeAnimation__"] canvas'].join(', ');
     new MutationObserver(records => {
@@ -7918,6 +8141,12 @@
       [data-ymc-backdrop-fade] { position:fixed; inset:0; z-index:-3; pointer-events:none; }
       [data-ymc-pattern] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-2; pointer-events:none; overflow:hidden; }
       ${NAV_STYLES}
+      [data-ymc-search-exit] {
+        position:fixed; z-index:2147483638; cursor:pointer; border:1px solid color-mix(in srgb,currentColor 30%,transparent);
+        border-radius:999px; padding:7px 12px; font:600 12px/1.2 system-ui,sans-serif;
+        background:var(--ym-background-color-primary-enabled-popover,#21242b); color:var(--ym-controls-color-primary-text-enabled,#fff);
+      }
+      [data-ymc-search-exit]:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
       ${patternRules('[data-ymc-pattern]')}
       [data-ymc-page-spectrum] { position:fixed; inset:auto var(--ymc-reserved-width) 0 0; height:var(--ymc-spectrum-height); z-index:-1; pointer-events:none; }
       [data-ymc-page-spectrum] canvas { display:block; width:100%; height:100%; opacity:var(--ymc-spectrum-alpha); }

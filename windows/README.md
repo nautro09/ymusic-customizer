@@ -1,4 +1,4 @@
-# YMusic Customizer v0.8.9 для Windows
+# YMusic Customizer v0.8.10 для Windows
 
 Расширение для официального приложения Яндекс Музыки. Устанавливается одним JS-файлом поверх [ymusic_mod](https://github.com/nersuga/ymusic_mod). Плеер, очередь и воспроизведение остаются штатными.
 

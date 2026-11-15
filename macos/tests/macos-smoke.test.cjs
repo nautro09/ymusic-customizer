@@ -85,7 +85,7 @@ async function run() {
     assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
     assert.equal(await page.evaluate(() => location.host), 'desktop');
     assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().themeSheet), true);
-    assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().version), '0.8.9');
+    assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().version), '0.8.10');
     assert.equal(await page.evaluate(async () => (await window.ymcMac.getState()).config.discordShowAlbum), false);
 
     await page.keyboard.press('Meta+Shift+Y');
@@ -145,7 +145,7 @@ async function run() {
     await page.evaluate(() => YMusicCustomizer.update({ smartTheme: false }));
     await editor.locator('#ymc-theme-palette .section-toggle').click();
     await page.locator('#ymc-open-store').click();
-    assert.equal(await page.locator('[data-store-card]').count(), 28);
+    assert.equal(await page.locator('[data-store-card]').count(), 29);
     await page.locator('#ymc-editor [data-tab=player]').click();
     await editor.locator('#ymc-discord .section-toggle').click();
     const id = '123456789012345678';

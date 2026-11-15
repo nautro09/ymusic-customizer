@@ -105,7 +105,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.8.10';
+          const version = localStorage.getItem('test:next-version') ?? '0.8.11';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -120,7 +120,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await searchAudioSmoke(page, ui, platform);
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.10/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.11/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -128,7 +128,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.8.10'));
+      .querySelector('#ymc-update-label').textContent.includes('0.8.11'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -137,15 +137,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.8.11');
+    await nextRelease('0.8.12');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.11');
-    await nextRelease('0.8.12');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.12');
+    await nextRelease('0.8.13');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -517,6 +517,32 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await navRoot.evaluate(el => Promise.allSettled(el.getAnimations().map(animation => animation.finished)));
     assert.deepEqual(await search.boundingBox(), nativeSize);
 
+    await update({ sidebarDock: 'top', sidebarCollapsed: true, navBrand: 'vkusno' });
+    const logo = navRoot.locator('[class*="NavbarDesktop_logo__"]');
+    assert.match(await logo.evaluate(el => getComputedStyle(el, '::after').backgroundImage), /data:image\/svg\+xml/);
+    const openSearch = () => page.evaluate(() => {
+      const view = document.createElement('div');
+      view.dataset.testId = 'SEARCH_PAGE';
+      view.style.cssText = 'position:fixed;inset:0;background:#263344;z-index:100';
+      view.innerHTML = '<input data-test-id="SEARCH_PAGE_SEARCH_INPUT" aria-label="Поиск треков">';
+      const home = document.querySelector('[data-test-id="NAVBAR_NAVIGATION_ITEM_HOME"]');
+      home.addEventListener('click', event => { event.preventDefault(); view.remove(); }, { once: true });
+      document.body.append(view);
+    });
+    const exitSearch = page.getByRole('button', { name: 'Выйти из поиска' });
+    await page.keyboard.press('Escape');
+    await openSearch();
+    await exitSearch.click();
+    await exitSearch.waitFor({ state: 'detached' });
+    await openSearch();
+    await exitSearch.waitFor();
+    await page.getByRole('textbox', { name: 'Поиск треков' }).focus();
+    await page.keyboard.press('Escape');
+    await exitSearch.waitFor({ state: 'detached' });
+    await update({ sidebarDock: 'native', sidebarCollapsed: false, navBrand: 'native' });
+    assert.equal(await logo.evaluate(el => getComputedStyle(el, '::after').backgroundImage), 'none');
+    await page.evaluate(() => YMusicCustomizer.open());
+
     await ui.locator('#ymc-home-track .section-toggle').click();
     const adaptive = ui.locator('#p-vibeAdaptiveCover');
     const trackArt = wave.locator('#fixture-track-cover');
@@ -595,13 +621,17 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await clock.locator('[data-ymc-clock-date]').isVisible(), false);
     assert.equal(await caption.evaluate(el => el.parentElement.dataset.ymcWaveAlbum), 'overlay');
     assert.equal(await dockedPlayer.evaluate(el => getComputedStyle(el).maxWidth), 'none');
+    await update({ clockSeconds: true, clockWeight: 600, edgeGlowWidth: 5, edgeGlowAngle: 28 });
+    assert.match(await clock.locator('[data-ymc-clock-time]').textContent(), /^\d\d:\d\d:\d\d$/);
+    assert.equal(await clock.locator('[data-ymc-clock-time]').evaluate(el => getComputedStyle(el).fontWeight), '600');
+    assert.match(await glow.evaluate(el => getComputedStyle(el, '::before').backgroundImage), /28deg/);
     await trackArt.evaluate(img => {
       const holder = img.parentElement;
       holder.before(img);
       holder.remove();
     });
     await caption.waitFor({ state: 'detached' });
-    await update({ edgeGlow: 'off', waveClock: 'off', waveAlbumCard: false, barLayout: 'native', widePlayer: false, vibeAdaptiveCover: false });
+    await update({ edgeGlow: 'off', waveClock: 'off', clockSeconds: false, waveAlbumCard: false, barLayout: 'native', widePlayer: false, vibeAdaptiveCover: false });
     await glow.waitFor({ state: 'detached' });
     await clock.waitFor({ state: 'detached' });
 
@@ -748,8 +778,24 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     const redNext = await nextIcon.evaluate(el => getComputedStyle(el).color);
     assert.notEqual(redNext, 'rgb(153, 153, 153)');
     assert.equal(await nextIcon.locator('path').evaluate(el => getComputedStyle(el).stroke), redNext);
+    await update({ liquidGlass: 'regular', glassCustom: true, waveClock: 'time', clockPlate: 55, clockCustom: true,
+      edgeGlow: 'app', edgeGlowCustom: true, edgeGlowStart: '#123456', smartFrame: true, smartGlass: true, smartClock: true });
+    const details = () => page.evaluate(() => [
+      getComputedStyle(document.querySelector('[data-ymc-window-glow]'), '::before').backgroundImage,
+      getComputedStyle(document.querySelector('[data-ymc-wave-clock]')).backgroundColor,
+      getComputedStyle(document.querySelector('[data-test-id=VIBE_PLAYERBAR_TIMECODE_SLIDER]')).backgroundImage
+    ]);
+    const redDetails = await details();
     await testCover('#205af2');
     await page.waitForFunction(prior => getComputedStyle(document.querySelector('button[aria-label=Пауза] svg')).color !== prior, redPause);
+    await page.waitForFunction(prior => [
+      getComputedStyle(document.querySelector('[data-ymc-window-glow]'), '::before').backgroundImage,
+      getComputedStyle(document.querySelector('[data-ymc-wave-clock]')).backgroundColor,
+      getComputedStyle(document.querySelector('[data-test-id=VIBE_PLAYERBAR_TIMECODE_SLIDER]')).backgroundImage
+    ].every((color, i) => color !== prior[i]), redDetails);
+    await update({ smartFrame: false });
+    assert.match((await details())[0], /18, 52, 86/);
+    await update({ liquidGlass: 'off', waveClock: 'off', edgeGlow: 'off', glassCustom: false });
     await ui.locator('[data-tab=theme]').click();
     await update({ smartStrength: 92 });
     for (const section of ['palette', 'background', 'media']) {
@@ -797,7 +843,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     });
     await update({ liquidGlass: 'regular', glassBackdrop: true, barLayout: 'floating' });
     const regularGlass = await barMaterial();
-    assert.match(regularGlass.backgroundImage, /radial-gradient/);
+    assert.match(regularGlass.backgroundImage, /linear-gradient/);
     assert.match(regularGlass.backdropFilter, /blur.*saturate/);
     await update({ liquidGlass: 'clear' });
     const clearGlass = await barMaterial();
