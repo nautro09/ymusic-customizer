@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.9.0 for Windows and macOS. MIT.
+ * YMusic Customizer v0.10.0 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.9.0';
+  const version = '0.10.0';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -34,7 +34,7 @@
     stars: 'Звёздное небо', constellations: 'Созвездия', grid: 'Координатная сетка',
     hexagons: 'Соты', diamonds: 'Кристаллы', circuits: 'Микросхема', orbits: 'Орбиты',
     ripples: 'Круги на воде', rain: 'Метеорный дождь', snow: 'Снежинки',
-    petals: 'Лепестки', bubbles: 'Пузырьки', notes: 'Ноты', pixels: 'Пиксели', symbols: 'Свои символы'
+    petals: 'Лепестки', bubbles: 'Пузырьки', notes: 'Ноты', pixels: 'Пиксели', fries:'Две полоски и точка', symbols: 'Свои символы'
   };
   const LINE_PATTERNS = {
     squareGrid: 'Клеточки', honeycombGrid: 'Сплошные соты', diamondGrid: 'Ромбы',
@@ -110,12 +110,12 @@
     clockDatePosition: 'below', clockDateSize: 28, clockCustom: false,
     clockColor: '#E4F3FF', clockFill: '#101C30', clockAccent: '#A5EEEF',
     clockOpacity: 100, clockPlate: 0, clockRadius: 22, clockGlow: 0,
-    clockStyle: 'digital', clockMarks: 'hours',
+    clockStyle: 'editorial', clockMarks: 'hours',
     edgeGlow: 'off', edgeGlowStrength: 65, edgeGlowCustom: false,
     edgeGlowStart: '#FF8A78', edgeGlowEnd: '#FF61B6',
     edgeGlowStyle: 'full', edgeGlowInset: 4, edgeGlowRadius: 16, edgeGlowWidth: 2,
     edgeGlowHalo: 36, edgeGlowSpread: 18, edgeGlowAngle: 135,
-    navBrand: 'native',
+    navBrand: 'native', navLogo:'',
     waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 72, waveTone: 60, waveBeat: 70,
     waveClearRail: true, waveNativeOpacity: 100, vibeAdaptiveCover: false, vibeHideCoverWithPortrait: false, vibeAdaptiveCoverSize: 78,
     vibeTrackLayout: 'native',
@@ -160,7 +160,9 @@
     motionCardScale: 103, motionCardLift: 5, motionAura: false, motionAuraSpeed: 3200,
     motionBackground: false, motionBackgroundSpeed: 18, glowIntensity: 0,
     hideVibeVolume: false, hideVibeMenu: false, hideVibeLike: false, hideVibeDislike: false,
-    hideVibeSkip: false, hideVibePlay: false,
+    hideVibePrevious: false, hideVibeNext: false, hideVibePlay: false,
+    showArtistName:true, showSoloCover:true, showArtistCover:true,
+    showWaveTrackName:true, showWaveTrackArtist:true, showWaveTime:true, showWaveContext:true,
     hideBarVolume: false, hideBarQueue: false, hideBarCover: false, hideBarTitle: false, hideBarArtist: false,
     barButtonsCustom: false, barButtonFill: '#251C36', barButtonText: '#F7F4FF',
     barButtonHover: '#51366F', barButtonOpacity: 92, barButtonRound: 14,
@@ -197,7 +199,7 @@
       vibeAdaptiveCover:true,vibeAdaptiveCoverSize:76,vibeHideCoverWithPortrait:true,likedCustom:true,likedColor:'#F79ECD'
     },
     'Вкусно — и точка': {
-      navBrand:'vkusno',accent:'#FF9A40',background:'#13271C',gradientEnd:'#264F36',panel:'#203D2B',
+      navBrand:'vkusno',patternEnabled:true,patternStyle:'fries',patternOpacity:22,patternDensity:36,patternSize:84,accent:'#FF9A40',background:'#13271C',gradientEnd:'#264F36',panel:'#203D2B',
       text:'#FFF6E9',textSecondary:'#DECDB6',likedCustom:true,likedColor:'#FB471F',
       liquidGlass:'regular',glassCustom:true,glassTint:'#264F36',glassLight:'#FFD4AA',
       glassOpacity:62,glassShine:28,glassRim:26,barLayout:'floating',barProgressMode:'always',
@@ -323,8 +325,8 @@
     edgeGlowStyle: ['full', 'horizontal', 'vertical', 'corners'],
     clockPosition: ['topLeft', 'topCenter', 'topRight', 'bottomLeft', 'bottomCenter', 'bottomRight'],
     clockFont: ['system', 'rounded', 'mono', 'serif'], clockFormat: ['24', '12'], clockDatePosition: ['above', 'below'],
-    clockStyle: ['digital', 'tiles', 'stacked', 'outline', 'analog', 'orbit'], clockMarks: ['none', 'hours', 'minutes'],
-    navBrand: ['native', 'vkusno'],
+    clockStyle: ['editorial','digital', 'tiles', 'stacked', 'outline', 'analog', 'orbit'], clockMarks: ['none', 'hours', 'minutes'],
+    navBrand: ['native', 'custom', 'vkusno'],
     patternStyle: [...Object.keys(PATTERNS), ...Object.keys(LINE_PATTERNS)], patternScope: ['app', 'wave'], patternPalette: ['theme', 'custom'],
     patternMotion: ['still', 'drift', 'shimmer', 'both'], patternDirection: Object.keys(PATTERN_DIRECTIONS),
     patternBeatEffect: Object.keys(PATTERN_BEAT_EFFECTS),
@@ -391,7 +393,7 @@
     'sidebarEdgeHint', 'sidebarEdgeCustom',
     'customVibeIcons', 'aiTrackCards', 'showVibeWheel', 'playlistButtons', 'likedCustom', 'likedTintImage',
     'customAccentStates', 'spectrumPeaks', 'customVibeButtons', 'hideVibeVolume', 'hideVibeMenu', 'hideVibeLike',
-    'hideVibeDislike', 'hideVibeSkip', 'hideVibePlay', 'hideBarVolume', 'hideBarQueue', 'hideBarCover', 'hideBarTitle', 'hideBarArtist',
+    'hideVibeDislike', 'hideVibePrevious', 'hideVibeNext', 'showArtistName', 'showSoloCover', 'showArtistCover', 'showWaveTrackName', 'showWaveTrackArtist', 'showWaveTime', 'showWaveContext', 'hideVibePlay', 'hideBarVolume', 'hideBarQueue', 'hideBarCover', 'hideBarTitle', 'hideBarArtist',
     'playlistCustomButtons', 'playlistCoverCustom', 'playlistSearchCustom', 'barButtonsCustom',
     'smartTheme', ...smartGroups,
     'motionEnabled', 'motionCards', 'motionAura', 'motionBackground',
@@ -430,6 +432,9 @@
     for (const key of TOGGLES) {
       if (typeof value[key] === 'boolean') safe[key] = value[key];
     }
+    for (const key of ['hideVibePrevious','hideVibeNext']) {
+      if (!(key in value) && value.hideVibeSkip === true) safe[key] = true;
+    }
     if (value.vibeAdaptiveCover === true && !Object.hasOwn(value, 'vibeHideCoverWithPortrait')) safe.vibeHideCoverWithPortrait = true;
     if (value.vibeCoverFocus === true) safe.vibeAdaptiveCover = true;
     if (safe.vibeTrackLayout === 'native' && (value.vibeCoverFocus === true || value.showVibeArtist === false)) {
@@ -449,6 +454,7 @@
     }
     safe.wallpaper = isDataImage(value.wallpaper) ? value.wallpaper : '';
     safe.barWallpaper = isDataImage(value.barWallpaper) ? value.barWallpaper : '';
+    safe.navLogo = isDataImage(value.navLogo) && value.navLogo.length < 400000 ? value.navLogo : '';
     safe.likedImage = isDataImage(value.likedImage) ? value.likedImage : '';
     if (Array.isArray(value.addonSheets) && value.addonSheets.length <= 24) {
       let remaining = MAX_ADDON;
@@ -561,7 +567,8 @@
     hideVibeMenu: 'button:is([data-test-id="CONTEXT_MENU_BUTTON"],[data-test-id="VIBE_CONTEXT_MENU_BUTTON"],[aria-label="Контекстное меню" i],[aria-label="Context menu" i],[aria-label="More options" i])',
     hideVibeLike: 'button:is([data-test-id="LIKE_BUTTON"],[aria-label="Нравится" i],[aria-label="Убрать лайк" i],[aria-label="Больше не нравится" i],[aria-label="Like" i],[aria-label="Unlike" i])',
     hideVibeDislike: 'button:is([data-test-id="DISLIKE_BUTTON"],[aria-label="Не нравится" i],[aria-label="Убрать дизлайк" i],[aria-label="Dislike" i],[aria-label="Remove dislike" i])',
-    hideVibeSkip: ':is([class*="VibePlayerControls_skipButton__"],[data-test-id="NEXT_TRACK_BUTTON"],[data-test-id="PREVIOUS_TRACK_BUTTON"],[data-test-id="PREV_TRACK_BUTTON"])',
+    hideVibePrevious: ':is([data-test-id="PREVIOUS_TRACK_BUTTON"],[data-test-id="PREV_TRACK_BUTTON"],button[aria-label*="Предыдущ" i])',
+    hideVibeNext: ':is([data-test-id="NEXT_TRACK_BUTTON"],button[aria-label*="Следующ" i],[class*="VibePlayerControls_skipButton__"]:not([data-test-id*="PREV"]):not([aria-label*="Предыдущ" i]))',
     hideVibePlay: VIBE_PLAY
   };
   const BAR_VISIBILITY = {
@@ -750,13 +757,13 @@
       ${t.playlistCoverCustom ? `${scoped(SELECTOR.playlistCover)} { border-radius:${t.playlistCoverRound}px !important; }` : ''}
       ${t.playlistSearchCustom || (smartButtons && t.playlistButtons) || readableSearch ? `
         ${scoped(searchContainer)}, ${scoped(SELECTOR.playlistSearch)} {
-          background-color:${readableSearch ? searchSurface : paint(rgba(t.playlistSearchFill,t.playlistSearchOpacity))} !important;
-          color:${readableSearch ? searchInk : paint(searchInk)} !important;
+          background-color:${paint(readableSearch ? searchSurface : rgba(t.playlistSearchFill,t.playlistSearchOpacity))} !important;
+          color:${paint(searchInk)} !important;
           ${t.playlistSearchCustom ? `border-radius:${t.playlistSearchRound}px !important;` : ''}
         }
         ${scoped(searchContainer + ' input')} { background-color:transparent !important; }
         ${scoped(SELECTOR.playlistSearch + '::placeholder')} {
-          color:${readableSearch ? searchInk : paint(searchInk)} !important; opacity:${t.contrastGuard ? 1 : .72};
+          color:${paint(searchInk)} !important; opacity:${t.contrastGuard ? 1 : .72};
         }
       ` : ''}
     `;
@@ -894,7 +901,8 @@
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + (wordmark ? 244 : 35) + ' 27">' +
     VKUSNO_MARK + (wordmark ? VKUSNO_WORDMARK.replaceAll('#264F36', ink) : '') + '</svg>'));
   function brandStyles(t, sidebar) {
-    if (t.navBrand !== 'vkusno') return '';
+    const custom = t.navBrand === 'custom' && t.navLogo;
+    if (!custom && t.navBrand !== 'vkusno') return '';
     const logo = '[class*="NavbarDesktop_logoWrapper__"] a';
     const holder = logo + ' [class*="NavbarDesktop_logo__"]';
     const compact = ':is([data-ymc-nav-compact],[data-ymc-nav-dock="left"],[data-ymc-nav-dock="right"])';
@@ -904,10 +912,10 @@
       ${scoped(holder + ' svg')} { visibility:hidden !important; }
       ${scoped(holder + '::after')} {
         content:""; position:absolute; inset:0; min-width:28px; pointer-events:none;
-        background:${vkusnoLogo(true, luminance(sidebar) > .44 ? '#264F36' : '#FFF6E9')} center / contain no-repeat;
+        background:${custom ? cssUrl(custom) : vkusnoLogo(true, luminance(sidebar) > .44 ? '#264F36' : '#FFF6E9')} center / contain no-repeat;
       }
       ${scoped(compact + ' ' + holder + '::after, ' + nativeCompact + ' ' + holder + '::after')} {
-        background-image:${vkusnoLogo(false, '#264F36')}; background-size:min(90%,28px) auto;
+        background-image:${custom ? cssUrl(custom) : vkusnoLogo(false, '#264F36')}; background-size:min(90%,28px) auto;
       }
       ${scoped('[data-ymc-nav-dock] ' + holder)} { width:100% !important; min-height:30px; }
     `;
@@ -974,6 +982,13 @@
       }
       ${scoped('[data-ymc-clock-date][hidden]')} { display:none; }
       ${scoped('[data-ymc-clock-period]')} {font-size:.31em; letter-spacing:.02em; vertical-align:baseline;}
+      ${t.clockStyle === 'editorial' ? `
+        ${scoped('[data-ymc-clock-time]')} {display:flex;align-items:baseline;line-height:.94;font-stretch:condensed;}
+        ${scoped('[data-ymc-clock-number="minute"]')} {color:var(--ymc-clock-accent);}
+        ${scoped('[data-ymc-clock-separator]')} {font-weight:400;opacity:.72;margin-inline:.012em;}
+        ${scoped('[data-ymc-clock-number="second"],[data-ymc-clock-separator]:has(+ [data-ymc-clock-number="second"])')} {font-size:.38em;}
+        ${scoped('[data-ymc-clock-date]')} {font-weight:620;letter-spacing:.06em;font-variant-caps:all-small-caps;}
+      ` : ''}
       ${t.clockStyle === 'digital' ? `
         ${scoped('[data-ymc-clock-separator]')} {opacity:.68;}
         ${scoped('[data-ymc-clock-number="second"]')} {font-size:.56em;letter-spacing:-.035em;}
@@ -999,8 +1014,9 @@
         ${scoped('[data-ymc-clock-time]')} { position:absolute; clip-path:inset(50%); }
         ${scoped('[data-ymc-clock-face]')} {
           display:block; position:relative; inline-size:2.05em; block-size:2.05em;
-          border:1px solid ${paint(rgba(clockInk, 55))}; border-radius:50%;
-          background:radial-gradient(circle,${paint(rgba(clockFill, 52))},${paint(rgba(clockFill, 22))});
+          border:1px solid ${paint(rgba(clockInk, 30))}; border-radius:50%;
+          box-shadow:inset 0 .015em .035em ${paint(rgba(clockInk, 18))},0 .06em .18em #0002;
+          background:radial-gradient(ellipse at 36% 20%,${paint(rgba(clockAccent, 14))},transparent 68%),${paint(rgba(clockFill, 78))};
         }
         ${t.clockStyle === 'orbit' ? `
           ${scoped('[data-ymc-clock-face]')} {
@@ -1437,7 +1453,7 @@
     const now = new Date();
     waveClock.dateTime = now.toISOString();
     const digits = waveClock.firstElementChild;
-    if (['digital', 'tiles', 'stacked'].includes(theme.clockStyle)) {
+    if (['editorial','digital', 'tiles', 'stacked'].includes(theme.clockStyle)) {
       const parts = clockFormat.formatToParts(now);
       if (digits.dataset.format !== formatKey || digits.childElementCount !== parts.length) {
         digits.replaceChildren(...parts.map(({ type }) => {
@@ -1558,20 +1574,26 @@
     if (activeHero && activeHero !== hero) {
       coverAnimation?.cancel();
       activeHero.removeAttribute('data-ymc-track-art');
+      activeHero.removeAttribute('data-ymc-cover-off');
       paintWaveBeat(0);
       resetBeatEnvelope(waveBeatState);
     }
     activeHero = hero;
     $('ymc-builder-open').disabled = !hero;
-    setText($('ymc-builder-help'), hero ? 'Выберите блок, перетащите его или потяните за угол рамки.' : 'Откройте «Мою волну», чтобы редактировать её блоки.');
+    setText($('ymc-builder-help'), hero ? 'Перетащите виджет из правой панели или выберите блок прямо на экране.' : 'Откройте «Мою волну», чтобы редактировать её блоки.');
     const track = syncWaveTrackLayout(hero);
     syncCinemaDecor(hero, fullscreen);
     document.documentElement.toggleAttribute('data-ymc-on-wave', Boolean(hero));
+    const needsCoverVariant = homeDraft || theme.homeLayout || !theme.showSoloCover || !theme.showArtistCover;
     const enlargesArt = theme.vibeAdaptiveCover;
     const adaptsArt = enlargesArt || theme.vibeHideCoverWithPortrait;
-    portraitNode = hero && theme.showVibePortrait && (adaptsArt || hasBeatAura(theme)) ? [...hero.querySelectorAll(SELECTOR.portrait)]
+    portraitNode = hero && theme.showVibePortrait && (adaptsArt || hasBeatAura(theme) || needsCoverVariant) ? [...hero.querySelectorAll(SELECTOR.portrait)]
       .find(img => img.complete && img.naturalWidth > 0 && img.getClientRects().length &&
         getComputedStyle(img).visibility === 'visible') : undefined;
+    const variant = portraitNode && theme.vibeTrackLayout !== 'noArtist' ? 'coverArtist' : 'coverSolo';
+    const variantChanged = coverVariant !== variant;
+    coverVariant = variant;
+    if (hero) hero.toggleAttribute('data-ymc-cover-off', variant === 'coverSolo' ? !theme.showSoloCover : !theme.showArtistCover);
     const adaptiveHero = adaptsArt && !hero?.matches('[class*="VibePage_bigCardPanel_opened__"]') ? hero : null;
     const priorArt = adaptiveHero?.dataset.ymcTrackArt;
     const nextArt = portraitNode && theme.vibeHideCoverWithPortrait ? 'portrait' : !portraitNode && enlargesArt ? 'cover' : 'native';
@@ -1585,7 +1607,7 @@
     }
     syncAdaptiveArt(nextArt === 'cover' ? adaptiveHero : null);
     syncWaveAlbumCard(hero, nextArt, track);
-    if (checkBlocks || homeDraft || (theme.homeLayout && hero !== homeScene) || theme.homeLayout !== homeSource) {
+    if (checkBlocks || variantChanged || homeDraft || (theme.homeLayout && hero !== homeScene) || theme.homeLayout !== homeSource) {
       syncHomeLayout(hero);
     }
     if (animateArt) {
@@ -1900,7 +1922,7 @@
         const value = el?.getAttribute(name);
         return value && navMarks.get(el)?.get(name) !== value ? value : '';
       };
-      const label = (brand ? (theme.navBrand === 'vkusno' ? 'Логотип «Вкусно — и точка»' : 'Логотип Яндекс Музыки') : pinTitle || nativeAttribute(control, 'aria-label') ||
+      const label = (brand ? (theme.navBrand === 'vkusno' ? 'Логотип «Вкусно — и точка»' : theme.navBrand === 'custom' && theme.navLogo ? 'Свой логотип' : 'Логотип Яндекс Музыки') : pinTitle || nativeAttribute(control, 'aria-label') ||
         nativeAttribute(node, 'aria-label') || nativeAttribute(node, 'title') || node.textContent.trim() ||
         nativeAttribute(control, 'title') || '').slice(0, 100);
       const test = node.dataset.testId;
@@ -2291,8 +2313,11 @@
     const portraitRule = portrait === 'none' ? 'none' : paint(portrait);
     const pulsePortrait = t.motionEnabled && t.motionAura && hasPortraitAura(t) && !hasBeatAura(t);
     const hiddenElements = [
-      [t.showVibePortrait, PORTRAIT], [t.vibeTrackLayout !== 'noArtist', SELECTOR.vibeArtist],
+      [t.showVibePortrait, PORTRAIT], [t.showArtistName && t.vibeTrackLayout !== 'noArtist', SELECTOR.vibeArtist],
       [t.showVibeHeading, SELECTOR.vibeHeading],
+      [t.showWaveTrackName, VIBE_TRACK_NAME + ', [data-ymc-wave-track-title]'],
+      [t.showWaveTrackArtist, VIBE_TRACK_ARTIST + ', [data-ymc-timeline-artist]'],
+      [t.showWaveTime, VIBE_TIMECODE], [t.showWaveContext, '[data-test-id="VIBE_PAGE_CONTEXT_MENU_BUTTON"]'],
       [t.showCornerAppVersion, SELECTOR.cornerVersion], [t.showCornerLoaderVersion, SELECTOR.cornerLoader],
       [t.showCornerAudioFormat, SELECTOR.cornerFormat]
     ].filter(([visible]) => !visible).map(([, selector]) => selector).join(', ');
@@ -2383,15 +2408,15 @@
       ${painting}
       ${useCustomizerPalette && t.smartTheme && t.contrastGuard ? `
         ${scoped(SEARCH_BOX + ', ' + SEARCH_BOX + ' input, [class*="SearchPage_tab__"]')} {
-          background-color:${searchFill} !important;
-          color:${searchInk} !important;
-          --q2v-accent-color:${searchInk} !important;
-          --ym-controls-color-secondary-on_outline-enabled:${searchInk} !important;
+          background-color:${paint(searchFill)} !important;
+          color:${paint(searchInk)} !important;
+          --q2v-accent-color:${paint(searchInk)} !important;
+          --ym-controls-color-secondary-on_outline-enabled:${paint(searchInk)} !important;
         }
-        ${scoped(SEARCH_BOX + ' input')} { border-radius:inherit; caret-color:${searchInk} !important; }
-        ${scoped(SEARCH_BOX + ' input::placeholder')} { color:${searchInk} !important; }
-        ${scoped(SEARCH_BOX + ' [class*="AnimatedSearchInputText_base__"]')} { fill:${searchInk} !important; opacity:1 !important; }
-        ${scoped(SEARCH_BOX + ' [class*="AnimatedSearchInputText_gradientStop_"]')} { stop-color:${searchInk} !important; }
+        ${scoped(SEARCH_BOX + ' input')} { border-radius:inherit; caret-color:${paint(searchInk)} !important; }
+        ${scoped(SEARCH_BOX + ' input::placeholder')} { color:${paint(searchInk)} !important; }
+        ${scoped(SEARCH_BOX + ' [class*="AnimatedSearchInputText_base__"]')} { fill:${paint(searchInk)} !important; opacity:1 !important; }
+        ${scoped(SEARCH_BOX + ' [class*="AnimatedSearchInputText_gradientStop_"]')} { stop-color:${paint(searchInk)} !important; }
       ` : ''}
       ${t.sidebarEdgeCustom ? `${scoped('[data-ymc-nav-edge]')} { --ymc-edge-color:${paint(t.sidebarEdgeColor)}; }` : ''}
       ${t.panelOpacity === 0 ? `${scoped('[class*="DefaultLayout_navbar__"], ' + SELECTOR.sidebar)} {
@@ -2407,6 +2432,8 @@
         ` : ''}
       ` : ''}
       ${!t.aiTrackCards ? `${scoped(SELECTOR.vibeAi)} { display:none !important; }` : ''}
+      ${scoped('[data-ymc-layout-inline]')} { display:inline-block !important; }
+      ${scoped('[data-ymc-cover-off] :is(' + coverBlock + ')')} { visibility:hidden !important; pointer-events:none !important; }
       ${hiddenElements ? `${scoped(hiddenElements)} { display:none !important; }` : ''}
       ${!t.showVibeWheel ? `${scoped(SELECTOR.vibeWheel)} { display:none !important; }` : ''}
       ${t.showVibeWheel && t.vibeWheelOpacity < 100 ? `${scoped(SELECTOR.vibeWheel)} { opacity:${t.vibeWheelOpacity / 100} !important; }` : ''}
@@ -2715,193 +2742,335 @@
   }
 
   // Layout values are normalized to the hero. The client keeps ownership of every control.
+  const coverBlock = VIBE_ALBUM_IMAGE + ', ' + VIBE_ALBUM + ':not(:has(' + VIBE_ALBUM_IMAGE + '))';
+  // The property in each row is shared with the main settings panel.
   const HOME_BLOCKS = {
-    title: ['Заголовок', SELECTOR.vibeArtist],
-    cover: ['Обложка', VIBE_ALBUM_IMAGE + ', ' + VIBE_ALBUM + ':not(:has(' + VIBE_ALBUM_IMAGE + '))'],
-    portrait: ['Портрет', PORTRAIT],
-    timeline: ['Строка трека', SELECTOR.vibeTrack],
-    controls: ['Кнопки воспроизведения', SELECTOR.vibeControls],
-    clock: ['Часы', '[data-ymc-wave-clock]']
+    title: ['Исполнитель', SELECTOR.vibeArtist, 'showArtistName', 'Aa'],
+    heading: ['Моя волна', SELECTOR.vibeHeading, 'showVibeHeading', '≋'],
+    coverSolo: ['Обложка без артиста', coverBlock, 'showSoloCover', '♫'],
+    coverArtist: ['Обложка с артистом', coverBlock, 'showArtistCover', '▣'],
+    portrait: ['Портрет', PORTRAIT, 'showVibePortrait', '◉'],
+    clock: ['Часы', '[data-ymc-wave-clock]', 'waveClock', '10:09'],
+    wheel: ['Колесо', SELECTOR.vibeWheel, 'showVibeWheel', '◌'],
+    words: ['Подсказки', SELECTOR.vibeAi, 'aiTrackCards', '“ ”'],
+    timeline: ['Строка трека', SELECTOR.vibeTrack, 'hideVibeTrack', '━●─'],
+    trackName: ['Название трека', VIBE_TRACK_NAME + ', [data-ymc-wave-track-title]', 'showWaveTrackName', '♪ Aa'],
+    trackArtist: ['Автор в строке', VIBE_TRACK_ARTIST + ', [data-ymc-timeline-artist]', 'showWaveTrackArtist', 'Aa'],
+    timecode: ['Время трека', VIBE_TIMECODE, 'showWaveTime', '2:48'],
+    caption: ['Подпись обложки', '[data-ymc-album-caption]', 'waveAlbumCard', '▤'],
+    context: ['Настройки волны', '[data-test-id="VIBE_PAGE_CONTEXT_MENU_BUTTON"]', 'showWaveContext', '☷'],
+    controls: ['Группа кнопок', SELECTOR.vibeControls, 'hideVibeControls', '◂ ▸'],
+    play: ['Пуск / пауза', VIBE_PLAY, 'hideVibePlay', '▶'],
+    previous: ['Назад', VIBE_VISIBILITY.hideVibePrevious, 'hideVibePrevious', '◀'],
+    next: ['Дальше', VIBE_VISIBILITY.hideVibeNext, 'hideVibeNext', '▶▏'],
+    like: ['Нравится', VIBE_VISIBILITY.hideVibeLike, 'hideVibeLike', '♡'],
+    dislike: ['Не нравится', VIBE_VISIBILITY.hideVibeDislike, 'hideVibeDislike', '⊖'],
+    volume: ['Громкость', VIBE_VISIBILITY.hideVibeVolume, 'hideVibeVolume', '◖))'],
+    menu: ['Меню', VIBE_VISIBILITY.hideVibeMenu, 'hideVibeMenu', '•••']
   };
   function decodeHomeLayout(raw) {
-    if (!raw || typeof raw !== 'string' || raw.length > 1200) return {};
+    if (typeof raw !== 'string' || !raw || raw.length > 4096) return {};
     let parsed;
     try { parsed = JSON.parse(raw); } catch { return {}; }
     const result = {};
     for (const key of Object.keys(HOME_BLOCKS)) {
-      const entry = parsed?.[key];
-      if (Array.isArray(entry) && entry.length === 3 && entry.every(Number.isFinite)) {
-        result[key] = [bounded(entry[0], 0, 1000, 500), bounded(entry[1], 0, 1000, 500), bounded(entry[2], 40, 180, 100)];
+      const entry = parsed?.[key] ?? (key.startsWith('cover') ? parsed?.cover : null);
+      if (Array.isArray(entry) && [3, 4].includes(entry.length) && entry.every(Number.isFinite)) {
+        result[key] = entry.map((n, i) => i < 2 ? bounded(n, 0, 1000, 500) : bounded(n, 40, 180, 100));
       }
     }
     return result;
   }
 
-  let homeScene, homeDraft, homeFrame, homeResize, homeSaved, homeSource, homeDrag;
+  let homeScene, homeDraft, homeFrame, homeResize, homeSaved, homeSource, homeDrag, homeOriginal;
+  let homeOwnsInert = false;
+  let coverVariant = 'coverSolo';
   const homeBlocks = new Map();
+  const homeBounds = new Map();
   const limit = (value, min, max) => Math.max(min, Math.min(max, value));
+  const homeEnabled = prop => prop === 'waveClock' ? theme.waveClock !== 'off' :
+    prop.startsWith('hide') ? !theme[prop] : theme[prop];
   function queueHomeLayout() {
     if (homeFrame === undefined) homeFrame = requestAnimationFrame(() => {
       homeFrame = undefined;
       placeHomeBlocks();
     });
   }
+  function measureHome(key, node) {
+    const box = node.getBoundingClientRect();
+    if (key === 'title' && node.textContent.trim()) {
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      const range = document.createRange();
+      let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+      while (walker.nextNode()) {
+        if (!walker.currentNode.textContent.trim()) continue;
+        range.selectNodeContents(walker.currentNode);
+        const text = range.getBoundingClientRect();
+        if (!text.width || !text.height) continue;
+        left = Math.min(left, text.left); top = Math.min(top, text.top);
+        right = Math.max(right, text.right); bottom = Math.max(bottom, text.bottom);
+      }
+      if (right > left) return { box, ink: new DOMRect(left, top, right - left, bottom - top) };
+    }
+    return { box, ink: box };
+  }
   function placeHomeBlocks() {
     if (!homeScene) return;
     const field = homeScene.getBoundingClientRect();
-    if (homeDraft) Object.assign($('ymc-builder-area').style, {
-      left:field.x+'px', top:field.y+'px', width:field.width+'px', height:field.height+'px'
-    });
     if (!field.width || !field.height) return;
     const layout = homeDraft || homeSaved;
-    const picker = $('ymc-builder-block');
-    const frame = $('ymc-builder-frame');
+    const picker = $('ymc-builder-block'), frame = $('ymc-builder-frame');
     const edits = [];
+    const byNode = new Map([...homeBlocks.values()].map(item => [item.node, item]));
+    const parents = new Set();
+    homeBounds.clear();
     for (const [key, item] of homeBlocks) {
-      const box = item.node.getBoundingClientRect();
+      const { box, ink } = measureHome(key, item.node);
       if (!box.width || !box.height) continue;
       const entry = layout[key];
-      const scale = entry ? entry[2] / 100 : 1;
-      const width = box.width * scale / item.scale, height = box.height * scale / item.scale;
-      const originX = box.x + box.width / 2 - item.x, originY = box.y + box.height / 2 - item.y;
-      const marginX = Math.min(width, field.width) / 2, marginY = Math.min(height, field.height) / 2;
-      const x = entry ? field.x + limit(field.width * entry[0] / 1000, marginX, field.width - marginX) : originX;
-      const y = entry ? field.y + limit(field.height * entry[1] / 1000, marginY, field.height - marginY) : originY;
-      edits.push({ item, dx:x - originX, dy:y - originY, scale, entry });
-      if (homeDraft && picker.value === key) {
-        Object.assign(frame.style, { left:x - width / 2 + 'px', top:y - height / 2 + 'px', width:width + 'px', height:height + 'px' });
-        frame.hidden = false;
-        frame.setAttribute('aria-label', HOME_BLOCKS[key][0] + ' — переместить стрелками');
-        $('ymc-builder-size').value = String(Math.round(scale * 100));
+      const sx = (entry?.[2] ?? 100) / 100, sy = (entry?.[3] ?? entry?.[2] ?? 100) / 100;
+      let ax = 1, ay = 1;
+      for (let ancestor = item.node.parentElement; ancestor && ancestor !== homeScene; ancestor = ancestor.parentElement) {
+        const parent = byNode.get(ancestor);
+        if (parent) { ax *= parent.sx; ay *= parent.sy; parents.add(parent); }
       }
+      const width = ink.width * sx / item.sx, height = ink.height * sy / item.sy;
+      const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+      const naturalX = cx - ax * item.x + (ink.x + ink.width / 2 - cx) * sx / item.sx;
+      const naturalY = cy - ay * item.y + (ink.y + ink.height / 2 - cy) * sy / item.sy;
+      const x = entry ? field.x + field.width * entry[0] / 1000 : naturalX;
+      const y = entry ? field.y + field.height * entry[1] / 1000 : naturalY;
+      edits.push({ item, dx: (x - naturalX) / ax, dy: (y - naturalY) / ay, sx, sy, entry });
+      if (homeDraft) homeBounds.set(key, { x: x - width / 2, y: y - height / 2, width, height });
     }
-    for (const { item, dx, dy, scale, entry } of edits) {
-      if (Math.abs(item.x - dx) < .1 && Math.abs(item.y - dy) < .1 && item.scale === scale) continue;
-      item.x = dx; item.y = dy; item.scale = scale;
-      // Add to native positioning and animations, including the cover transition.
-      const pose = { translate:dx + 'px ' + dy + 'px', scale:String(scale), composite:'add' };
+    for (const { item, dx, dy, sx, sy, entry } of edits) {
+      if (Math.abs(item.x - dx) < .07 && Math.abs(item.y - dy) < .07 && item.sx === sx && item.sy === sy && Boolean(entry) === Boolean(item.effect)) continue;
+      Object.assign(item, { x: dx, y: dy, sx, sy });
+      if (item.inline && Boolean(entry) !== item.node.hasAttribute('data-ymc-layout-inline')) {
+        item.node.toggleAttribute('data-ymc-layout-inline', Boolean(entry));
+        queueHomeLayout();
+      }
       if (!entry) { item.effect?.cancel(); item.effect = null; }
-      else if (item.effect) item.effect.effect.setKeyframes([pose, pose]);
       else {
-        item.effect = item.node.animate([pose, pose], { duration:1, fill:'both' });
-        item.effect.finish();
+        const pose = { translate: dx + 'px ' + dy + 'px', scale: sx + ' ' + sy, composite: 'add' };
+        if (item.effect) item.effect.effect.setKeyframes([pose, pose]);
+        else { item.effect = item.node.animate([pose, pose], { duration: 1, fill: 'both' }); item.effect.finish(); }
       }
+      if (parents.has(item)) queueHomeLayout();
     }
+    if (!homeDraft) return;
+    const key = picker.value, rect = homeBounds.get(key);
+    frame.hidden = !rect;
+    for (const id of ['size', 'width', 'height']) $('ymc-builder-' + id).disabled = !rect;
+    const warning = $('ymc-builder-warning');
+    if (!rect) { setText(warning, 'Блок появится, когда его покажет плеер.'); return; }
+    Object.assign(frame.style, { left: rect.x + 'px', top: rect.y + 'px', width: rect.width + 'px', height: rect.height + 'px' });
+    frame.setAttribute('aria-label', HOME_BLOCKS[key][0] + ' — переместить стрелками');
+    const item = homeBlocks.get(key);
+    for (const [id, value] of [['size', item.sx], ['width', item.sx], ['height', item.sy]]) {
+      $('ymc-builder-' + id).value = String(Math.round(value * 100));
+    }
+    const collisions = [];
+    for (const [other, b] of homeBounds) {
+      const node = homeBlocks.get(other).node;
+      if (node.contains(item.node) || item.node.contains(node)) continue;
+      if (Math.min(rect.x + rect.width, b.x + b.width) - Math.max(rect.x, b.x) > 2 &&
+        Math.min(rect.y + rect.height, b.y + b.height) - Math.max(rect.y, b.y) > 2) collisions.push(HOME_BLOCKS[other][0]);
+    }
+    setText(warning, collisions.length ? 'Перекрытие с «' + collisions.join('», «') + '». Можно разнести блоки или оставить так.' : '');
   }
   function syncHomeLayout(hero) {
-    if (homeDraft && hero !== homeScene) stopHomeEditor();
+    if (homeDraft && hero !== homeScene) { stopHomeEditor(); apply(); }
     const source = theme.homeLayout;
-    if (source !== homeSource) { homeSource = source; homeSaved = decodeHomeLayout(source); }
+    const changedLayout = source !== homeSource;
+    if (changedLayout) { homeSource = source; homeSaved = decodeHomeLayout(source); }
     if (!homeDraft && !source) hero = null;
     if (!hero && !homeScene && !homeBlocks.size) return;
-    const changedScene = homeScene !== hero;
-    if (changedScene) {
-      homeResize?.disconnect();
-      homeScene = hero;
-      if (hero) {
-        homeResize ??= new ResizeObserver(queueHomeLayout);
-        homeResize.observe(hero);
-      }
+    let changed = homeScene !== hero;
+    if (changed) {
+      homeResize?.disconnect(); homeScene = hero;
+      if (hero) { homeResize ??= new ResizeObserver(queueHomeLayout); homeResize.observe(hero); }
     }
-    let changed = changedScene;
     for (const [key, [, selector]] of Object.entries(HOME_BLOCKS)) {
-      const node = hero && (homeDraft || homeSaved[key]) ? [...hero.querySelectorAll(selector)].find(el =>
-        el.getClientRects().length && !el.closest('[hidden]') &&
-        getComputedStyle(el).visibility === 'visible') : null;
+      const relevant = (!key.startsWith('cover') || key === coverVariant) && (homeDraft || homeSaved[key]);
+      const node = hero && relevant ? [...hero.querySelectorAll(selector)].find(el => el.getClientRects().length &&
+        !el.closest('[hidden]') && getComputedStyle(el).visibility === 'visible') : null;
       const prev = homeBlocks.get(key);
       if (prev?.node === node || !node && !prev) continue;
-      if (prev) { prev.effect?.cancel(); homeResize?.unobserve(prev.node); homeBlocks.delete(key); }
-      if (node) { homeBlocks.set(key, { node, x:0, y:0, scale:1 }); homeResize.observe(node); }
+      if (prev) { prev.node.removeAttribute('data-ymc-layout-inline'); prev.effect?.cancel(); homeResize.unobserve(prev.node); homeBlocks.delete(key); }
+      if (node) { homeBlocks.set(key, { node, x: 0, y: 0, sx: 1, sy: 1, inline: getComputedStyle(node).display === 'inline' }); homeResize.observe(node); }
       changed = true;
     }
     if (homeDraft) {
-      const select = $('ymc-builder-block');
-      const keys = Object.keys(HOME_BLOCKS).filter(key => homeBlocks.has(key));
-      if (select.dataset.keys !== keys.join(',')) {
-        const last = select.value;
-        select.replaceChildren(...keys.map(key => new Option(HOME_BLOCKS[key][0], key)));
-        if (keys.includes(last)) select.value = last;
-        select.dataset.keys = keys.join(',');
+      for (const card of $('ymc-builder-cards').children) {
+        const key = card.dataset.block;
+        card.querySelector('input').checked = homeEnabled(HOME_BLOCKS[key][2]);
+        card.setAttribute('aria-current', String(key === $('ymc-builder-block').value));
+        card.dataset.present = String(homeBlocks.has(key));
       }
-      $('ymc-builder-frame').hidden = !keys.length;
     }
-    if (hero && (changed || homeDraft || source)) queueHomeLayout();
+    if (hero && (changed || changedLayout || homeDraft)) queueHomeLayout();
   }
   function stopHomeEditor() {
-    homeDraft = null; homeDrag = null;
-    $('ymc-builder-tools').hidden = $('ymc-builder-frame').hidden = $('ymc-builder-area').hidden = true;
+    if (homeOwnsInert && homeScene) homeScene.inert = false;
+    homeOwnsInert = false;
+    if (homeOriginal) theme = { ...theme, ...homeOriginal };
+    homeOriginal = null; homeDraft = null; homeDrag = null; homeBounds.clear();
+    for (const id of ['tools', 'frame', 'area']) $('ymc-builder-' + id).hidden = true;
     window.removeEventListener('scroll', queueHomeLayout, true);
   }
   function wireHomeEditor() {
-    const picker = $('ymc-builder-block'), frame = $('ymc-builder-frame');
-    const setPose = (key, x, y, scale) => {
+    const get = id => $('ymc-builder-' + id);
+    const picker = get('block'), frame = get('frame'), area = get('area'), cards = get('cards');
+    const select = key => { picker.value = key; syncHomeLayout(homeScene); };
+    const setPose = (key, x, y, sx, sy = sx) => {
       const field = homeScene.getBoundingClientRect();
-      homeDraft[key] = [bounded((x-field.x)*1000/field.width,0,1000,500), bounded((y-field.y)*1000/field.height,0,1000,500), bounded(scale,40,180,100)];
+      if (!field.width || !field.height) return;
+      const entry = [bounded((x - field.x) * 1000 / field.width, 0, 1000, 500), bounded((y - field.y) * 1000 / field.height, 0, 1000, 500), bounded(sx, 40, 180, 100)];
+      if (Math.round(sy) !== entry[2]) entry.push(bounded(sy, 40, 180, 100));
+      homeDraft[key] = entry;
       queueHomeLayout();
     };
-    const getPose = () => {
-      const item = homeBlocks.get(picker.value);
-      if (!item || !homeDraft) return;
-      const box = item.node.getBoundingClientRect();
-      return { key:picker.value, x:box.x+box.width/2, y:box.y+box.height/2, scale:item.scale*100, width:box.width, height:box.height };
+    const getPose = key => {
+      const item = homeBlocks.get(key), rect = homeBounds.get(key);
+      if (!item || !rect) return;
+      const entry = homeDraft[key];
+      const field = homeScene.getBoundingClientRect();
+      return {
+        key, width: rect.width, height: rect.height,
+        x: entry ? field.x + entry[0] * field.width / 1000 : rect.x + rect.width / 2,
+        y: entry ? field.y + entry[1] * field.height / 1000 : rect.y + rect.height / 2,
+        sx: entry?.[2] ?? 100, sy: entry?.[3] ?? entry?.[2] ?? 100
+      };
     };
-    $('ymc-builder-open').onclick = () => {
+    const setVisible = (key, on) => {
+      const prop = HOME_BLOCKS[key][2];
+      const patch = {
+        [prop]: prop === 'waveClock' ? (on ? (homeOriginal.waveClock === 'time' ? 'time' : theme.waveClock === 'time' ? 'time' : 'date') : 'off') :
+          prop.startsWith('hide') ? !on : on
+      };
+      if (on && ['previous', 'next', 'play', 'like', 'dislike', 'menu', 'volume'].includes(key)) patch.hideVibeControls = false;
+      if (on && ['trackName', 'trackArtist', 'timecode'].includes(key)) patch.hideVibeTrack = false;
+      if (on && key === 'coverArtist') patch.vibeHideCoverWithPortrait = false;
+      if (on && key === 'title' && theme.vibeTrackLayout === 'noArtist') patch.vibeTrackLayout = 'native';
+      for (const k of Object.keys(patch)) if (!(k in homeOriginal)) homeOriginal[k] = theme[k];
+      theme = { ...theme, ...patch };
+      apply(); refresh(); syncControls(true);
+    };
+    for (const [key, [name, , , glyph]] of Object.entries(HOME_BLOCKS)) {
+      picker.add(new Option(name, key));
+      const card = document.createElement('div');
+      card.className = 'widget'; card.dataset.block = key; card.draggable = true;
+      card.innerHTML = '<button type="button"><span aria-hidden="true"></span><b></b></button><input type="checkbox">';
+      card.querySelector('span').textContent = glyph;
+      card.querySelector('b').textContent = name;
+      const check = card.querySelector('input');
+      check.setAttribute('aria-label', 'Показывать · ' + name);
+      card.querySelector('button').onclick = () => select(key);
+      check.onchange = () => { setVisible(key, check.checked); select(key); };
+      card.ondragstart = e => { e.dataTransfer.setData('application/x-ymc-widget', key); e.dataTransfer.effectAllowed = 'copyMove'; };
+      cards.append(card);
+    }
+    const dropTarget = el => {
+      el.ondragover = e => { if (e.dataTransfer.types.includes('application/x-ymc-widget')) e.preventDefault(); };
+      el.ondrop = e => {
+        const key = e.dataTransfer.getData('application/x-ymc-widget');
+        if (!Object.hasOwn(HOME_BLOCKS, key) || !homeDraft) return;
+        e.preventDefault(); setVisible(key, true); select(key);
+        const entry = homeDraft[key];
+        setPose(key, e.clientX, e.clientY, entry?.[2] ?? 100, entry?.[3] ?? entry?.[2] ?? 100);
+      };
+    };
+    dropTarget(area); dropTarget(frame);
+    get('open').onclick = () => {
       if (!activeHero) return;
       showDialog('');
       if (!activeHero) return;
-      homeDraft = decodeHomeLayout(theme.homeLayout);
-      homeScene = activeHero;
-      homeResize ??= new ResizeObserver(queueHomeLayout);
-      homeResize.observe(homeScene);
-      $('ymc-builder-tools').hidden = $('ymc-builder-area').hidden = false;
-      syncHomeLayout(activeHero);
+      homeDraft = decodeHomeLayout(theme.homeLayout); homeOriginal = {};
+      get('tools').removeAttribute('data-folded');
+      get('fold').textContent = 'Свернуть'; get('fold').setAttribute('aria-expanded', 'true');
+      for (const id of ['tools', 'area']) get(id).hidden = false;
+      syncHomeLayoutOnOpen();
       window.addEventListener('scroll', queueHomeLayout, true);
       picker.focus();
     };
+    function syncHomeLayoutOnOpen() {
+      homeScene = activeHero;
+      homeOwnsInert = !homeScene.inert;
+      homeScene.inert = true;
+      homeResize ??= new ResizeObserver(queueHomeLayout);
+      homeResize.observe(homeScene); syncHomeLayout(activeHero);
+      if (!homeBlocks.has(picker.value) && homeBlocks.size) select(homeBlocks.keys().next().value);
+    }
     const finish = save => {
-      const layout = homeDraft;
+      const layout = homeDraft, patch = {};
+      for (const key of Object.keys(homeOriginal)) patch[key] = theme[key];
       stopHomeEditor();
-      if (save) update({ homeLayout:Object.keys(layout).length ? JSON.stringify(layout) : '' });
-      syncHomeLayout(activeHero);
-      showDialog('editor', launcher);
-      $('ymc-builder-open').focus();
+      if (save) update({ ...patch, homeLayout: Object.keys(layout).length ? JSON.stringify(layout) : '' });
+      else { apply(); refresh(); syncControls(true); }
+      syncHomeLayout(activeHero); queueHomeLayout();
+      showDialog('editor', launcher); get('open').focus();
     };
-    $('ymc-builder-save').onclick = () => finish(true);
-    $('ymc-builder-cancel').onclick = () => finish(false);
-    $('ymc-builder-reset').onclick = () => { homeDraft = {}; queueHomeLayout(); };
-    picker.onchange = queueHomeLayout;
-    $('ymc-builder-size').oninput = event => {
-      const pose = getPose();
-      if (pose) setPose(pose.key, pose.x, pose.y, Number(event.target.value));
+    get('save').onclick = () => finish(true);
+    get('cancel').onclick = () => finish(false);
+    get('reset').onclick = () => { homeDraft = {}; queueHomeLayout(); };
+    get('one-reset').onclick = () => { delete homeDraft[picker.value]; queueHomeLayout(); };
+    get('fold').onclick = () => {
+      const folded = get('tools').toggleAttribute('data-folded');
+      get('fold').textContent = folded ? 'Развернуть' : 'Свернуть';
+      get('fold').setAttribute('aria-expanded', String(!folded));
     };
-    frame.onpointerdown = event => {
-      const pose = getPose();
-      if (!pose || event.button !== 0 || homeDrag) return;
-      frame.setPointerCapture(event.pointerId);
-      homeDrag = { ...pose, id:event.pointerId, startX:event.clientX, startY:event.clientY, resize:event.target.hasAttribute('data-resize') };
-      event.preventDefault();
+    picker.onchange = () => select(picker.value);
+    for (const axis of ['size', 'width', 'height']) get(axis).oninput = e => {
+      const p = getPose(picker.value), value = Number(e.target.value);
+      if (p) setPose(p.key, p.x, p.y, axis === 'height' ? p.sx : value, axis === 'width' ? p.sy : value);
     };
-    frame.onpointermove = event => {
-      const drag = homeDrag;
-      if (!drag || !homeDraft || drag.id !== event.pointerId) return;
-      const dx = event.clientX - drag.startX, dy = event.clientY - drag.startY;
-      if (drag.resize) {
-        const ratio = 1 + 2*(dx*drag.width + dy*drag.height)/(drag.width**2 + drag.height**2 || 1);
-        setPose(drag.key, drag.x, drag.y, drag.scale*ratio);
-      } else setPose(drag.key, drag.x+dx, drag.y+dy, drag.scale);
+    function beginDrag(e, key, handle) {
+      const pose = getPose(key);
+      if (!pose || e.button !== 0 || homeDrag) return;
+      select(key); frame.focus({ preventScroll: true }); handle.setPointerCapture(e.pointerId);
+      homeDrag = { ...pose, id: e.pointerId, startX: e.clientX, startY: e.clientY, resize: e.target.hasAttribute('data-resize') };
+      e.preventDefault();
+    }
+    frame.onpointerdown = e => beginDrag(e, picker.value, frame);
+    area.onpointerdown = e => {
+      const hits = [...homeBounds].filter(([, r]) => e.clientX >= r.x && e.clientX <= r.x + r.width && e.clientY >= r.y && e.clientY <= r.y + r.height);
+      hits.sort((a, b) => a[1].width * a[1].height - b[1].width * b[1].height);
+      if (hits.length) beginDrag(e, hits[0][0], area);
     };
-    frame.onlostpointercapture = () => { homeDrag = null; };
-    frame.onkeydown = event => {
-      const pose = getPose(), step = event.shiftKey ? 10 : 1;
-      const delta = { ArrowLeft:[-step,0], ArrowRight:[step,0], ArrowUp:[0,-step], ArrowDown:[0,step] }[event.key];
-      if (pose && delta) { event.preventDefault(); setPose(pose.key,pose.x+delta[0],pose.y+delta[1],pose.scale); }
+    frame.onpointermove = area.onpointermove = e => {
+      const d = homeDrag;
+      if (!d || d.id !== e.pointerId) return;
+      const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
+      if (d.resize) {
+        const ratio = 1 + 2 * (dx * d.width + dy * d.height) / (d.width ** 2 + d.height ** 2 || 1);
+        setPose(d.key, d.x, d.y, d.sx * ratio, d.sy * ratio);
+      } else setPose(d.key, d.x + dx, d.y + dy, d.sx, d.sy);
     };
-    document.addEventListener('keydown', event => {
-      if (homeDraft && event.key === 'Escape') { event.stopImmediatePropagation(); event.preventDefault(); finish(false); }
+    frame.onlostpointercapture = area.onlostpointercapture = () => { homeDrag = null; };
+    frame.onkeydown = e => {
+      const p = getPose(picker.value), step = e.shiftKey ? 10 : 1;
+      const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      if (p && d) { e.preventDefault(); setPose(p.key, p.x + d[0], p.y + d[1], p.sx, p.sy); }
+    };
+    window.addEventListener('keydown', e => {
+      if (!homeDraft) return;
+      const path = e.composedPath();
+      if (e.key === 'Tab') {
+        const focusable = [frame, ...get('tools').querySelectorAll('button,input,select')].filter(el => !el.disabled && el.getClientRects().length);
+        if (focusable.length && ((e.shiftKey && path.includes(focusable[0])) || (!e.shiftKey && path.includes(focusable.at(-1))))) {
+          e.preventDefault(); e.stopImmediatePropagation(); focusable[e.shiftKey ? focusable.length - 1 : 0].focus(); return;
+        }
+      }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); finish(false); return; }
+      if (!path.includes(get('tools')) && !path.includes(frame)) { e.preventDefault(); e.stopImmediatePropagation(); picker.focus(); }
     }, true);
+    for (const node of [get('tools'), frame, area]) {
+      for (const type of ['keydown', 'keyup', 'click', 'dblclick', 'auxclick', 'pointerdown', 'pointerup', 'contextmenu']) {
+        node.addEventListener(type, e => { e.stopPropagation(); if (type === 'contextmenu') e.preventDefault(); });
+      }
+    }
   }
-
-
   let theme = readTheme();
   let dynamicColors;
   let smartCovers = [];
@@ -2910,7 +3079,6 @@
   let smartPalette;
   let smartDestination;
   let smartRequest = 0;
-  let smartSpectrumFade;
   let smartStatus = '';
   const coverPalettes = new Map();
   let visualBase, visualColors, visualSnapshot;
@@ -2954,23 +3122,23 @@
     if (sheet.textContent !== css) sheet.textContent = css;
   }
   const paintNames = [];
-  let paintCount = 0;
+  let lastPaint = [];
   let paintValues = [];
   const isPaintColor = value => /^(?:#[0-9a-f]{6}|rgba?\([\d.,\s]+\))$/i.test(value);
   function paintToken(value) {
-    if (!isPaintColor(value)) return value;
+    if (!isPaintColor(value) && !value.startsWith('url(')) return value;
     const index = paintValues.push(value) - 1;
     const name = paintNames[index] ??= '--ymc-paint-' + index;
     return `var(${name})`;
   }
-  function syncPaint(style) {
+  function syncPaint(style, colorOnly) {
     for (let index = 0; index < paintValues.length; index++) {
       const name = paintNames[index];
       const value = paintValues[index];
-      if (style.getPropertyValue(name) !== value) style.setProperty(name, value);
+      if ((colorOnly ? lastPaint[index] : style.getPropertyValue(name)) !== value) style.setProperty(name, value);
     }
-    for (let index = paintValues.length; index < paintCount; index++) style.removeProperty(paintNames[index]);
-    paintCount = paintValues.length;
+    for (let index = paintValues.length; index < lastPaint.length; index++) style.removeProperty(paintNames[index]);
+    lastPaint = paintValues;
     paintValues = [];
   }
   let motionPreference;
@@ -2978,14 +3146,14 @@
 
   function apply(colorOnly = false, duration = 0) {
     const active = isStyled();
-    if (!active) stopBackdropFade();
+    if (!active) stopPaletteTransition();
     const styledTheme = visualTheme();
     if (!colorOnly) samplePortraitWallpaper();
     const portraitBackground = portraitBackgroundColor();
     const root = document.documentElement;
     if (!colorOnly) root.setAttribute('data-ymc-active', active ? 'yes' : 'no');
     setSheet(baseStyle, active ? makeStyles(styledTheme, cover, portraitBackground, shadow ? paintToken : literal) : '');
-    if (shadow) syncPaint(root.style);
+    if (shadow) syncPaint(root.style, colorOnly);
     if (!colorOnly) {
       const sheets = active && styledTheme.addonEnabled ? styledTheme.addonSheets : [];
       while (addonStyles.length > sheets.length) addonStyles.pop().remove();
@@ -3055,7 +3223,7 @@
     clearTimeout(persistTimer);
     persistTimer = undefined;
     try {
-      localStorage.setItem(KEY, JSON.stringify(theme));
+      localStorage.setItem(KEY, JSON.stringify(homeOriginal ? {...theme,...homeOriginal} : theme));
       saveError = '';
     } catch {
       saveError = 'Не удалось сохранить настройки. Экспортируйте тему или освободите место, убрав изображение.';
@@ -3080,9 +3248,8 @@
       recordHistory(previous, historyKey);
     }
     theme = next;
-    stopBackdropFade();
     if (!theme.smartTheme || !theme.enabled) {
-      smartSpectrumFade = undefined;
+      stopPaletteTransition();
       smartRequest++;
       smartAbort?.abort();
       smartAbort = undefined;
@@ -3736,6 +3903,7 @@
   const STROKE = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
   const sparkle = '<path d="M0-13Q1-1 11 0Q1 1 0 13Q-1 1-11 0Q-1-1 0-13Z"/>';
   const patternMarks = {
+    fries: () => '<g transform="translate(-16,-13)">'+VKUSNO_MARK+'</g>',
     stars: i => i % 7 === 0 ? sparkle : '<circle r="3"/>',
     orbits: i => '<ellipse rx="21" ry="9" ' + STROKE + '/><circle r="' + (i % 2 ? 4.5 : 2.5) +
       '"/><circle cx="15" cy="-6" r="2.3"/>',
@@ -4467,90 +4635,44 @@
     return target;
   }
 
-  let backdropFade;
-  function stopBackdropFade() {
-    if (!backdropFade) return;
-    backdropFade.animation.cancel();
-    backdropFade.node.remove();
-    backdropFade = undefined;
-  }
-
-  function fadeBackdrop(previous, next, duration) {
-    let start = previous.background;
-    let end = previous.mode === 'solid' ? start : previous.gradientEnd;
-    if (backdropFade) {
-      const fade = backdropFade;
-      const progress = fade.animation.effect.getComputedTiming().progress ?? 0;
-      const alpha = fade.opacity * (1 - progress);
-      start = mixHex(start, fade.start, alpha);
-      end = mixHex(end, fade.end, alpha);
-      stopBackdropFade();
-    }
-    const nextEnd = next.mode === 'solid' ? next.background : next.gradientEnd;
-    if (!duration || (start === next.background && end === nextEnd) || next.addonEnabled && next.addonPalette ||
-        !['solid', 'gradient'].includes(previous.mode) || !['solid', 'gradient'].includes(next.mode) ||
-        next.appMediaEnabled && vibeMedia) return;
-    let opacity = 1;
-    if (next.contrastGuard || smartOn(next, 'smartText')) {
-      const threshold = Math.max(smartOn(next, 'smartText') ? 4.5 : 1, next.contrastGuard ? next.contrastLevel / 10 : 1);
-      const ink = tintedInk(next.text, [next.background, nextEnd], threshold);
-      // Keep the new foreground legible when a very dark theme changes to a light one or vice versa.
-      const readable = alpha => contrastRatio(ink, mixHex(next.background, start, alpha)) >= threshold &&
-        contrastRatio(ink, mixHex(nextEnd, end, alpha)) >= threshold;
-      if (!readable(1)) {
-        let low = 0, high = 1;
-        for (let i = 0; i < 8; i++) {
-          const mid = (low + high) / 2;
-          if (readable(mid)) low = mid;
-          else high = mid;
-        }
-        opacity = low;
-      }
-    }
-    if (opacity < .02) return;
-    const node = document.createElement('div');
-    node.setAttribute('data-ymc-backdrop-fade', '');
-    node.setAttribute('aria-hidden', 'true');
-    node.style.background = `linear-gradient(${previous.gradientAngle}deg,${start},${end})`;
-    document.body.append(node);
-    const animation = node.animate([{ opacity }, { opacity: 0 }], { duration, easing: 'ease-in-out', fill: 'both' });
-    backdropFade = { node, animation, start, end, opacity };
-    animation.onfinish = () => {
-      if (backdropFade?.animation === animation) stopBackdropFade();
-    };
-  }
-
-  function animateSmartTheme(target) {
-    if (smartDestination && COLORS.every(key => smartDestination[key] === target[key])) return;
-    smartDestination = target;
-    syncSmartPreview(target);
-    const duration = reducedMotion() || document.hidden ? 0 : theme.smartTransition;
-    if (!dynamicColors && duration && isStyled()) {
-      dynamicColors = smartBaseColors();
+  let paletteTimer;
+  function stopPaletteTransition(finish = false) {
+    clearTimeout(paletteTimer);
+    paletteTimer = undefined;
+    if (finish && smartDestination && dynamicColors !== smartDestination) {
+      dynamicColors = smartDestination;
       apply(true);
     }
-    const before = visualTheme();
-    const now = performance.now();
-    const spectrumStart = spectrumPalette(before, now).spectrumMid;
-    dynamicColors = target;
-    smartSpectrumFade = duration && smartOn(visualTheme(), 'smartSpectrum') && spectrumStart !== target.spectrumMid
-      ? { start: spectrumStart, at: now, duration } : undefined;
-    if (isStyled()) {
-      fadeBackdrop(before, visualTheme(), duration);
-      apply(true, duration);
-    }
   }
 
-  function spectrumPalette(t, now) {
-    if (!smartSpectrumFade) return t;
-    const { start, at, duration } = smartSpectrumFade;
-    const progress = Math.min(1, (now - at) / duration);
-    if (progress >= 1) {
-      smartSpectrumFade = undefined;
-      return t;
+  function animateSmartTheme(target, trackChange = false) {
+    if (smartDestination && COLORS.every(key => smartDestination[key] === target[key])) return;
+    stopPaletteTransition();
+    smartDestination = target;
+    syncSmartPreview(target);
+    const duration = trackChange && !reducedMotion() && !document.hidden && isStyled() ? theme.smartTransition : 0;
+    const from = dynamicColors || smartBaseColors();
+    const fields = COLORS.filter(key => from[key] !== target[key]);
+    const start = performance.now();
+    function paintStep() {
+      const now = performance.now();
+      const progress = duration && fields.length ? Math.min(1,(now-start)/duration) : 1;
+      if (progress === 1 || document.hidden || !isStyled()) {
+        dynamicColors = target;
+        paletteTimer = undefined;
+      } else {
+        const eased = (1-Math.cos(progress*Math.PI))/2;
+        dynamicColors = {...from};
+        for (const key of fields) dynamicColors[key] = mixHex(from[key],target[key],eased);
+      }
+      // Recompute ink against the intermediate surfaces, including light-to-dark changes.
+      apply(true);
+      if (dynamicColors !== target) {
+        const cost = performance.now()-now;
+        paletteTimer = setTimeout(paintStep, Math.max(32-cost,cost*5));
+      }
     }
-    const eased = (1 - Math.cos(Math.PI * Math.max(0, progress))) / 2;
-    return { ...t, ...spectrumTones(mixHex(start, t.spectrumMid, eased)) };
+    paintStep();
   }
 
   async function loadCoverPalette(source, signal) {
@@ -4615,7 +4737,7 @@
       smartPalette = palette;
       smartReady = true;
       smartAbort = undefined;
-      animateSmartTheme(smartTarget(palette));
+      animateSmartTheme(smartTarget(palette),true);
       smartStatus = 'Используется палитра обложки ' + smartTitle + '.';
       setText($('ymc-smart-status'), smartStatus);
       return;
@@ -5275,7 +5397,7 @@
     if (drawSpectrum) updateSpectrumLevels(t, bins, input?.analyser?.context.sampleRate || 48000, dt);
     const fading = drawSpectrum && spectrumLevels.subarray(0, t.spectrumBands).some(level => level > .004);
     const beatFading = paintAudioEffects(effects, t, input, bins, dt, now);
-    const spectrumTheme = drawSpectrum ? spectrumPalette(t, now) : t;
+    const spectrumTheme = drawSpectrum ? t : t;
     if (background && activeDialog !== 'now') {
       if (barCanvas.dataset.signal !== spectrumSignal) barCanvas.dataset.signal = spectrumSignal;
       setText($('ymc-bar-status'), SPECTRUM_STATUS[spectrumSignal]);
@@ -5344,9 +5466,42 @@
     #ymc-builder-area{box-shadow:inset 0 0 0 1px var(--accent)}
     #ymc-builder-frame{pointer-events:auto;touch-action:none;cursor:move;border:2px solid var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 9%,transparent)}
     #ymc-builder-frame [data-resize]{position:absolute;right:-7px;bottom:-7px;width:18px;height:18px;border:2px solid var(--bg);border-radius:50%;background:var(--accent);cursor:nwse-resize}
-    #ymc-builder-tools{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);pointer-events:auto;width:max-content;max-width:calc(100% - 24px);display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;padding:8px;border:1px solid var(--border);border-radius:16px;background:var(--bg);box-shadow:0 4px 20px #0003}
-    #ymc-builder-tools label{display:flex;align-items:center;gap:4px}
-    #ymc-builder-tools select{width:auto}
+    #ymc-builder-area{inset:0;pointer-events:auto;touch-action:none;cursor:crosshair}
+    #ymc-builder-frame{min-height:0;min-width:0}
+    #ymc-builder-tools{position:fixed;right:12px;top:clamp(12px,5vh,54px);max-height:90dvh;width:min(280px,80vw);pointer-events:auto;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:20px;background:var(--bg);color:var(--fg);box-shadow:0 12px 44px #0004}
+    #ymc-builder-tools header,#ymc-builder-tools footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px}
+    #ymc-builder-tools header strong{font-size:18px}
+    #ymc-builder-tools footer{border-top:1px solid var(--border)}
+    #ymc-builder-tools[data-folded]{width:auto}
+    #ymc-builder-tools[data-folded] :is(.widget-scroll,footer,#ymc-builder-warning){display:none}
+    .widget-scroll{padding:0 14px 12px;overflow:auto;overscroll-behavior:contain}
+    .widget-scroll>label{display:grid;grid-template-columns:6em 1fr;align-items:center;margin:8px 0}
+    .widget-scroll :is(input,select){min-width:0}
+    #ymc-builder-cards{max-height:clamp(116px,32vh,390px);overflow:auto;overscroll-behavior:contain;padding:3px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .widget{position:relative;border:1px solid var(--border);border-radius:12px;background:var(--control)}
+    .widget[aria-current=true]{border-color:var(--accent);background:var(--hover)}
+    .widget button{display:grid;gap:3px;padding:8px;width:100%;text-align:left;border:0;background:none;color:var(--fg);cursor:grab}
+    .widget span{font:650 18px/1.25 ui-rounded,system-ui;color:var(--accent)}
+    .widget[data-present=false] span{color:var(--muted)}
+    .widget[data-block^=cover] span,.widget[data-block=portrait] span{width:27px;height:25px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--art-end));color:var(--bg);border-radius:5px}
+    .widget[data-block=portrait] span{border-radius:50%}
+    .line>input[type=checkbox]{appearance:none;position:relative;flex:none;width:32px;height:19px;border:1px solid var(--border);border-radius:20px;background:var(--control);cursor:pointer}
+    .line>input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:11px;height:11px;border-radius:50%;background:var(--muted)}
+    .line>input[type=checkbox]:checked{background:var(--accent)}
+    .line>input[type=checkbox]:checked::after{translate:13px 0;background:var(--store-cta-fg)}
+    @media(prefers-reduced-motion:no-preference){.line>input[type=checkbox],.line>input[type=checkbox]::after{transition:translate .2s cubic-bezier(.2,.8,.25,1),background-color .18s}}
+    @media(forced-colors:active){.line>input[type=checkbox]{appearance:auto}.line>input[type=checkbox]::after{display:none}}
+    .widget b{font-size:11px;font-weight:560}
+    .widget input{position:absolute;right:6px;top:6px;accent-color:var(--accent)}
+    #ymc-builder-warning{margin:4px 14px;font-size:12px;color:var(--fg);border-inline-start:2px solid var(--accent);padding-inline-start:8px}
+    #ymc-builder-warning:empty{display:none}
+    @media(prefers-reduced-motion:no-preference){
+      .btn,.widget,.section-switch input{transition:background-color .18s,border-color .18s,box-shadow .18s}
+      input[type=range]::-webkit-slider-thumb{transition:scale .16s ease-out}
+      input[type=range]:active::-webkit-slider-thumb{scale:1.12}
+      [data-pane]:not([hidden]),.guide-card,#ymc-builder-tools:not([hidden]){animation:ymc-panel-enter .22s cubic-bezier(.22,1,.36,1)}
+      @keyframes ymc-panel-enter{from{opacity:.4;translate:0 4px}to{opacity:1;translate:0}}
+    }
     .head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .btn.primary{background:var(--hover);border-color:var(--accent)}
     .shade{position:fixed;inset:0;background:#090610ad;pointer-events:auto}
@@ -5614,12 +5769,21 @@
   const MARKUP = `
     <div id="ymc-builder-area" hidden aria-hidden="true"></div>
     <div id="ymc-builder-frame" hidden role="group" tabindex="0"><span data-resize title="Изменить размер"></span></div>
-    <div id="ymc-builder-tools" hidden role="group" aria-label="Конструктор главного экрана">
-      <select id="ymc-builder-block" aria-label="Блок"></select>
-      <label>Размер <input id="ymc-builder-size" type="range" min="40" max="180" step="1"></label>
-      <button class="btn" id="ymc-builder-reset">Сбросить раскладку</button>
-      <button class="btn" id="ymc-builder-cancel">Отмена</button><button class="btn primary" id="ymc-builder-save">Сохранить</button>
-    </div>
+    <aside id="ymc-builder-tools" hidden aria-label="Конструктор главного экрана">
+      <header><strong>Виджеты</strong><button class="btn" id="ymc-builder-fold" aria-expanded="true">Свернуть</button></header>
+      <div class="widget-scroll">
+        <p class="muted">Перетащите блок на «Мою волну». Галочка управляет его видимостью.</p>
+        <div id="ymc-builder-cards"></div>
+        <label>Выбранный блок <select id="ymc-builder-block"></select></label>
+        ${[['size','Размер'],['width','Ширина'],['height','Высота']].map(([id,label])=>
+          '<label>'+label+' <input id="ymc-builder-'+id+'" type="range" min="40" max="180" step="1"></label>').join('')}
+
+        <button class="btn" id="ymc-builder-one-reset">Вернуть блок на место</button>
+        <button class="btn" id="ymc-builder-reset">Сбросить раскладку</button>
+      </div>
+      <p id="ymc-builder-warning" role="status"></p>
+      <footer><button class="btn" id="ymc-builder-cancel">Отмена</button><button class="btn primary" id="ymc-builder-save">Сохранить</button></footer>
+    </aside>
     <div id="ymc-editor" hidden>
       <div id="ymc-resize" role="separator" aria-orientation="vertical" aria-label="Ширина редактора" aria-controls="ymc-panel"
         tabindex="0" title="Перетащите край. Стрелки меняют ширину, двойной щелчок возвращает минимум."></div>
@@ -5919,7 +6083,7 @@
               </select></label>
               ${whenAvailable('waveClockSize', 'waveClock', `
                 <div class="grid">
-                  <label>Вид часов<select data-prop="clockStyle"><option value="digital">Цифровые</option>
+                  <label>Вид часов<select data-prop="clockStyle"><option value="editorial">Акцент · крупные цифры</option><option value="digital">Цифровые</option>
                     <option value="tiles">Табло с секциями</option><option value="stacked">Цифры в столбик</option>
                     <option value="outline">Контурные цифры</option><option value="analog">Стрелочные</option><option value="orbit">Орбита · минутное кольцо</option></select></label>
                   <label>Положение<select data-prop="clockPosition"><option value="topLeft">Сверху слева</option>
@@ -5962,12 +6126,16 @@
             ${check('hideVibeControls', 'Скрыть все кнопки «Моей волны»')}
             ${whenAvailable('hideVibePlay', 'hideVibeControls', `
               ${check('hideVibePlay', 'Скрыть воспроизведение и паузу')}
-              ${check('hideVibeSkip', 'Скрыть переключение треков')}
+              ${check('hideVibePrevious', 'Скрыть предыдущий трек')}
+              ${check('hideVibeNext', 'Скрыть следующий трек')}
               ${check('hideVibeLike', 'Скрыть лайк')}${check('hideVibeDislike', 'Скрыть дизлайк')}
               ${check('hideVibeVolume', 'Скрыть громкость')}${check('hideVibeMenu', 'Скрыть контекстное меню')}`)}
           </section>
           <section id="ymc-home-sidebar"><h3>Панель навигации</h3>
-            <label>Логотип<select data-prop="navBrand"><option value="native">Яндекс Музыка</option><option value="vkusno">Вкусно — и точка</option></select></label>
+            <div class="buttons"><button class="btn" id="ymc-logo-pick">Загрузить логотип</button>
+              <button class="btn" id="ymc-logo-clear">Вернуть штатный</button>
+              <input type="file" accept="image/png,image/jpeg,image/webp" id="ymc-logo-file" hidden></div>
+            <p class="muted">PNG, JPG или WebP до 2 МБ. Длинная сторона будет уменьшена до 256 пикселей.</p>
             <label>Расположение<select data-prop="sidebarDock"><option value="native">Как в Яндекс Музыке</option>
               <option value="left">Слева</option><option value="right">Справа</option><option value="top">Сверху, горизонтально</option>
               <option value="bottom">Снизу, горизонтально</option></select></label>
@@ -6053,6 +6221,13 @@
               <p class="muted">На басовых ударах свечение вокруг силуэта становится шире и ярче. Эквалайзер можно оставить скрытым.</p>`)}
           </section>
           <section id="ymc-home-track"><h3>Обложка и строка трека</h3>
+            ${check('showWaveTrackName', 'Показывать название трека')}
+            ${check('showWaveTrackArtist', 'Показывать автора в строке')}
+            ${check('showWaveTime', 'Показывать время трека')}
+            ${check('showWaveContext', 'Показывать настройки волны')}
+            ${check('showArtistName', 'Показывать имя исполнителя')}
+            ${check('showSoloCover', 'Обложка без артиста')}
+            ${check('showArtistCover', 'Обложка с артистом')}
             ${check('waveAlbumCard', 'Показывать обложку как карточку трека')}
             <label>Название трека и имя исполнителя<select data-prop="vibeTrackLayout">
               <option value="native">Как в Яндекс Музыке</option>
@@ -6669,7 +6844,7 @@
       sidebarEdgeCustom: !t.sidebarEdgeHint, sidebarEdgeColor: !t.sidebarEdgeHint || !t.sidebarEdgeCustom,
       vibeAdaptiveCoverSize: !t.vibeAdaptiveCover, vibeHideCoverWithPortrait: !t.showVibePortrait,
       vibeTrackOpacity: t.hideVibeTrack,
-      hideVibePlay: t.hideVibeControls, hideVibeSkip: t.hideVibeControls,
+      hideVibePlay: t.hideVibeControls, hideVibePrevious: t.hideVibeControls, hideVibeNext: t.hideVibeControls,
       hideVibeLike: t.hideVibeControls, hideVibeDislike: t.hideVibeControls,
       hideVibeVolume: t.hideVibeControls, hideVibeMenu: t.hideVibeControls,
       sidebar: !t.separateSurfaces, player: !t.separateSurfaces,
@@ -6716,7 +6891,7 @@
       edgeGlowStrength: t.edgeGlow === 'off', edgeGlowStart: t.edgeGlow === 'off' || !t.edgeGlowCustom,
       waveClockSize: t.waveClock === 'off', clockX: t.clockPosition.endsWith('Center'),
       clockMarks: !['analog','orbit'].includes(t.clockStyle), clockWeight: ['analog','orbit'].includes(t.clockStyle),
-      clockAccent: !['tiles', 'stacked', 'analog','orbit'].includes(t.clockStyle),
+      clockAccent: !['editorial','tiles', 'stacked', 'analog','orbit'].includes(t.clockStyle),
       clockDatePosition: t.waveClock !== 'date', clockRadius: !t.clockPlate,
       clockColor: !t.clockCustom, clockFill: !t.clockCustom || !t.clockPlate,
       barHeight: t.barLayout === 'native', barCoverSize: t.barLayout === 'native',
@@ -7206,7 +7381,7 @@
     ['theme', 'ymc-theme-heart', 'Отметка «Нравится»',
       'Включите оформление закрашенной отметки. Выберите цвет, размер, непрозрачность и форму. Настройте пульс или мерцание и длительность цикла. Можно загрузить картинку и оставить её цвета или перекрасить цветом лайка.'],
     ['layout', 'ymc-home-builder', 'Конструктор главного экрана',
-      'Откройте «Мою волну», выберите блок и перетащите его в рамке. Масштаб меняется за угол или ползунком. Сохраните раскладку или отмените правки.'],
+      'Перетащите виджет из правой панели на «Мою волну». Галочка меняет его видимость. За угол можно изменить общий размер, а ползунками — ширину и высоту отдельно. Пересечения подсвечиваются подсказкой. Сохраните раскладку или отмените правки.'],
     ['layout', 'ymc-home-clock', 'Часы',
       'Выберите цифровое табло или циферблат. У «Орбиты» кольцо показывает прошедшую часть часа. Цвет деталей можно связать с обложкой в умной теме.'],
     ['layout', 'ymc-home-hero', 'Фото и заголовок «Моя волна»',
@@ -7330,6 +7505,11 @@
     { version:'0.9.0', notes:[
       'Конструктор на главной позволяет перемещать и масштабировать блоки «Моей волны».',
       'Обновлены часы, подписи навигации, отражения стекла и подбор контрастных оттенков.'
+    ], steps:['ymc-home-builder','ymc-home-clock','ymc-home-sidebar','ymc-theme-smart'] },
+    { version:'0.10.0', notes:[
+      'Перетаскивайте виджеты из правой панели. Размер по каждой оси, видимость и позиция кнопок настраиваются отдельно.',
+      'У обложки с артистом и без него отдельные раскладки. Появились предупреждения о пересечениях.',
+      'Палитра плавно меняется между треками. Добавлены циферблат «Акцент», свой логотип и фирменный узор в магазине.'
     ], steps:['ymc-home-builder','ymc-home-clock','ymc-home-sidebar','ymc-theme-smart'] }
   ];
 
@@ -7745,7 +7925,7 @@
   }
 
   function showDialog(name, trigger) {
-    if (name && homeDraft) stopHomeEditor();
+    if (name && homeDraft) { stopHomeEditor(); apply(); refresh(); syncControls(true); }
     if (name !== 'editor') finishAppearancePreview();
     if (name !== 'editor') closeGuide(false);
     if (name !== 'editor' && compareNative) {
@@ -7841,7 +8021,7 @@
     const missingState = root.getAttribute('data-ymc-active') !== (isStyled() ? 'yes' : 'no') ||
       root.hasAttribute('data-ymc-editor-open') !== editor ||
       editor && !root.style.getPropertyValue('--ymc-dock') ||
-      paintCount && !root.style.getPropertyValue(paintNames[0]);
+      lastPaint.length && !root.style.getPropertyValue(paintNames[0]);
     if (!remount && !missingFilter && !missingSheets && !missingState) return;
 
     // The client's React root may replace the startup markup after the preload has run.
@@ -8240,6 +8420,12 @@
     fileInput('ymc-vibe-pick', 'ymc-vibe-file', async ([file]) => {
       if (await changeVibeMedia(file)) await rememberFile(file);
     });
+    fileInput('ymc-logo-pick','ymc-logo-file',async ([file],isCurrent) => {
+      if (file.size > 2000000) throw Error('Выберите логотип до 2 МБ.');
+      const navLogo = await imageToDataUrl(file,256,true);
+      if (isCurrent()) update({navLogo,navBrand:'custom'});
+    });
+    $('ymc-logo-clear').onclick=()=>{fileRequest++;update({navLogo:'',navBrand:'native'});};
     fileInput('ymc-liked-pick', 'ymc-liked-file', async ([file], isCurrent) => {
       const likedImage = await imageToDataUrl(file, 128, true);
       if (!isCurrent()) return;
@@ -8409,13 +8595,13 @@
     reducedMotion();
     motionPreference.addEventListener('change', () => {
       if (reducedMotion()) {
-        stopBackdropFade();
-        smartSpectrumFade = undefined;
-        coverAnimation?.cancel();
+        stopPaletteTransition(true);
+          coverAnimation?.cancel();
       }
       refresh();
     });
     document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopPaletteTransition(true);
       refresh();
     });
     window.addEventListener('pagehide', () => {
@@ -8429,8 +8615,7 @@
       releaseSpectrumInput();
       spectrumContext?.close().catch(() => {});
       spectrumContext = undefined;
-      stopBackdropFade();
-      smartSpectrumFade = undefined;
+      stopPaletteTransition();
       if (smartAbort) {
         smartRequest++;
         smartAbort.abort();
@@ -8539,11 +8724,10 @@
       body:has([class*="TitleBar_root__"]) { --ymc-native-titlebar-height:max(32px,var(--ym-spacer-size-xxxl,32px)); }
       html[data-ymc-editor-open] { --ymc-reserved-width:var(--ymc-dock); }
       html[data-ymc-editor-open] ${SELECTOR.layout} { width:calc(100% - var(--ymc-dock)) !important; min-width:0 !important; }
-      body:has(> [data-ymc-app-backdrop],> [data-ymc-pattern],> [data-ymc-page-spectrum],> [data-ymc-backdrop-fade]) { isolation:isolate; }
+      body:has(> [data-ymc-app-backdrop],> [data-ymc-pattern],> [data-ymc-page-spectrum]) { isolation:isolate; }
       html body:has(> [data-ymc-app-backdrop]) { background-image:none !important; }
       html[data-ymc-active="yes"]:has([data-ymc-app-backdrop]) ${SELECTOR.layout} { background:transparent !important; }
       [data-ymc-app-backdrop] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-3; pointer-events:none; overflow:hidden; }
-      [data-ymc-backdrop-fade] { position:fixed; inset:0; z-index:-3; pointer-events:none; }
       [data-ymc-pattern] { position:fixed; inset:0 var(--ymc-reserved-width) 0 0; z-index:-2; pointer-events:none; overflow:hidden; }
       ${NAV_STYLES}
       ${patternRules('[data-ymc-pattern]')}

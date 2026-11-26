@@ -158,12 +158,32 @@ final class InstallerWindow: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func launch() {
+        let target = install.application.standardizedFileURL
+        let running = NSRunningApplication.runningApplications(withBundleIdentifier: MusicInstall.customID)
+            .contains { $0.bundleURL?.standardizedFileURL == target }
+        guard !running, (try? install.hostUpdateSource()) != nil else { openMusic(); return }
+        // Use the helper that belongs to the installed mod, even if this launcher is older.
+        let embedded = target.appendingPathComponent("Contents/Resources/YMusic Customizer.app/Contents/MacOS/YMusicCustomizer")
+        perform("Обновляю копию перед открытием…", completion: { self.openMusic() }) {
+            let process = Process()
+            process.executableURL = embedded
+            process.arguments = ["--host-update", target.deletingLastPathComponent().path]
+            try process.run()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else {
+                throw CustomizerError("Не удалось обновить копию. Предыдущая версия доступна в папке приложений.")
+            }
+            return "Копия обновлена."
+        }
+    }
+
+    private func openMusic() {
         NSWorkspace.shared.openApplication(at: install.application, configuration: NSWorkspace.OpenConfiguration()) { _, error in
             if let error { DispatchQueue.main.async { self.showError(error) } }
         }
     }
 
-    private func perform(_ progress: String, action: @escaping () throws -> String) {
+    private func perform(_ progress: String, completion: (() -> Void)? = nil, action: @escaping () throws -> String) {
         busy = true
         detailText.stringValue = progress
         refresh()
@@ -173,7 +193,9 @@ final class InstallerWindow: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.busy = false
                 self.refresh()
                 switch result {
-                case .success(let message): self.detailText.stringValue = message
+                case .success(let message):
+                    self.detailText.stringValue = message
+                    completion?()
                 case .failure(let error):
                     self.detailText.stringValue = "Действие прервано."
                     self.showError(error)

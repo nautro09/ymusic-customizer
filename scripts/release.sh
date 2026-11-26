@@ -65,7 +65,7 @@ fi
 python3 scripts/embed-update-key.py "$stage/windows/scripts/update.cjs"
 (
   cd "$stage/windows"
-  python3 -m zipfile -c "$stage/artifacts/YMusic-Customizer-Windows.zip" README.md LICENSE docs licenses mod scripts УСТАНОВИТЬ.bat УДАЛИТЬ.bat
+  python3 -m zipfile -c "$stage/artifacts/YMusic-Customizer-Windows.zip" README.md LICENSE docs licenses mod scripts УСТАНОВИТЬ.bat ОТКРЫТЬ.bat УДАЛИТЬ.bat
 )
 python3 - "$stage/artifacts" "$version" "$notes" <<'PY'
 import hashlib

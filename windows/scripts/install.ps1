@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 
 function Enable-HostRepair([string]$RepairHome, [string]$TaskName, [string]$User) {
     New-Item -ItemType Directory -Path $RepairHome -Force | Out-Null
-    foreach ($file in @('repair-host.js', 'repair-host.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs')) {
+    foreach ($file in @('repair-host.js', 'repair-host.ps1', 'host-paths.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $RepairHome -Force
     }
     $script = Join-Path $RepairHome 'repair-host.js'
@@ -103,7 +103,7 @@ try {
         foreach ($file in @($active, $disabled)) {
             if (Test-Path -LiteralPath $file -PathType Leaf) { Remove-Item -LiteralPath $file -Force }
         }
-        foreach ($file in @('repair-host.js', 'repair-host.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs', 'host-repair-status.txt', 'host-repair.log')) {
+        foreach ($file in @('repair-host.js', 'repair-host.ps1', 'host-paths.ps1', 'discord-loader.ps1', 'discord-activity.cjs', 'update.cjs', 'host-repair-status.txt', 'host-repair.log', 'renderer.js', 'renderer-host.txt')) {
             $path = Join-Path $repairHome $file
             if (Test-Path -LiteralPath $path -PathType Leaf) { Remove-Item -LiteralPath $path -Force }
         }
@@ -176,8 +176,26 @@ try {
     } finally {
         if (Test-Path -LiteralPath $pending -PathType Leaf) { Remove-Item -LiteralPath $pending -Force }
     }
+    try {
+        $cache = Join-Path $repairHome 'renderer.js'
+        $stagedCache = Join-Path $repairHome ('renderer-' + $id + '.tmp')
+        try {
+            Copy-Item -LiteralPath $target -Destination $stagedCache
+            if (Test-Path -LiteralPath $cache) { [IO.File]::Replace($stagedCache, $cache, ($stagedCache + '.old'))
+                Remove-Item -LiteralPath ($stagedCache + '.old') }
+            else { [IO.File]::Move($stagedCache, $cache) }
+        } finally {
+            if (Test-Path -LiteralPath $stagedCache) { Remove-Item -LiteralPath $stagedCache -Force }
+        }
+        . (Join-Path $PSScriptRoot 'host-paths.ps1')
+        $appDir = Find-YMusicApp
+        $stampFile = Join-Path $repairHome 'renderer-host.txt'
+        if ($target -eq $active -and $appDir) {
+            [IO.File]::WriteAllText($stampFile, (Get-YMusicAsarStamp (Join-Path $appDir 'resources\app.asar')))
+        } elseif (Test-Path -LiteralPath $stampFile) { Remove-Item -LiteralPath $stampFile }
+    } catch { Write-Warning ('Не удалось обновить резервную копию мода: ' + $_.Exception.Message) }
     if ($movedDuplicate) { Write-Host ("Копия прежнего отключённого файла: " + $duplicateBackup) }
-    Write-Host 'YMusic Customizer v0.9.0 установлен.' -ForegroundColor Green
+    Write-Host 'YMusic Customizer v0.10.0 установлен.' -ForegroundColor Green
     if ($target -eq $disabled) {
         Write-Host 'Мод был отключён. Включите его в разделе «Моды», затем перезапустите приложение.'
     } else {

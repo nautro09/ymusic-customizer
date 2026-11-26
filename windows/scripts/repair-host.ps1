@@ -1,29 +1,7 @@
-﻿$ErrorActionPreference = 'Stop'
+﻿param([switch]$BeforeLaunch)
+$ErrorActionPreference = 'Stop'
 
-function Find-YMusicApp {
-    $standard = Join-Path $env:LOCALAPPDATA 'Programs\YandexMusic'
-    if (Test-Path -LiteralPath (Join-Path $standard 'resources\app.asar') -PathType Leaf) { return $standard }
-    $candidates = @()
-    foreach ($root in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall')) {
-        foreach ($item in Get-ChildItem -LiteralPath $root -ErrorAction SilentlyContinue) {
-            $entry = Get-ItemProperty -LiteralPath $item.PSPath -ErrorAction SilentlyContinue
-            if ($entry.InstallLocation -and ($entry.DisplayName -in @('Яндекс Музыка', 'Яндекс.Музыка', 'Yandex Music') -or
-                $item.PSChildName -match '^(YandexMusic|yandex-music|ru\.yandex\.desktop\.music)$')) {
-                $candidates += $entry.InstallLocation
-            }
-        }
-    }
-    foreach ($candidate in $candidates) {
-        if (Test-Path -LiteralPath (Join-Path $candidate 'resources\app.asar') -PathType Leaf) {
-            return (Resolve-Path -LiteralPath $candidate).Path
-        }
-    }
-}
-
-function Get-YMusicAsarStamp([string]$Asar) {
-    $file = Get-Item -LiteralPath $Asar
-    return "$($file.Length):$($file.LastWriteTimeUtc.Ticks)"
-}
+. (Join-Path $PSScriptRoot 'host-paths.ps1')
 
 function Test-YMusicPatched([string]$Asar) {
     $share = [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete
@@ -63,16 +41,47 @@ $lock = [Threading.Mutex]::new($false, 'Local\YMusicCustomizerSetup')
 $acquired = $false
 try {
     try { $acquired = $lock.WaitOne(0) } catch [Threading.AbandonedMutexException] { $acquired = $true }
-    if (-not $acquired) { return }
+    if (-not $acquired) {
+        if ($BeforeLaunch) { throw 'Обновление уже выполняется. Дождитесь окончания и откройте Музыку снова.' }
+        return
+    }
     $musicHome = Join-Path $env:APPDATA 'YandexMusic'
     $mod = Join-Path $musicHome 'mods\ymusic-customizer.js'
-    if (-not (Test-Path -LiteralPath $mod -PathType Leaf)) { return }
+    $disabledMod = Join-Path $musicHome 'mods\_ymusic-customizer.js'
+    $rendererStamp = Join-Path $PSScriptRoot 'renderer-host.txt'
+    if (Test-Path -LiteralPath $disabledMod -PathType Leaf) {
+        if (Test-Path -LiteralPath $rendererStamp) { Remove-Item -LiteralPath $rendererStamp }
+        return
+    }
     $watcher = Join-Path $musicHome 'modloader\watch-update.ps1'
     $appDir = Find-YMusicApp
     if (-not $appDir -or -not (Test-Path -LiteralPath $watcher -PathType Leaf)) { return }
     $asar = Join-Path $appDir 'resources\app.asar'
+    $currentHost = Get-YMusicAsarStamp $asar
+    $lastHost = if (Test-Path -LiteralPath $rendererStamp) { [IO.File]::ReadAllText($rendererStamp) }
+    if (-not (Test-Path -LiteralPath $mod -PathType Leaf)) {
+        if (-not $lastHost) { return }
+        if ($lastHost -eq $currentHost) {
+            # Removing the renderer while the host is unchanged also opts out.
+            Remove-Item -LiteralPath $rendererStamp
+            return
+        }
+        $cache = Join-Path $PSScriptRoot 'renderer.js'
+        if (-not (Test-Path -LiteralPath $cache -PathType Leaf)) { return }
+        $directory = Split-Path -Parent $mod
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+        $pending = Join-Path $directory ('.ymc-' + [Guid]::NewGuid().ToString('N') + '.tmp')
+        try {
+            Copy-Item -LiteralPath $cache -Destination $pending
+            if (Test-Path -LiteralPath $disabledMod) { return }
+            [IO.File]::Move($pending, $mod)
+        } finally {
+            if (Test-Path -LiteralPath $pending) { Remove-Item -LiteralPath $pending }
+        }
+    }
     if (Test-YMusicPatched $asar) {
         Repair-YMusicLoader $musicHome
+        if ($currentHost -ne $lastHost) { [IO.File]::WriteAllText($rendererStamp, $currentHost) }
         return
     }
     $appPrefix = $appDir.TrimEnd('\') + '\'
@@ -80,26 +89,34 @@ try {
     $busy = Get-Process | Where-Object { $_.Name -like 'Yandex_Music*' -or $_.Name -like 'Un_*' -or
         ($_.Path -and ($_.Path.StartsWith($appPrefix, [StringComparison]::OrdinalIgnoreCase) -or
                        $_.Path.StartsWith($updaterPrefix, [StringComparison]::OrdinalIgnoreCase))) } | Select-Object -First 1
-    if ($busy) { return }
+    if ($busy) {
+        if ($BeforeLaunch) { throw 'Дождитесь окончания обновления и закройте работающую Яндекс Музыку.' }
+        return
+    }
 
     $stamp = Get-YMusicAsarStamp $asar
     $statusFile = Join-Path $PSScriptRoot 'host-repair-status.txt'
     # Give the loader's own updater time to repair app.asar before trying independently.
-    if (((Get-Date).ToUniversalTime() - (Get-Item -LiteralPath $asar).LastWriteTimeUtc).TotalSeconds -lt 90) { return }
+    if (-not $BeforeLaunch -and ((Get-Date).ToUniversalTime() - (Get-Item -LiteralPath $asar).LastWriteTimeUtc).TotalSeconds -lt 90) { return }
     $previous = Get-Item -LiteralPath $statusFile -ErrorAction SilentlyContinue
-    if ($previous -and ((Get-Date).ToUniversalTime() - $previous.LastWriteTimeUtc).TotalMinutes -lt 15 -and
+    if (-not $BeforeLaunch -and $previous -and ((Get-Date).ToUniversalTime() - $previous.LastWriteTimeUtc).TotalMinutes -lt 15 -and
         [IO.File]::ReadAllText($statusFile) -eq $stamp) { return }
     $runningWatcher = Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" |
         Where-Object { $_.CommandLine -and $_.CommandLine.Contains($watcher) } | Select-Object -First 1
-    if ($runningWatcher) { return }
+    if ($runningWatcher) {
+        if ($BeforeLaunch) { throw 'Загрузчик обновляет клиент. Откройте Музыку после завершения.' }
+        return
+    }
     if ((Get-YMusicAsarStamp $asar) -ne $stamp -or (Test-YMusicPatched $asar)) { return }
     [IO.File]::WriteAllText($statusFile, $stamp)
     $powershell = Join-Path $PSHOME 'powershell.exe'
     & $powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $watcher -Mode repair -AppDir $appDir -NoLaunch
     if ($LASTEXITCODE -ne 0 -or -not (Test-YMusicPatched $asar)) { throw 'ymusic_mod could not restore the updated Yandex Music client.' }
     Repair-YMusicLoader $musicHome
+    [IO.File]::WriteAllText($rendererStamp, (Get-YMusicAsarStamp $asar))
 } catch {
     Add-Content -LiteralPath (Join-Path $PSScriptRoot 'host-repair.log') -Value ("[{0:s}] {1}" -f (Get-Date), $_.Exception.Message) -Encoding UTF8
+    if ($BeforeLaunch) { Write-Host $_.Exception.Message }
     exit 1
 } finally {
     if ($acquired) { $lock.ReleaseMutex() }
