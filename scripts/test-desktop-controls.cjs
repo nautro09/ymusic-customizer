@@ -105,7 +105,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.8.12';
+          const version = localStorage.getItem('test:next-version') ?? '0.9.1';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -120,7 +120,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await searchAudioSmoke(page, ui, platform);
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.8\.12/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.9\.1/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -128,7 +128,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.8.12'));
+      .querySelector('#ymc-update-label').textContent.includes('0.9.1'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -137,15 +137,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.8.13');
+    await nextRelease('0.9.2');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.8.13');
-    await nextRelease('0.8.14');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.9.2');
+    await nextRelease('0.9.3');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -511,7 +511,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       assert.equal(await edgeToggle.getAttribute('data-ymc-nav-cell'), 'fold');
     }
     await ui.locator('#ymc-sidebar-reset').click();
-    assert.equal(await search.isVisible(), true);
+    await search.waitFor({ state:'visible' });
     assert.equal(await navRoot.getAttribute('data-ymc-nav-dock'), null);
     assert.equal(await navRoot.locator('[data-ymc-nav-cell],[data-ymc-nav-native-label]').count(), 0);
     await navRoot.evaluate(el => Promise.allSettled(el.getAnimations().map(animation => animation.finished)));
