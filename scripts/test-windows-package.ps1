@@ -1,22 +1,31 @@
-﻿param([Parameter(Mandatory)][string]$Directory, [Parameter(Mandatory)][string]$Tag)
+﻿param(
+    [Parameter(Mandatory, ParameterSetName='Archive')][string]$Directory,
+    [Parameter(Mandatory, ParameterSetName='Archive')][string]$Tag,
+    [Parameter(Mandatory, ParameterSetName='Files')][string]$Staged
+)
 $ErrorActionPreference = 'Stop'
-$package = (Resolve-Path $Directory).Path
-$archive = Join-Path $package 'YMusic-Customizer-Windows.zip'
-$manifest = Get-Content (Join-Path $package 'update.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-if ("v$($manifest.version)" -ne $Tag -or (Get-FileHash $archive).Hash -ne $manifest.sha256.win32) {
-    throw 'Unexpected Windows package.'
-}
 $stage = Join-Path $env:TEMP ('ymc-package-' + [Guid]::NewGuid().ToString('N'))
 $env:APPDATA = Join-Path $stage 'roaming'
 $env:LOCALAPPDATA = Join-Path $stage 'local'
-Expand-Archive -LiteralPath $archive -DestinationPath (Join-Path $stage 'package')
-$scripts = Join-Path $stage 'package\scripts'
+if ($Staged) {
+    $payload = (Resolve-Path $Staged).Path
+} else {
+    $package = (Resolve-Path $Directory).Path
+    $archive = Join-Path $package 'YMusic-Customizer-Windows.zip'
+    $manifest = Get-Content (Join-Path $package 'update.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ("v$($manifest.version)" -ne $Tag -or (Get-FileHash $archive).Hash -ne $manifest.sha256.win32) {
+        throw 'Unexpected Windows package.'
+    }
+    $payload = Join-Path $stage 'package'
+    Expand-Archive -LiteralPath $archive -DestinationPath $payload
+}
+$scripts = Join-Path $payload 'scripts'
 foreach ($file in Get-ChildItem $scripts -Filter '*.ps1') {
     $errors = $null
     [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$errors)
     if ($errors) { throw ($errors | Out-String) }
 }
-& node --check (Join-Path $stage 'package\mod\ymusic-customizer.js')
+& node --check (Join-Path $payload 'mod\ymusic-customizer.js')
 if ($LASTEXITCODE) { throw 'Invalid renderer.' }
 $music = Join-Path $env:APPDATA 'YandexMusic'
 $loader = Join-Path $music 'modloader'

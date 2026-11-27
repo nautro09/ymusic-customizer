@@ -6,6 +6,10 @@ on:
         description: Release tag to verify
         required: true
         type: string
+      payload:
+        description: Digest of all files in the signed candidate (before publication)
+        required: false
+        type: string
 permissions:
   contents: read
 jobs:
@@ -16,7 +20,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Reproduce unpublished candidate
+        if: inputs.payload != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAYLOAD: ${{ inputs.payload }}
+        run: |
+          set -euo pipefail
+          gh release download -D previous -p YMusic-Customizer-Windows.zip
+          python scripts/stage-windows-check.py previous/YMusic-Customizer-Windows.zip staged "$PAYLOAD"
       - name: Download release files and verify signature
+        if: inputs.payload == ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -30,4 +45,9 @@ jobs:
         shell: powershell
         env:
           RELEASE_TAG: ${{ inputs.tag }}
-        run: ./scripts/test-windows-package.ps1 -Directory package -Tag $env:RELEASE_TAG
+        run: |
+          if (Test-Path staged) {
+            ./scripts/test-windows-package.ps1 -Staged staged
+          } else {
+            ./scripts/test-windows-package.ps1 -Directory package -Tag $env:RELEASE_TAG
+          }
