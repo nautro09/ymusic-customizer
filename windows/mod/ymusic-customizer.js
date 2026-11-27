@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.10.0 for Windows and macOS. MIT.
+ * YMusic Customizer v0.10.1 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.10.0';
+  const version = '0.10.1';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -116,7 +116,7 @@
     edgeGlowStyle: 'full', edgeGlowInset: 4, edgeGlowRadius: 16, edgeGlowWidth: 2,
     edgeGlowHalo: 36, edgeGlowSpread: 18, edgeGlowAngle: 135,
     navBrand: 'native', navLogo:'',
-    waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 72, waveTone: 60, waveBeat: 70,
+    waveStyle: 'native', wavePalette: 'auto', waveTint: '#9B70EE', waveOpacity: 72, waveTone: 60, waveBeat: 70, waveSensitivity:74, waveRelease:320,
     waveClearRail: true, waveNativeOpacity: 100, vibeAdaptiveCover: false, vibeHideCoverWithPortrait: false, vibeAdaptiveCoverSize: 78,
     vibeTrackLayout: 'native',
     sidebarDock: 'native', sidebarAlign: 'center', sidebarSize: 62, sidebarGap: 5, sidebarInset: 10,
@@ -203,7 +203,7 @@
       text:'#FFF6E9',textSecondary:'#DECDB6',likedCustom:true,likedColor:'#FB471F',
       liquidGlass:'regular',glassCustom:true,glassTint:'#264F36',glassLight:'#FFD4AA',
       glassOpacity:62,glassShine:28,glassRim:26,barLayout:'floating',barProgressMode:'always',
-      sidebarDock:'top',sidebarAlign:'center',sidebarSize:56,sidebarInset:12,sidebarCompact:false,waveNativeOpacity:30,
+      sidebarDock:'native',sidebarAlign:'center',sidebarSize:56,sidebarInset:12,sidebarCompact:false,waveNativeOpacity:30,
       edgeGlow:'wave',edgeGlowStyle:'corners',edgeGlowStrength:46,edgeGlowCustom:true,edgeGlowStart:'#EE7203',
       edgeGlowEnd:'#FB471F',edgeGlowHalo:24,edgeGlowWidth:1,cardRound:18,portraitEffect:'glow'
     },
@@ -342,7 +342,7 @@
     'portraitColor', 'navigationFill', 'navigationText', 'patternPrimary', 'patternSecondary', 'sidebarEdgeColor',
     'edgeGlowStart', 'edgeGlowEnd', 'glassTint', 'glassLight', 'clockColor', 'clockFill', 'clockAccent'];
   const RANGES = {
-    waveNativeOpacity: [0, 100, '%'], waveOpacity: [0, 100, '%'], waveTone: [10, 100, '%'], waveBeat: [0, 180, '%'],
+    waveNativeOpacity: [0, 100, '%'], waveOpacity: [0, 100, '%'], waveTone: [10, 100, '%'], waveBeat: [0, 180, '%'], waveSensitivity:[10,100,'%'], waveRelease:[100,900,'мс'],
     vibeAdaptiveCoverSize: [35, 100, '%'], sidebarSize: [44, 120, 'px'], sidebarGap: [0, 28, 'px'], sidebarInset: [0, 36, 'px'],
     sidebarIconSize: [14, 38, 'px'],
     waveClockSize: [35, 190, '%'], clockWeight: [200, 850, ''], clockSpacing: [-8, 18, '%'],
@@ -475,7 +475,15 @@
     for (const [key, version] of [[KEY, 2], [LEGACY_KEY, 1]]) {
       try {
         const value = JSON.parse(localStorage.getItem(key));
-        if (value?.version === version) return sanitizeTheme(value);
+        if (value?.version === version) {
+          if (value.name === 'Вкусно — и точка' && value.navBrand === 'vkusno' &&
+              value.sidebarDock === 'top' && value.sidebarSize === 56 && value.sidebarInset === 12 &&
+              !Object.hasOwn(value,'waveRelease')) {
+            value.sidebarDock = 'native';
+            value.sidebarCollapsed = false;
+          }
+          return sanitizeTheme(value);
+        }
       } catch { /* A damaged entry should not block the legacy theme. */ }
     }
     return { ...DEFAULT };
@@ -1270,7 +1278,7 @@
     `;
   }
 
-  let waveMatrix, waveSample, waveKey = '', waveAbort, waveRetry = 0, waveFailures = 0, activeHero, portraitNode;
+  let waveMatrix, waveSample, sampledWaveKey, waveKey = '', waveAbort, waveRetry = 0, waveFailures = 0, activeHero, portraitNode;
 
   function waveBackground(t) {
     const sample = t.appMediaEnabled && vibeMedia ? suggestedPalette?.sample : t.mode === 'image' ? portraitWallpaper.sample : null;
@@ -1291,7 +1299,7 @@
   const waveColorSource = t => recoloredWave(t) ? t.wavePalette : 'auto';
   function waveNeedsCover(t, background = waveBackground(t)) {
     const source = waveColorSource(t);
-    return source === 'cover' || source === 'auto' && (smartLightWave(t) || luminance(background) >= .63);
+    return source === 'cover' || source === 'auto' && (recoloredWave(t) || smartLightWave(t) || luminance(background) >= .63);
   }
 
   function paintCustomWave(t) {
@@ -1304,7 +1312,10 @@
     const base = backgroundTone.chroma < .055 ? (bright ? '#444444' : '#EEEEEE')
       : coverTone(backgroundTone, 1.18, bright ? .36 : Math.max(.50, backgroundTone.light + .24));
     const contrast = recoloredWave(t) ? t.waveTone / 100 : .60;
-    const seed = waveNeedsCover(t, background) && coverInk || base;
+    const fallback = recoloredWave(t) && backgroundTone.chroma < .055 ? t.accent : base;
+    const seed = waveNeedsCover(t, background) && coverInk
+      ? source === 'auto' ? mixHex(coverInk, fallback, bright ? .12 : .27) : coverInk
+      : fallback;
     const ink = source === 'custom' ? t.waveTint : tintedInk(seed, [background], 1.8 + contrast * 3);
     const gain = 1.25 + contrast * 2.45;
     const cutoff = (bright ? .20 : .075) + contrast * .055;
@@ -1321,11 +1332,11 @@
       waveKey = key;
       waveAbort?.abort();
       waveAbort = undefined;
-      waveSample = undefined;
+      if (!sources.length) waveSample = undefined;
       waveFailures = waveRetry = 0;
       paintCustomWave(visualTheme());
     }
-    if (shared || !sources.length || waveSample || waveAbort || waveFailures >= 3 || performance.now() < waveRetry) return;
+    if (shared || !sources.length || waveSample && sampledWaveKey === key || waveAbort || waveFailures >= 3 || performance.now() < waveRetry) return;
     const controller = new AbortController();
     waveAbort = controller;
     try {
@@ -1333,6 +1344,7 @@
         const sample = await loadCoverPalette(source, controller.signal);
         if (controller.signal.aborted) return;
         if (sample) {
+          sampledWaveKey = key;
           waveSample = sample;
           paintCustomWave(visualTheme());
           return;
@@ -3748,14 +3760,19 @@
     }
   }
 
+  let themeCheckpoint;
   async function applyLibraryTheme(record) {
     if (!record) return;
     const settings = sanitizeTheme(record.settings);
     if ((settings.customCss.trim() || settings.addonSheets.length) &&
         !confirm('В этой теме есть пользовательский CSS. Применить его?')) return;
-    const { background } = snapshot();
+    const previous = snapshot();
+    if (sameTheme(settings, previous.settings) && previous.background === record.background) return;
+    const checkpoint = { previous, applied: settings };
+    await localStorageRequest('backgrounds', 'readwrite', store => store.put(checkpoint,'before-preset'));
     if (!await changeVibeMedia(record.background, false, { history: false })) return;
-    setTheme(settings, { previous: { settings: theme, background } });
+    themeCheckpoint = checkpoint;
+    setTheme(settings, { previous });
     notice('Применена тема «' + record.name + '».');
   }
 
@@ -3834,6 +3851,10 @@
 
   async function loadVibeMedia() {
     try {
+      themeCheckpoint = await localStorageRequest('backgrounds','readonly',store => store.get('before-preset'));
+      if (themeCheckpoint && !undoStack.length && sameTheme(theme, sanitizeTheme(themeCheckpoint.applied))) {
+        undoStack.push(themeCheckpoint.previous);
+      }
       const file = await vibeMediaStorage('readonly');
       if (file) vibeMedia = await prepareVibeMedia(file);
       showPaletteSuggestion();
@@ -5340,7 +5361,7 @@
       settings.patternBeatSensitivity, settings.patternBeatRelease) * settings.patternBeatStrength / 100;
     const portraitFading = portrait && paintBeat(t, input, bass, dt);
     const livePattern = pattern ? patternLevel(patternBeatState, t, bass) : 0;
-    const liveWave = wave ? followBeat(waveBeatState, input, bass, dt, 74, 235) * t.waveBeat / 100 : 0;
+    const liveWave = wave ? followBeat(waveBeatState, input, bass, dt, t.waveSensitivity, t.waveRelease) * t.waveBeat / 100 : 0;
     if (!pattern) resetBeatEnvelope(patternBeatState);
     if (!wave) resetBeatEnvelope(waveBeatState);
     paintPatternBeat(patternLayer, livePattern, now);
@@ -6167,7 +6188,7 @@
                   <option value="cover">Всегда из обложки</option><option value="custom">Свой цвет</option></select></label>
                 ${whenAvailable('waveTint', 'wavePalette', swatch('waveTint', 'Цвет волны'))}
                 ${range('waveOpacity', 'Видимость анимации')}${range('waveTone', 'Контраст анимации')}
-                ${range('waveBeat', 'Реакция волны на бас')}`)}`)}
+                ${range('waveBeat', 'Реакция волны на бас')}${range('waveSensitivity','Чувствительность к ударам')}${range('waveRelease','Затухание пульса')}`)}`)}
           </section>
           <section id="ymc-home-wave"><h3>Колесо и подсказки</h3>
             ${check('showVibeWheel', 'Показывать колесо «Моей волны»')}
@@ -6377,6 +6398,7 @@
             <p class="muted store-empty" id="ymc-store-empty" hidden></p>
             <div class="buttons" id="ymc-store-theme-actions">
               <button class="btn primary" id="ymc-library-apply">Применить выбранную</button>
+              <button class="btn" id="ymc-revert-preset" hidden>Вернуть тему до применения</button>
               <button class="btn" id="ymc-library-export-selected">Экспорт выбранной</button>
               <button class="btn" id="ymc-library-remove-theme">Удалить</button>
             </div>
@@ -6757,6 +6779,8 @@
     const busy = historyBusy || vibeBusy || libraryBusy || Boolean(previewSession);
     $('ymc-undo').disabled = busy || !undoStack.length;
     $('ymc-redo').disabled = busy || !redoStack.length;
+    $('ymc-revert-preset').hidden = !themeCheckpoint || theme.name !== themeCheckpoint.applied.name;
+    $('ymc-revert-preset').disabled = busy;
   }
 
   function syncPortraitPreview(backgroundColor, displayTheme = theme) {
@@ -6838,7 +6862,7 @@
       patternNativeOpacity: !t.vibeAnimation || t.waveStyle !== 'native',
       waveStyle: !t.vibeAnimation, waveClearRail: !t.vibeAnimation, waveNativeOpacity: !t.vibeAnimation || customWave,
       wavePalette: !customWave, waveTint: !customWave || t.wavePalette !== 'custom',
-      waveOpacity: !customWave, waveTone: !customWave, waveBeat: !customWave,
+      waveOpacity: !customWave, waveTone: !customWave, waveBeat: !customWave, waveSensitivity: !customWave || !t.waveBeat, waveRelease: !customWave || !t.waveBeat,
       sidebarAlign: t.sidebarDock === 'native', sidebarSize: t.sidebarDock === 'native',
       sidebarGap: t.sidebarDock === 'native', sidebarInset: t.sidebarDock === 'native', sidebarCompact: t.sidebarDock === 'native',
       sidebarEdgeCustom: !t.sidebarEdgeHint, sidebarEdgeColor: !t.sidebarEdgeHint || !t.sidebarEdgeCustom,
@@ -8489,6 +8513,16 @@
       libraryThemeId = record.id;
       selectStoreGroup('saved');
       notice('Тема сохранена.');
+    });
+    $('ymc-revert-preset').onclick = () => runLibrary(async () => {
+      if (!themeCheckpoint) return;
+      const { previous } = themeCheckpoint;
+      const current = snapshot();
+      if (!await changeVibeMedia(previous.background, false, {history:false})) return;
+      themeCheckpoint = undefined;
+      setTheme(previous.settings, {previous:current});
+      await localStorageRequest('backgrounds','readwrite',store => store.delete('before-preset'));
+      notice('Предыдущая тема восстановлена.');
     });
     libraryButton('apply', () => applyLibraryTheme(selectedTheme()));
     libraryButton('export-selected', () => exportThemePackage(selectedTheme()));

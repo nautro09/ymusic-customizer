@@ -195,7 +195,7 @@ try {
         } elseif (Test-Path -LiteralPath $stampFile) { Remove-Item -LiteralPath $stampFile }
     } catch { Write-Warning ('Не удалось обновить резервную копию мода: ' + $_.Exception.Message) }
     if ($movedDuplicate) { Write-Host ("Копия прежнего отключённого файла: " + $duplicateBackup) }
-    Write-Host 'YMusic Customizer v0.10.0 установлен.' -ForegroundColor Green
+    Write-Host 'YMusic Customizer v0.10.1 установлен.' -ForegroundColor Green
     if ($target -eq $disabled) {
         Write-Host 'Мод был отключён. Включите его в разделе «Моды», затем перезапустите приложение.'
     } else {
