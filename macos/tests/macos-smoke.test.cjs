@@ -85,7 +85,7 @@ async function run() {
     assert.equal(await app.evaluate(({ app }) => app.getPath('userData')), profile);
     assert.equal(await page.evaluate(() => location.host), 'desktop');
     assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().themeSheet), true);
-    assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().version), '0.10.2');
+    assert.equal(await page.evaluate(() => YMusicCustomizer.diagnostics().version), '0.10.3');
     assert.equal(await page.evaluate(async () => (await window.ymcMac.getState()).config.discordShowAlbum), false);
 
     await page.keyboard.press('Meta+Shift+Y');
@@ -93,6 +93,17 @@ async function run() {
     await editor.waitFor({ state: 'visible' });
     assert.equal(await editor.locator('.tabs [data-tab]').count(), 5);
     assert.equal(await page.locator('#ymc-guide-offer').isVisible(), true);
+    const close = editor.locator('#ymc-close');
+    const closeRect = await close.boundingBox();
+    const titlebar = page.locator('[class*="TitleBar_root__"]').first();
+    if (await titlebar.isVisible()) {
+      const bar = await titlebar.boundingBox();
+      assert.ok(closeRect.y >= bar.y + bar.height);
+    }
+    await page.mouse.click(closeRect.x + closeRect.width - 4, closeRect.y + 4);
+    await editor.waitFor({ state: 'hidden' });
+    await page.keyboard.press('Meta+Shift+Y');
+    await editor.waitFor({ state: 'visible' });
     await page.evaluate(async () => {
       const frame = document.createElement('div');
       frame.id = 'test-portrait-frame';

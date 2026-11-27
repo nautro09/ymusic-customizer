@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.10.2 for Windows and macOS. MIT.
+ * YMusic Customizer v0.10.3 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.10.2';
+  const version = '0.10.3';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -5663,7 +5663,7 @@
     .head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .btn.primary{background:var(--hover);border-color:var(--accent)}
     .shade{position:fixed;inset:0;background:#090610ad;pointer-events:auto}
-    #ymc-editor{position:fixed;inset:0 0 0 auto;width:var(--ymc-dock);pointer-events:auto;display:flex;flex-direction:column}
+    #ymc-editor{position:fixed;inset:var(--ymc-editor-top,0px) 0 0 auto;width:var(--ymc-dock);pointer-events:auto;display:flex;flex-direction:column;-webkit-app-region:no-drag}
     .panel{position:relative;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;background:var(--bg);border-left:1px solid var(--border);padding:0 clamp(10px,2vw,20px) 24px}
     #ymc-resize{position:absolute;inset:0 auto 0 -6px;width:12px;z-index:5;cursor:ew-resize;touch-action:none;user-select:none}
     #ymc-resize::after{content:"";position:absolute;top:50%;left:4px;width:4px;height:44px;translate:0 -50%;border-radius:6px;background:var(--muted);opacity:.45}
@@ -5695,8 +5695,9 @@
     .tabs{padding:8px 0;margin-top:6px;border-radius:11px}
     .tabs button,.shop-nav button,.editor-tools button{white-space:nowrap;font-size:12px;padding:6px 8px}
     .tabs [aria-pressed=true],.shop-nav [aria-pressed=true],.editor-tools [aria-pressed=true]{border-color:var(--accent);background:var(--hover)}
+    .head-actions button{display:inline-grid;place-items:center;min-width:36px;min-height:36px;-webkit-app-region:no-drag}
     .head-actions button:is(#ymc-undo,#ymc-redo){padding:5px 10px;font-size:17px;line-height:1.2}
-    .head-actions .head-icon{min-width:32px;padding:5px 8px;font-size:16px;line-height:1.25}
+    .head-actions .head-icon{padding:5px 8px;font-size:16px;line-height:1.25}
     .editor-tools input{flex:1 1 120px;min-width:100px;font-size:12px}
     .shop-nav{margin-top:8px}
     .settings-results{max-height:25vh;overflow:auto;overscroll-behavior:contain;margin-top:7px;padding:6px;border:1px solid var(--border);border-radius:9px;background:var(--control)}
@@ -8939,6 +8940,8 @@
       ${SELECTOR.navbar}:has([class*="NavbarDesktopUserWidget_userMeta_collapsed__"]) [data-ymc-launcher] span { display:none; }
       :root { --ymc-dock:0px; --ymc-reserved-width:0px; --ymc-native-titlebar-height:32px; }
       body:has([class*="TitleBar_root__"]) { --ymc-native-titlebar-height:max(32px,var(--ym-spacer-size-xxxl,32px)); }
+      /* Keep the editor out of Electron's native drag region and window buttons. */
+      body:has([class*="TitleBar_root__"]) { --ymc-editor-top:var(--ymc-native-titlebar-height); }
       html[data-ymc-editor-open] { --ymc-reserved-width:var(--ymc-dock); }
       html[data-ymc-editor-open] ${SELECTOR.layout} { width:calc(100% - var(--ymc-dock)) !important; min-width:0 !important; }
       body:has(> [data-ymc-app-backdrop],> [data-ymc-pattern],> [data-ymc-page-spectrum]) { isolation:isolate; }

@@ -105,7 +105,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       Object.defineProperty(navigator, 'platform', { value: navigatorPlatform });
       window.ymMods = {
         checkUpdate: async () => {
-          const version = localStorage.getItem('test:next-version') ?? '0.10.3';
+          const version = localStorage.getItem('test:next-version') ?? '0.10.4';
           return { available: Boolean(version), version, notes: 'Проверка новой версии' };
         },
         installUpdate: async () => {
@@ -120,7 +120,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await searchAudioSmoke(page, ui, platform);
     const toast = ui.locator('#ymc-update-toast');
     await toast.waitFor();
-    assert.match(await toast.textContent(), /Вышел Customizer 0\.10\.3/);
+    assert.match(await toast.textContent(), /Вышел Customizer 0\.10\.4/);
     assert.equal(await ui.locator('#ymc-editor').isHidden(), true);
     const toastRect = await toast.boundingBox();
     assert.ok(toastRect.x > 800 && toastRect.y < 65, 'the toast starts in the top right');
@@ -128,7 +128,7 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     await toast.waitFor({ state: 'hidden' });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#ymusic-customizer-root')?.shadowRoot
-      .querySelector('#ymc-update-label').textContent.includes('0.10.3'));
+      .querySelector('#ymc-update-label').textContent.includes('0.10.4'));
     assert.equal(await toast.isHidden(), true, 'the same release stays dismissed');
 
     const nextRelease = async version => {
@@ -137,15 +137,15 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
       await toast.waitFor();
       assert.match(await ui.locator('#ymc-update-toast-title').textContent(), new RegExp(version.replaceAll('.', '\\.')));
     };
-    await nextRelease('0.10.4');
+    await nextRelease('0.10.5');
     const label = await ui.locator('#ymc-update-toast-title').boundingBox();
     await page.mouse.move(label.x + 8, label.y + label.height / 2);
     await page.mouse.down();
     await page.mouse.move(label.x + 113, label.y + label.height / 2, { steps: 6 });
     await page.mouse.up();
     await toast.waitFor({ state: 'hidden' });
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.10.4');
-    await nextRelease('0.10.5');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:update:dismissed')), '0.10.5');
+    await nextRelease('0.10.6');
     await ui.locator('#ymc-update-toast-open').click();
     const editor = ui.locator('#ymc-editor');
     await editor.waitFor();
@@ -216,6 +216,32 @@ async function platformSmoke(browser, platform, navigatorPlatform) {
     assert.equal(await handle.isHidden(), true);
     await page.setViewportSize({ width: 1260, height: 850 });
     await handle.waitFor();
+
+    await page.evaluate(() => {
+      const titlebar = document.createElement('div');
+      titlebar.className = 'TitleBar_root__hitbox-fixture';
+      titlebar.style.cssText = 'position:fixed;inset:0 0 auto;height:52px;-webkit-app-region:drag';
+      document.body.style.setProperty('--ym-spacer-size-xxxl','52px');
+      document.body.append(titlebar);
+    });
+    const undo = ui.locator('#ymc-undo'), redo = ui.locator('#ymc-redo');
+    const priorAccent = await page.evaluate(() => YMusicCustomizer.getTheme().accent);
+    await update({ accent: '#A2461C' });
+    for (const viewport of [{width:1260,height:850},{width:420,height:760}]) {
+      await page.setViewportSize(viewport);
+      for (const button of [undo,redo]) {
+        const box = await button.boundingBox();
+        assert.ok(box.y >= 52 && box.width >= 36 && box.height >= 36, JSON.stringify(box));
+        await page.mouse.click(box.x + box.width - 4, box.y + 4);
+        assert.equal(await page.evaluate(() => YMusicCustomizer.getTheme().accent), button === undo ? priorAccent : '#A2461C');
+      }
+    }
+    await undo.click();
+    await page.setViewportSize({width:1260,height:850});
+    await page.evaluate(() => {
+      document.querySelector('.TitleBar_root__hitbox-fixture').remove();
+      document.body.style.removeProperty('--ym-spacer-size-xxxl');
+    });
 
     await ui.locator('#p-patternEnabled').check();
     const picker = ui.locator('[data-prop=patternStyle]');
