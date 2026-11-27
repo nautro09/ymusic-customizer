@@ -17,7 +17,7 @@ async function run() {
       if (platform) Object.defineProperty(navigator, 'platform', { value: platform });
       const config = { discordRpc: false, discordClientId: '', discordShowPaused: false, discordShowAlbum: false };
       window.ymMods = {
-        checkUpdate: async () => ({ available: true, version: '0.10.2', notes: 'Новая версия для проверки' }),
+        checkUpdate: async () => ({ available: true, version: '0.10.3', notes: 'Новая версия для проверки' }),
         installUpdate: async () => {
           window.ymcInstallRequested = true;
           return { error: 'Тестовая установка остановлена.' };
@@ -31,7 +31,7 @@ async function run() {
         ...(platform === 'Win32' ? {} : { reportTrack: track => { window.lastDiscordTrack = track; } })
       };
       if (!localStorage.getItem('ymc:theme:v1')) {
-        localStorage.setItem('ymc:last-version', '0.10.1');
+        localStorage.setItem('ymc:last-version', '0.10.2');
         localStorage.setItem('ymc:theme:v1', JSON.stringify({ version: 1, name: 'Старая тема', round: 9, customCss: 'body{--legacy:1}' }));
       }
     }, process.env.YMC_TEST_PLATFORM);
@@ -55,7 +55,7 @@ async function run() {
 
     await page.keyboard.press('Control+Shift+Y');
     assert.equal(await ui.locator('#ymc-editor').isVisible(), true);
-    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.10.2').waitFor();
+    await ui.locator('#ymc-update-summary').getByText('Обновления · v0.10.3').waitFor();
     assert.equal(await page.evaluate(() => window.ymcInstallRequested), undefined);
     await ui.locator('#ymc-update-summary').click();
     assert.equal(await ui.locator('#ymc-update-notes').textContent(), 'Новая версия для проверки');
@@ -593,6 +593,10 @@ async function run() {
     await ui.locator('#ymc-library-name').fill('Тема с видео');
     await ui.locator('#ymc-library-save').click();
     await ui.locator('[data-store-card]', { hasText: 'Тема с видео' }).waitFor();
+    await ui.locator('#ymc-undo').click();
+    await ui.locator('[data-store-card]', {hasText:'Тема с видео'}).waitFor({state:'detached'});
+    await ui.locator('#ymc-redo').click();
+    await ui.locator('[data-store-card]', {hasText:'Тема с видео'}).click();
     const packageDownload = page.waitForEvent('download');
     await ui.locator('#ymc-library-export-selected').click();
     const packageBytes = await readFile(await (await packageDownload).path());
@@ -671,7 +675,7 @@ async function run() {
     }
     assert.equal(await guide.isHidden(), true);
     assert.equal(await offer.isHidden(), true);
-    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.10.1');
+    assert.equal(await page.evaluate(() => localStorage.getItem('ymc:guide:seen')), '0.10.2');
     await page.reload();
     await launcher.click();
     assert.equal(await offer.isHidden(), true);
@@ -681,7 +685,7 @@ async function run() {
     });
     await page.reload();
     await ui.locator('#ymc-whats-new').waitFor();
-    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0\.5\.6 до v0\.10\.1/);
+    assert.match(await ui.locator('#ymc-release-range').textContent(), /v0\.5\.6 до v0\.10\.2/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /Семь сплошных линейных узоров/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /v0.6.0/);
     assert.match(await ui.locator('#ymc-release-notes').textContent(), /Светлая умная тема/);
@@ -739,6 +743,10 @@ async function run() {
     await page.waitForFunction(() => window.lastDiscordPatch?.discordRpc);
     assert.deepEqual(await page.evaluate(() => window.lastDiscordPatch),
       { discordClientId: '123456789012345678', discordRpc: true, discordShowPaused: true, discordShowAlbum: true });
+    await ui.locator('#ymc-undo').click();
+    await page.waitForFunction(() => window.lastDiscordPatch?.discordRpc === false);
+    await ui.locator('#ymc-redo').click();
+    await page.waitForFunction(() => window.lastDiscordPatch?.discordRpc === true);
     await page.evaluate(() => {
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.playbackState = 'none';

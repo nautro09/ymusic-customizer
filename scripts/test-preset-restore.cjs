@@ -26,9 +26,27 @@ async function check(browser, platform) {
   assert.deepEqual(await page.evaluate(() => YMusicCustomizer.getTheme()),original);
   await apply.click();
   await page.waitForFunction(() => YMusicCustomizer.getTheme().navBrand === 'vkusno');
+  await page.evaluate(() => YMusicCustomizer.update({waveRelease:680}));
+  let saved = false;
+  for (let attempt = 0; attempt < 50 && !saved; attempt++) {
+    saved = await page.evaluate(async () => {
+      const request = indexedDB.open('ymc:local-media');
+      const db = await new Promise(resolve => { request.onsuccess = () => resolve(request.result); });
+      try {
+        const read = db.transaction('backgrounds').objectStore('backgrounds').get('history');
+        const journal = await new Promise(resolve => { read.onsuccess = () => resolve(read.result); });
+        return journal?.current.settings.waveRelease === 680;
+      } finally { db.close(); }
+    });
+    if (!saved) await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  assert.ok(saved, 'history checkpoint persisted');
   await page.reload();
   await page.waitForFunction(() => window.YMusicCustomizer);
   await openStore();
+  await ui.locator('#ymc-undo').click();
+  assert.equal(await page.evaluate(() => YMusicCustomizer.getTheme().navBrand),'vkusno');
+  assert.notEqual(await page.evaluate(() => YMusicCustomizer.getTheme().waveRelease),680);
   await ui.locator('#ymc-undo').click();
   assert.deepEqual(await page.evaluate(() => YMusicCustomizer.getTheme()),original);
   await ui.locator('#ymc-redo').click();

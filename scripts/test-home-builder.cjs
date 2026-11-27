@@ -43,6 +43,12 @@ async function check(browser, platform) {
   await find('builder-size').fill('135');
   await waitPaint();
   assert.ok(Math.abs((await block.boundingBox()).width - initial.width*1.35) < 1);
+  await find('builder-undo').click();
+  await waitPaint();
+  assert.ok(Math.abs((await block.boundingBox()).width-initial.width)<1);
+  await find('builder-redo').click();
+  await waitPaint();
+  assert.ok(Math.abs((await block.boundingBox()).width-initial.width*1.35)<1);
   await find('builder-save').click();
   await find('close').click();
   await block.click();

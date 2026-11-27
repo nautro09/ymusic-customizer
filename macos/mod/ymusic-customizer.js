@@ -1,5 +1,5 @@
 /*
- * YMusic Customizer v0.10.1 for Windows and macOS. MIT.
+ * YMusic Customizer v0.10.2 for Windows and macOS. MIT.
  * Copyright (c) 2026 YMusic Customizer contributors.
  * See licenses/Next-Music-Client-MIT.txt for the scaling tokens.
  */
@@ -11,7 +11,7 @@
   const mac = Boolean(window.ymcMac) || /Mac/i.test(window.navigator?.platform ?? '');
   const discordBridge = window.ymcMac ?? window.ymMods;
   const shortcut = mac ? '⌘⇧Y' : 'Ctrl+Shift+Y';
-  const version = '0.10.1';
+  const version = '0.10.2';
   const discordName = 'Я. Музыка · nautro';
   const LEGACY_KEY = 'ymc:theme:v1';
   const KEY = 'ymc:theme:v2';
@@ -2934,6 +2934,34 @@
   function wireHomeEditor() {
     const get = id => $('ymc-builder-' + id);
     const picker = get('block'), frame = get('frame'), area = get('area'), cards = get('cards');
+    const undos = [], redos = [];
+    const capture = () => ({
+      layout: { ...homeDraft },
+      visibility: Object.fromEntries(Object.keys(homeOriginal).map(key => [key, theme[key]]))
+    });
+    const syncArrows = () => {
+      get('undo').disabled = !undos.length;
+      get('redo').disabled = !redos.length;
+    };
+    const remember = (previous = capture()) => {
+      undos.push(previous);
+      if (undos.length > 60) undos.shift();
+      redos.length = 0;
+      syncArrows();
+    };
+    const travel = (from, to) => {
+      if (!from.length || homeDrag) return;
+      to.push(capture());
+      const next = from.pop();
+      homeDraft = next.layout;
+      theme = { ...theme, ...homeOriginal, ...next.visibility };
+      syncArrows();
+      apply();
+      refresh();
+      syncControls(true);
+    };
+    get('undo').onclick = () => travel(undos, redos);
+    get('redo').onclick = () => travel(redos, undos);
     const select = key => { picker.value = key; syncHomeLayout(homeScene); };
     const setPose = (key, x, y, sx, sy = sx) => {
       const field = homeScene.getBoundingClientRect();
@@ -2979,7 +3007,7 @@
       const check = card.querySelector('input');
       check.setAttribute('aria-label', 'Показывать · ' + name);
       card.querySelector('button').onclick = () => select(key);
-      check.onchange = () => { setVisible(key, check.checked); select(key); };
+      check.onchange = () => { remember(); setVisible(key, check.checked); select(key); };
       card.ondragstart = e => { e.dataTransfer.setData('application/x-ymc-widget', key); e.dataTransfer.effectAllowed = 'copyMove'; };
       cards.append(card);
     }
@@ -2988,7 +3016,7 @@
       el.ondrop = e => {
         const key = e.dataTransfer.getData('application/x-ymc-widget');
         if (!Object.hasOwn(HOME_BLOCKS, key) || !homeDraft) return;
-        e.preventDefault(); setVisible(key, true); select(key);
+        e.preventDefault(); remember(); setVisible(key, true); select(key);
         const entry = homeDraft[key];
         setPose(key, e.clientX, e.clientY, entry?.[2] ?? 100, entry?.[3] ?? entry?.[2] ?? 100);
       };
@@ -2999,6 +3027,8 @@
       showDialog('');
       if (!activeHero) return;
       homeDraft = decodeHomeLayout(theme.homeLayout); homeOriginal = {};
+      undos.length = redos.length = 0;
+      syncArrows();
       get('tools').removeAttribute('data-folded');
       get('fold').textContent = 'Свернуть'; get('fold').setAttribute('aria-expanded', 'true');
       for (const id of ['tools', 'area']) get(id).hidden = false;
@@ -3025,18 +3055,27 @@
     };
     get('save').onclick = () => finish(true);
     get('cancel').onclick = () => finish(false);
-    get('reset').onclick = () => { homeDraft = {}; queueHomeLayout(); };
-    get('one-reset').onclick = () => { delete homeDraft[picker.value]; queueHomeLayout(); };
+    get('reset').onclick = () => { if (!Object.keys(homeDraft).length) return; remember(); homeDraft = {}; queueHomeLayout(); };
+    get('one-reset').onclick = () => { if (!(picker.value in homeDraft)) return; remember(); delete homeDraft[picker.value]; queueHomeLayout(); };
     get('fold').onclick = () => {
       const folded = get('tools').toggleAttribute('data-folded');
       get('fold').textContent = folded ? 'Развернуть' : 'Свернуть';
       get('fold').setAttribute('aria-expanded', String(!folded));
     };
     picker.onchange = () => select(picker.value);
-    for (const axis of ['size', 'width', 'height']) get(axis).oninput = e => {
-      const p = getPose(picker.value), value = Number(e.target.value);
-      if (p) setPose(p.key, p.x, p.y, axis === 'height' ? p.sx : value, axis === 'width' ? p.sy : value);
-    };
+    for (const axis of ['size', 'width', 'height']) {
+      const slider = get(axis);
+      let editing = false;
+      slider.oninput = () => {
+        const pose = getPose(picker.value);
+        if (!pose) return;
+        if (!editing) remember();
+        editing = true;
+        const value = Number(slider.value);
+        setPose(pose.key, pose.x, pose.y, axis === 'height' ? pose.sx : value, axis === 'width' ? pose.sy : value);
+      };
+      slider.onchange = () => { editing = false; };
+    }
     function beginDrag(e, key, handle) {
       const pose = getPose(key);
       if (!pose || e.button !== 0 || homeDrag) return;
@@ -3054,6 +3093,11 @@
       const d = homeDrag;
       if (!d || d.id !== e.pointerId) return;
       const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
+      if (!d.changed) {
+        if (!dx && !dy) return;
+        remember();
+        d.changed = true;
+      }
       if (d.resize) {
         const ratio = 1 + 2 * (dx * d.width + dy * d.height) / (d.width ** 2 + d.height ** 2 || 1);
         setPose(d.key, d.x, d.y, d.sx * ratio, d.sy * ratio);
@@ -3063,10 +3107,16 @@
     frame.onkeydown = e => {
       const p = getPose(picker.value), step = e.shiftKey ? 10 : 1;
       const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
-      if (p && d) { e.preventDefault(); setPose(p.key, p.x + d[0], p.y + d[1], p.sx, p.sy); }
+      if (p && d) { e.preventDefault(); if (!e.repeat) remember(); setPose(p.key, p.x + d[0], p.y + d[1], p.sx, p.sy); }
     };
     window.addEventListener('keydown', e => {
       if (!homeDraft) return;
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.code === 'KeyZ' || e.code === 'KeyY')) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!e.repeat) (e.shiftKey || e.code === 'KeyY' ? get('redo') : get('undo')).click();
+        return;
+      }
       const path = e.composedPath();
       if (e.key === 'Tab') {
         const focusable = [frame, ...get('tools').querySelectorAll('button,input,select')].filter(el => !el.disabled && el.getClientRects().length);
@@ -3114,6 +3164,25 @@
   const undoStack = [];
   const redoStack = [];
   let historyBusy = false;
+  let historyWrite = Promise.resolve();
+  let historyTimer;
+  function queueHistorySave() {
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(flushHistory, 200);
+  }
+
+  function flushHistory() {
+    clearTimeout(historyTimer);
+    historyTimer = undefined;
+    const journal = { undo: undoStack.slice(), redo: redoStack.slice(), current: snapshot() };
+    historyWrite = historyWrite.then(() => localStorageRequest('backgrounds', 'readwrite',
+      store => store.put(journal, 'history'))).catch(() => {});
+  }
+
+  function sameBackground(a, b) {
+    return a === b || Boolean(a && b && a.name === b.name && a.size === b.size &&
+      a.type === b.type && a.lastModified === b.lastModified);
+  }
   let lastHistoryKey = '';
   let lastHistoryAt = 0;
   const snapshot = () => ({ settings: theme, background: vibeMedia?.file ?? null });
@@ -3252,6 +3321,7 @@
     redoStack.length = 0;
     lastHistoryKey = key;
     lastHistoryAt = now;
+    queueHistorySave();
   }
 
   function setTheme(value, { immediate = true, sync = true, history = true, historyKey = '', previous = snapshot() } = {}) {
@@ -3291,23 +3361,62 @@
   }
 
   async function moveHistory(from, to, message) {
-    if (!from.length || historyBusy || vibeBusy || libraryBusy || previewSession) return;
-    const current = snapshot();
+    if (historyBusy || vibeBusy || libraryBusy || discordBusy) return;
+    if (previewSession) {
+      const previewUndo = from === undoStack;
+      const source = previewUndo ? previewSession.undo : previewSession.redo;
+      const destination = previewUndo ? previewSession.redo : previewSession.undo;
+      if (source.length || !previewUndo || Object.keys(previewSession.patch).length) {
+        if (!source.length) return;
+        destination.push(previewSession.patch);
+        previewSession.patch = source.pop();
+        previewSession.historyKey = '';
+        previewSession.visual = null;
+        syncControls(true);
+        syncAppearancePreview();
+        return;
+      }
+      finishAppearancePreview();
+    }
     const next = from.at(-1);
-    const restoreMedia = next.background !== current.background;
+    if (!next) return;
+    const current = snapshot();
     historyBusy = true;
-    if (restoreMedia) $('ymc-editor').inert = true;
+    $('ymc-editor').inert = true;
     syncHistoryButtons();
     try {
-      if (restoreMedia && !await changeVibeMedia(next.background, false, { history: false })) return;
+      let inverse = current;
+      if (next.library) {
+        await writeLibraryChanges(next.library, 'before');
+        inverse = { library: next.library.map(change => ({ ...change, before: change.after, after: change.before })) };
+      } else if (Object.hasOwn(next, 'editorWidth')) {
+        inverse = { editorWidth };
+        editorWidth = next.editorWidth;
+        saveEditorWidth();
+        syncEditorWidth();
+        queueGuidePosition();
+      } else if (next.discord) {
+        const prior = await discordBridge?.getState?.();
+        if (!prior?.config) throw Error('Не удалось прочитать параметры Discord.');
+        inverse = { discord: discordConfig(prior.config) };
+        if (!await writeDiscord(next.discord)) throw Error('Не удалось восстановить параметры Discord.');
+      } else {
+        const restoreMedia = !sameBackground(next.background, current.background);
+        if (restoreMedia && !await changeVibeMedia(next.background, false, { history: false })) return;
+        setTheme(next.settings, { history: false });
+      }
       from.pop();
-      to.push(current);
+      to.push(inverse);
       lastHistoryKey = '';
-      setTheme(next.settings, { history: false });
+      persist();
+      queueHistorySave();
+      if (next.library) await refreshLibrary();
       notice(message);
+    } catch (error) {
+      notice(error.message || 'Не удалось восстановить изменение.', true);
     } finally {
       historyBusy = false;
-      if (restoreMedia) $('ymc-editor').inert = false;
+      $('ymc-editor').inert = false;
       syncHistoryButtons();
     }
   }
@@ -3427,8 +3536,8 @@
     try {
       return await new Promise((resolve, reject) => {
         const tx = db.transaction(storeName, mode);
-        const request = operation(tx.objectStore(storeName));
-        tx.oncomplete = () => resolve(request.result);
+        const request = operation(Array.isArray(storeName) ? tx : tx.objectStore(storeName));
+        tx.oncomplete = () => resolve(request?.result);
         tx.onabort = () => reject(tx.error ?? Error('Операция с локальным хранилищем прервана.'));
       });
     } finally {
@@ -3685,11 +3794,34 @@
     for (const id of ['save', 'export-current', 'import']) $('ymc-library-' + id).disabled = libraryBusy;
   }
 
-  async function rememberFile(file) {
+  async function writeLibraryChanges(changes, side) {
+    await localStorageRequest(['themes', 'files'], 'readwrite', tx => {
+      for (const change of changes) {
+        const store = tx.objectStore(change.store);
+        const value = change[side];
+        if (value) store.put(value, change.id);
+        else store.delete(change.id);
+      }
+    });
+  }
+
+  async function editLibrary(changes) {
+    await writeLibraryChanges(changes, 'after');
+    recordHistory({ library: changes });
+    syncHistoryButtons();
+    await refreshLibrary();
+  }
+
+  function newLibraryFile(file) {
     const existing = libraryFiles.find(item => item.file.name === file.name &&
       item.file.size === file.size && item.file.lastModified === file.lastModified && item.file.type === file.type);
     if (existing) return;
-    const record = { id: libraryId(), file };
+    return { id: libraryId(), file };
+  }
+
+  async function rememberFile(file) {
+    const record = newLibraryFile(file);
+    if (!record) return;
     try {
       await localStorageRequest('files', 'readwrite', store => store.put(record, record.id));
       await refreshLibrary();
@@ -3746,7 +3878,7 @@
   }
 
   async function runLibrary(operation) {
-    if (libraryBusy) return;
+    if (libraryBusy || historyBusy) return;
     libraryBusy = true;
     syncLibraryButtons();
     syncHistoryButtons();
@@ -3852,11 +3984,16 @@
   async function loadVibeMedia() {
     try {
       themeCheckpoint = await localStorageRequest('backgrounds','readonly',store => store.get('before-preset'));
-      if (themeCheckpoint && !undoStack.length && sameTheme(theme, sanitizeTheme(themeCheckpoint.applied))) {
-        undoStack.push(themeCheckpoint.previous);
-      }
       const file = await vibeMediaStorage('readonly');
       if (file) vibeMedia = await prepareVibeMedia(file);
+      const journal = await localStorageRequest('backgrounds', 'readonly', store => store.get('history'));
+      if (!undoStack.length && journal && sameTheme(theme, sanitizeTheme(journal.current.settings)) &&
+          sameBackground(file ?? null, journal.current.background)) {
+        undoStack.push(...journal.undo.slice(-60));
+        redoStack.push(...journal.redo.slice(-60));
+      } else if (themeCheckpoint && !undoStack.length && sameTheme(theme, sanitizeTheme(themeCheckpoint.applied))) {
+        undoStack.push(themeCheckpoint.previous);
+      }
       showPaletteSuggestion();
     } catch {
       vibeError = 'Не удалось восстановить сохранённый фон. Выберите файл заново.';
@@ -5803,7 +5940,7 @@
         <button class="btn" id="ymc-builder-reset">Сбросить раскладку</button>
       </div>
       <p id="ymc-builder-warning" role="status"></p>
-      <footer><button class="btn" id="ymc-builder-cancel">Отмена</button><button class="btn primary" id="ymc-builder-save">Сохранить</button></footer>
+      <footer><button class="btn" id="ymc-builder-undo" aria-label="Отменить действие">↶</button><button class="btn" id="ymc-builder-redo" aria-label="Вернуть действие">↷</button><button class="btn" id="ymc-builder-cancel">Отмена</button><button class="btn primary" id="ymc-builder-save">Сохранить</button></footer>
     </aside>
     <div id="ymc-editor" hidden>
       <div id="ymc-resize" role="separator" aria-orientation="vertical" aria-label="Ширина редактора" aria-controls="ymc-panel"
@@ -6776,11 +6913,11 @@
   }
 
   function syncHistoryButtons() {
-    const busy = historyBusy || vibeBusy || libraryBusy || Boolean(previewSession);
-    $('ymc-undo').disabled = busy || !undoStack.length;
-    $('ymc-redo').disabled = busy || !redoStack.length;
+    const busy = historyBusy || vibeBusy || libraryBusy || discordBusy;
+    $('ymc-undo').disabled = busy || !(previewSession?.undo.length || undoStack.length);
+    $('ymc-redo').disabled = busy || !(previewSession ? previewSession.redo.length : redoStack.length);
     $('ymc-revert-preset').hidden = !themeCheckpoint || theme.name !== themeCheckpoint.applied.name;
-    $('ymc-revert-preset').disabled = busy;
+    $('ymc-revert-preset').disabled = busy || Boolean(previewSession);
   }
 
   function syncPortraitPreview(backgroundColor, displayTheme = theme) {
@@ -7032,13 +7169,22 @@
       update(partial, options);
       return false;
     }
-    const draft = sanitizeTheme({ ...editorTheme(), ...partial });
+    const current = editorTheme();
+    const draft = sanitizeTheme({ ...current, ...partial });
+    if (keys.every(key => current[key] === draft[key])) return true;
+    const historyKey = options?.historyKey;
+    if (!historyKey || historyKey !== previewSession.historyKey) {
+      previewSession.undo.push({ ...previewSession.patch });
+    }
+    previewSession.historyKey = historyKey;
+    previewSession.redo.length = 0;
     for (const key of keys) {
       if (draft[key] === theme[key]) delete previewSession.patch[key];
       else previewSession.patch[key] = draft[key];
     }
     previewSession.visual = null;
     syncAppearancePreview();
+    syncHistoryButtons();
     return true;
   }
 
@@ -7065,7 +7211,7 @@
     if (close) return;
     const { title, sections } = APPEARANCE_PREVIEWS[kind];
     const keys = new Set(sections.flatMap(id => [...$(id).querySelectorAll('[data-prop], [data-setting]')].map(settingKey)));
-    previewSession = { kind, keys, button, patch: {} };
+    previewSession = { kind, keys, button, patch: {}, undo: [], redo: [] };
     button.setAttribute('aria-pressed', 'true');
     setText(button, 'Закрыть предпросмотр');
     const sample = $(button.getAttribute('aria-controls'));
@@ -7238,8 +7384,27 @@
     }
   }
 
+  const discordConfig = config => ({
+    discordClientId: config.discordClientId ?? '',
+    discordRpc: Boolean(config.discordRpc),
+    discordShowPaused: Boolean(config.discordShowPaused),
+    discordShowAlbum: Boolean(config.discordShowAlbum)
+  });
+
+  async function writeDiscord(config) {
+    const result = await discordBridge?.setConfig?.(config);
+    if (!result?.ok) return false;
+    $('ymc-discord-id').value = config.discordClientId;
+    $('ymc-discord-enabled').checked = config.discordRpc;
+    $('ymc-discord-paused').checked = config.discordShowPaused;
+    $('ymc-discord-album').checked = config.discordShowAlbum;
+    discordReady = true;
+    setText($('ymc-discord-status'), discordStates[result.discord] ?? (config.discordRpc ? discordStates.connecting : discordStates.off));
+    return true;
+  }
+
   async function saveDiscord() {
-    if (discordBusy || !discordBridge?.setConfig) return;
+    if (discordBusy || historyBusy || !discordBridge?.setConfig) return;
     const discordClientId = $('ymc-discord-id').value.trim();
     const discordRpc = $('ymc-discord-enabled').checked;
     if ((discordRpc || discordClientId) && !/^\d{15,22}$/.test(discordClientId)) {
@@ -7250,16 +7415,20 @@
     const discordShowAlbum = $('ymc-discord-album').checked;
     discordBusy = true;
     $('ymc-discord-save').disabled = true;
+    syncHistoryButtons();
     try {
-      const result = await discordBridge.setConfig({ discordClientId, discordRpc, discordShowPaused, discordShowAlbum });
-      if (!result?.ok) throw Error();
-      discordReady = true;
-      setText($('ymc-discord-status'), discordStates[result.discord] ?? (discordRpc ? discordStates.connecting : discordStates.off));
+      const state = await discordBridge.getState();
+      const next = { discordClientId, discordRpc, discordShowPaused, discordShowAlbum };
+      if (!state?.config) throw Error();
+      const previous = discordConfig(state.config);
+      if (!await writeDiscord(next)) throw Error();
+      if (Object.keys(next).some(key => next[key] !== previous[key])) recordHistory({ discord: previous });
     } catch {
       setText($('ymc-discord-status'), 'Не удалось сохранить параметры Discord.');
     } finally {
       discordBusy = false;
       $('ymc-discord-save').disabled = false;
+      syncHistoryButtons();
     }
   }
 
@@ -7786,11 +7955,20 @@
     return width;
   }
 
+  function saveEditorWidth() {
+    try { localStorage.setItem(EDITOR_WIDTH_KEY, String(editorWidth)); } catch {}
+  }
+
   function setupEditorResize() {
     const resize = $('ymc-resize'), editor = $('ymc-editor');
     let drag;
     try { editorWidth = bounded(Number(localStorage.getItem(EDITOR_WIDTH_KEY)) || null, 1, 1400, 0); } catch {}
-    const save = () => { try { localStorage.setItem(EDITOR_WIDTH_KEY, String(editorWidth)); } catch {} };
+    const save = previous => {
+      if (previous === editorWidth) return;
+      saveEditorWidth();
+      recordHistory({ editorWidth: previous });
+      syncHistoryButtons();
+    };
     const choose = value => {
       const { min, max } = editorBounds();
       editorWidth = bounded(value, min, max, min);
@@ -7801,7 +7979,7 @@
       if (event.button !== 0 || drag) return;
       event.preventDefault();
       const bounds = editor.getBoundingClientRect();
-      drag = { id: event.pointerId, offset: event.clientX - bounds.left, start: event.clientX, right: bounds.right };
+      drag = { id: event.pointerId, previous: editorWidth, offset: event.clientX - bounds.left, start: event.clientX, right: bounds.right };
       resize.setPointerCapture(event.pointerId);
       resize.focus({ preventScroll: true });
       editor.setAttribute('data-resizing', '');
@@ -7814,20 +7992,25 @@
     for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) {
       resize.addEventListener(event, ({ pointerId }) => {
         if (pointerId !== drag?.id) return;
-        if (drag.changed) save();
+        if (drag.changed) save(drag.previous);
         drag = undefined;
         editor.removeAttribute('data-resizing');
       });
     }
-    resize.addEventListener('dblclick', () => { choose(editorBounds().min); save(); });
+    resize.addEventListener('dblclick', () => {
+      const previous = editorWidth;
+      choose(editorBounds().min);
+      save(previous);
+    });
     resize.addEventListener('keydown', event => {
       const { min, max } = editorBounds(), current = syncEditorWidth(), step = event.shiftKey ? 60 : 20;
       const next = { ArrowLeft: current + step, ArrowRight: current - step, Home: min, End: max }[event.key];
       if (next === undefined) return;
       event.preventDefault();
       event.stopPropagation();
+      const previous = editorWidth;
       choose(next);
-      save();
+      save(previous);
     });
     syncEditorWidth();
   }
@@ -8389,6 +8572,7 @@
       });
       if (live) el.addEventListener('change', () => {
         if (lastHistoryKey === el.dataset.prop) lastHistoryKey = '';
+        if (previewSession?.historyKey === el.dataset.prop) previewSession.historyKey = '';
       });
     }
     for (const el of shadow.querySelectorAll('[data-number]')) {
@@ -8508,8 +8692,7 @@
     const libraryButton = (id, action) => $('ymc-library-' + id).addEventListener('click', () => runLibrary(action));
     libraryButton('save', async () => {
       const record = currentThemeRecord($('ymc-library-name').value || theme.name);
-      await localStorageRequest('themes', 'readwrite', store => store.put(record, record.id));
-      await refreshLibrary();
+      await editLibrary([{ store: 'themes', id: record.id, before: null, after: record }]);
       libraryThemeId = record.id;
       selectStoreGroup('saved');
       notice('Тема сохранена.');
@@ -8530,8 +8713,7 @@
     libraryButton('remove-theme', async () => {
       const record = selectedTheme();
       if (!record || record.builtIn || !confirm('Удалить сохранённую тему?')) return;
-      await localStorageRequest('themes', 'readwrite', store => store.delete(record.id));
-      await refreshLibrary();
+      await editLibrary([{ store: 'themes', id: record.id, before: record, after: null }]);
     });
     libraryButton('use-file', async () => {
       const record = selectedFile();
@@ -8540,14 +8722,14 @@
     libraryButton('remove-file', async () => {
       const record = selectedFile();
       if (!record || !confirm('Удалить файл из библиотеки?')) return;
-      await localStorageRequest('files', 'readwrite', store => store.delete(record.id));
-      await refreshLibrary();
+      await editLibrary([{ store: 'files', id: record.id, before: record, after: null }]);
     });
     fileInput('ymc-library-import', 'ymc-library-import-file', ([file]) => runLibrary(async () => {
       const record = await readThemePackage(file);
-      await localStorageRequest('themes', 'readwrite', store => store.put(record, record.id));
-      if (record.background) await rememberFile(record.background);
-      await refreshLibrary();
+      const changes = [{ store: 'themes', id: record.id, before: null, after: record }];
+      const asset = record.background && newLibraryFile(record.background);
+      if (asset) changes.push({ store: 'files', id: asset.id, before: null, after: asset });
+      await editLibrary(changes);
       libraryThemeId = record.id;
       selectStoreGroup('saved');
       notice('Тема импортирована. Нажмите «Применить», чтобы её открыть.');
@@ -8657,6 +8839,7 @@
         smartCovers = [];
       }
       if (persistTimer !== undefined) persist();
+      if (historyTimer !== undefined) flushHistory();
       discordBridge?.reportTrack?.(null);
     });
     window.addEventListener('pageshow', event => {
